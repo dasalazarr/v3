@@ -1,31 +1,47 @@
+# Build stage
 FROM node:21-bullseye-slim as builder
 
+# Establecer el directorio de trabajo
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Habilitar pnpm
 ENV PNPM_HOME=/usr/local/bin
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-COPY package*.json pnpm-lock.yaml ./
+# Copiar archivos de configuración
+COPY package.json tsconfig.json rollup.config.js ./
+
+# Instalar dependencias
 RUN pnpm install
 
-COPY . .
-RUN pnpm run build
+# Copiar código fuente
+COPY src/ ./src/
 
-FROM node:21-bullseye-slim as deploy
+# Construir la aplicación
+RUN pnpm build
+
+# Production stage
+FROM node:21-bullseye-slim
 
 WORKDIR /app
 
-ARG PORT
-ENV PORT $PORT
-EXPOSE $PORT
-
-COPY --from=builder /app/assets ./assets
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/*.json /app/*-lock.yaml ./
-
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Habilitar pnpm en producción
 ENV PNPM_HOME=/usr/local/bin
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-RUN pnpm install --production --ignore-scripts
+# Copiar solo los archivos necesarios del builder
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/dist ./dist
 
-CMD ["npm", "start"]
+# Instalar solo dependencias de producción
+RUN pnpm install --prod
+
+# Configurar variables de entorno
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Exponer el puerto
+EXPOSE 3000
+
+# Comando para ejecutar la aplicación
+CMD ["node", "./dist/app.js"]

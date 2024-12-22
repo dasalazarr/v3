@@ -1,19 +1,51 @@
 import { createBot } from "@builderbot/bot";
 import { MemoryDB as Database } from "@builderbot/bot";
-import {provider} from "./provider";
+import { provider } from "./provider";
 import { config } from "./config";
 import templates from "./templates";
 
-const PORT = config.PORT;
+const PORT = process.env.PORT || config.PORT || 3000;
 
 const main = async () => {
-  const { handleCtx, httpServer } = await createBot({
-    flow: templates,
-    provider: provider,
-    database: new Database(),
-  });
+  try {
+    const { handleCtx, httpServer } = await createBot({
+      flow: templates,
+      provider: provider,
+      database: new Database(),
+    });
 
-  httpServer(+PORT);
+    // Iniciamos el servidor HTTP
+    httpServer(+PORT);
+    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log('📱 WhatsApp Bot is ready');
+
+    // Manejadores para graceful shutdown
+    const shutdown = async () => {
+      console.log('Cerrando servidor...');
+      try {
+        await provider.stop();
+        console.log('Bot cerrado exitosamente');
+        process.exit(0);
+      } catch (error) {
+        console.error('Error durante el cierre:', error);
+        process.exit(1);
+      }
+    };
+
+    // Manejadores de señales del sistema
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+    
+    // Manejador de errores no capturados
+    process.on('uncaughtException', (error) => {
+      console.error('Error no capturado:', error);
+      shutdown();
+    });
+
+  } catch (error) {
+    console.error('Error al iniciar el bot:', error);
+    process.exit(1);
+  }
 };
 
 main();
