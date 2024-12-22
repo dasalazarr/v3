@@ -2,6 +2,7 @@ import  { addKeyword, EVENTS } from "@builderbot/bot"
 import { faqFlow } from "./faqFlow"
 import sheetsServices from "../services/sheetsServices"
 import { registerFlow } from "./registerFlow";
+import { reservarCitaFlow } from './reservarCitaFlow';
 
 const mainFlow = addKeyword(EVENTS.WELCOME)
   .addAction(async (ctx, ctxFn) => {
@@ -12,6 +13,8 @@ const mainFlow = addKeyword(EVENTS.WELCOME)
         ctxFn.gotoFlow(faqFlow)
     } 
 
-  });
+  })
+  .addKeyword('Reservar cita')
+  .gotoFlow(reservarCitaFlow)
 
 export { mainFlow };

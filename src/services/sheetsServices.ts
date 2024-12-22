@@ -1,9 +1,11 @@
 import { google } from "googleapis";
 import { sheets_v4 } from "googleapis/build/src/apis/sheets";
+import { calendar_v3 } from "googleapis/build/src/apis/calendar";
 import { config } from "../config";
 
 class SheetManager {
   private sheets: sheets_v4.Sheets;
+  private calendar: calendar_v3.Calendar;
   private spreadsheetId: string;
 
   constructor(spreadsheetId: string, privateKey: string, clientEmail: string) {
@@ -12,10 +14,14 @@ class SheetManager {
         private_key: privateKey,
         client_email: clientEmail,
       },
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+      scopes: [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/calendar",
+      ],
     });
 
     this.sheets = google.sheets({ version: "v4", auth });
+    this.calendar = google.calendar({ version: "v3", auth });
     this.spreadsheetId = spreadsheetId;
   }
 
@@ -42,7 +48,7 @@ class SheetManager {
   // Función para agregar una conversación al inicio de la pestaña del usuario
   async addConverToUser(
     number: string,
-    conversation: { role: string, content: string }[]
+    conversation: { role: string; content: string }[]
   ): Promise<void> {
     try {
       const question = conversation.find((c) => c.role === "user")?.content;
@@ -77,7 +83,7 @@ class SheetManager {
     }
   }
 
-      // Función para obtener las preguntas/respuestas invertidas
+  // Función para obtener las preguntas/respuestas invertidas
   async getUserConv(number: string): Promise<any[]> {
     try {
       const result = await this.sheets.spreadsheets.values.get({
@@ -110,45 +116,88 @@ class SheetManager {
     }
   }
 
-  async createUser(number: string, name: string, mail:string): Promise<void> {
+  async createUser(number: string, name: string, mail: string): Promise<void> {
     try {
-        // Agregar el usuario a la pestaña 'Users'
-        await this.sheets.spreadsheets.values.append({
-          spreadsheetId: this.spreadsheetId,
-          range: "Users!A:C",
-          valueInputOption: "RAW",
-          requestBody: {
-            values: [[number, name, mail]],
-          },
-        });
-      
-        // Crear una nueva pestaña con el nombre del número de teléfono
-        await this.sheets.spreadsheets.batchUpdate({
-          spreadsheetId: this.spreadsheetId,
-          requestBody: {
-            requests: [
-              {
-                addSheet: {
-                  properties: {
-                    title: number,
-                  },
+      // Agregar el usuario a la pestaña 'Users'
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId: this.spreadsheetId,
+        range: "Users!A:C",
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[number, name, mail]],
+        },
+      });
+
+      // Crear una nueva pestaña con el nombre del número de teléfono
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: this.spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: number,
                 },
               },
-            ],
-          },
-        });
-      } catch (error) {
-        console.error("Error al crear usuario o nueva pestaña:", error);
-      }
+            },
+          ],
+        },
+      });
+    } catch (error) {
+      console.error("Error al crear usuario o nueva pestaña:", error);
     }
-  }  
+  }
 
-  
+  async reservarCita(fecha: string, hora: string, paciente: string) {
+    // Validar la fecha y hora
+    const fechaHora = new Date(`${fecha}T${hora}`);
+    if (isNaN(fechaHora.getTime())) {
+      throw new Error('Fecha y hora inválidas.');
+    }
 
-  export default new SheetManager(
-        config.spreadsheetId,
-        config.privateKey,
-        config.clientEmail
-      );
+    // Agregar la cita a Google Sheets
+    await this.agregarCitaAGoogleSheets(fechaHora, paciente);
 
+    // Crear un evento en Google Calendar
+    await this.crearEventoEnGoogleCalendar(fechaHora, paciente);
 
+    return 'Cita reservada con éxito.';
+  }
+
+  async agregarCitaAGoogleSheets(fechaHora: Date, paciente: string) {
+    const sheetData = await this.sheets.spreadsheets.values.append({
+      spreadsheetId: this.spreadsheetId,
+      range: 'Citas!A:B',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[fechaHora.toISOString(), paciente]],
+      },
+    });
+  }
+
+  async crearEventoEnGoogleCalendar(fechaHora: Date, paciente: string) {
+    const evento = {
+      summary: `Cita con ${paciente}`,
+      description: `Cita con ${paciente}`,
+      start: {
+        dateTime: fechaHora.toISOString(),
+      },
+      end: {
+        dateTime: new Date(fechaHora.getTime() + 60 * 60 * 1000).toISOString(),
+      },
+    };
+
+    const respuesta = await this.calendar.events.insert({
+      calendarId: 'primary',
+      requestBody: evento,
+    });
+
+    console.log(`Evento creado: ${respuesta.data.htmlLink}`);
+  }
+}
+
+export default new SheetManager(
+  config.spreadsheetId,
+  config.privateKey,
+  config.clientEmail
+);
