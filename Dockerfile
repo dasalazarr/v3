@@ -1,47 +1,51 @@
+# -----------------------
 # Build stage
+# -----------------------
 FROM node:21-bullseye-slim as builder
 
-# Establecer el directorio de trabajo
 WORKDIR /app
 
-# Habilitar pnpm
 ENV PNPM_HOME=/usr/local/bin
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copiar archivos de configuración
+# 1. Copiar archivos de configuración
 COPY package.json tsconfig.json rollup.config.js ./
 
-# Instalar dependencias
+# 2. Instalar dependencias (en modo build)
 RUN pnpm install
 
-# Copiar código fuente
+# 3. Copiar código fuente
 COPY src/ ./src/
 
-# Construir la aplicación
+# 4. Copiar carpeta assets (IMPORTANTE para que el build la vea si la necesitas en build)
+COPY assets/ ./assets/
+
+# 5. Construir la aplicación
 RUN pnpm build
 
-# Production stage
-FROM node:21-bullseye-slim
 
+# -----------------------
+# Production stage
+# -----------------------
+FROM node:21-bullseye-slim
 WORKDIR /app
 
-# Habilitar pnpm en producción
 ENV PNPM_HOME=/usr/local/bin
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copiar solo los archivos necesarios del builder
+# Copiamos del builder:
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/dist ./dist
+# (OPCIONAL) Copiar también los assets originales.
+# Esto es esencial si tu aplicación en runtime 
+# necesita leer los archivos estáticos:
+COPY --from=builder /app/assets ./assets
 
 # Instalar solo dependencias de producción
 RUN pnpm install --prod
 
-# Configurar variables de entorno
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Exponer el puerto
 EXPOSE 3000
-
-# Comando para ejecutar la aplicación
 CMD ["node", "./dist/app.js"]
