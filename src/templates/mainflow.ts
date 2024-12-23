@@ -1,10 +1,11 @@
 import { addKeyword, EVENTS } from "@builderbot/bot"
 import { faqFlow } from "./faqFlow"
 import sheetsServices from "../services/sheetsServices"
-import { registerFlow } from "./registerFlow";
-import { reservarCitaFlow } from './reservarCitaFlow';
+import { registerFlow } from "./registerFlow"
+import { reservarCitaFlow } from './reservarCitaFlow'
+import { infoFlow } from './infoFlow'
 
-const mainFlow = addKeyword(EVENTS.WELCOME)
+const flowPrincipal = addKeyword(EVENTS.WELCOME)
     .addAnswer('¡Bienvenido! 👋 ¿En qué puedo ayudarte?\n\n' +
               '1️⃣ Escribe "reservar" o "agendar" para programar una cita\n' +
               '2️⃣ Escribe "info" para obtener información sobre nuestros productos')
@@ -15,4 +16,5 @@ const mainFlow = addKeyword(EVENTS.WELCOME)
         }
     });
 
-export { mainFlow, reservarCitaFlow };
+export default flowPrincipal;
+export { reservarCitaFlow, infoFlow };

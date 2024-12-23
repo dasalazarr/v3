@@ -6,7 +6,10 @@ export const reservarCitaFlow = addKeyword(['reservar', 'agendar', 'cita', 'Rese
     .addAction({ capture: true }, async (ctx, { flowDynamic, state }) => {
         const fecha = ctx.body;
         await state.update({ fecha });
-        return flowDynamic('¿A qué hora te gustaría la cita? (Formato: HH:MM, ejemplo 14:30)');
+        return flowDynamic([
+            'Por favor, elige un horario disponible entre 9:00 AM y 6:00 PM',
+            'Formato: HH:MM (ejemplo: 14:30)'
+        ]);
     })
     .addAction({ capture: true }, async (ctx, { flowDynamic, state }) => {
         const hora = ctx.body;
@@ -16,13 +19,17 @@ export const reservarCitaFlow = addKeyword(['reservar', 'agendar', 'cita', 'Rese
         try {
             const resultado = await sheetsServices.reservarCita(fecha, hora, paciente);
             return flowDynamic([
-                `¡Perfecto! Tu cita ha sido agendada para el ${fecha} a las ${hora}.`,
+                `¡Perfecto! Tu cita ha sido agendada para el ${resultado.fechaHora}.`,
+                'Se ha enviado un correo con los detalles de la cita.',
+                `Puedes ver la cita en tu calendario aquí: ${resultado.linkCalendario}`,
+                'Recibirás un recordatorio por email 24 horas antes y una notificación 30 minutos antes de la cita.',
                 'Si necesitas modificar o cancelar tu cita, no dudes en avisarnos.'
             ]);
         } catch (error) {
             return flowDynamic([
-                'Lo siento, hubo un problema al agendar tu cita.',
-                'Por favor, intenta con otra fecha u hora, o contacta con nuestro servicio al cliente.'
+                'Lo siento, hubo un problema al agendar tu cita:',
+                error.message,
+                'Por favor, intenta nuevamente con otra fecha u hora.'
             ]);
         }
     });

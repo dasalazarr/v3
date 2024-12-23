@@ -1,12 +1,12 @@
 import { createFlow } from "@builderbot/bot";
-import { mainFlow } from "./mainflow";
+import flowPrincipal, { reservarCitaFlow, infoFlow } from "./mainflow";
 import { faqFlow } from "./faqFlow";
 import { registerFlow } from "./registerFlow";
 
 export default createFlow([
-
-    mainFlow,
+    flowPrincipal,
+    reservarCitaFlow,
+    infoFlow,
     faqFlow,
     registerFlow
-
 ]);
