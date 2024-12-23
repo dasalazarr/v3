@@ -5,24 +5,29 @@ FROM node:21-bullseye-slim as builder
 
 WORKDIR /app
 
+# Instalar pnpm globalmente
 ENV PNPM_HOME=/usr/local/bin
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# 1. Copiar archivos de configuración
-COPY package.json tsconfig.json rollup.config.js ./
+# Instalar dependencias de compilación necesarias
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-# 2. Instalar dependencias (en modo build)
+# 1. Copiar archivos de configuración
+COPY package.json pnpm-lock.yaml tsconfig.json rollup.config.js ./
+
+# 2. Instalar todas las dependencias (incluyendo devDependencies)
 RUN pnpm install
 
-# 3. Copiar código fuente
+# 3. Copiar código fuente y assets
 COPY src/ ./src/
-
-# 4. Copiar carpeta assets (IMPORTANTE para que el build la vea si la necesitas en build)
 COPY assets/ ./assets/
 
-# 5. Construir la aplicación
+# 4. Construir la aplicación
 RUN pnpm build
-
 
 # -----------------------
 # Production stage
@@ -30,22 +35,25 @@ RUN pnpm build
 FROM node:21-bullseye-slim
 WORKDIR /app
 
+# Instalar pnpm
 ENV PNPM_HOME=/usr/local/bin
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copiamos del builder:
-COPY --from=builder /app/package.json ./
+# Copiar archivos necesarios del builder
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=builder /app/dist ./dist
-# (OPCIONAL) Copiar también los assets originales.
-# Esto es esencial si tu aplicación en runtime 
-# necesita leer los archivos estáticos:
 COPY --from=builder /app/assets ./assets
 
 # Instalar solo dependencias de producción
 RUN pnpm install --prod
 
+# Configuración de producción
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# Verificar que los archivos necesarios existen
+RUN ls -la /app/dist && \
+    test -f /app/dist/app.js
+
 EXPOSE 3000
-CMD ["node", "./dist/app.js"]
+CMD ["node", "--enable-source-maps", "./dist/app.js"]
