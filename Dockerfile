@@ -5,55 +5,61 @@ FROM node:21-bullseye-slim as builder
 
 WORKDIR /app
 
-# Instalar pnpm globalmente
-ENV PNPM_HOME=/usr/local/bin
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Instalar dependencias de compilación necesarias
-RUN apt-get update && apt-get install -y \
-    python3 \
+# Instalar pnpm y dependencias de sistema necesarias en una sola capa
+RUN corepack enable && \
+    corepack prepare pnpm@latest --activate && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3-minimal \
     make \
     g++ \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# 1. Copiar archivos de configuración
-COPY package.json pnpm-lock.yaml tsconfig.json rollup.config.js ./
+# Copiar solo los archivos necesarios para la instalación de dependencias
+COPY package.json pnpm-lock.yaml ./
 
-# 2. Instalar todas las dependencias (incluyendo devDependencies)
-RUN pnpm install
+# Instalar dependencias con cache optimizado
+RUN pnpm install --frozen-lockfile
 
-# 3. Copiar código fuente y assets
+# Copiar archivos de configuración
+COPY tsconfig.json rollup.config.js ./
+
+# Copiar código fuente y assets
 COPY src/ ./src/
 COPY assets/ ./assets/
 
-# 4. Construir la aplicación
-RUN pnpm build
+# Construir la aplicación
+RUN pnpm build && \
+    pnpm prune --prod
 
 # -----------------------
 # Production stage
 # -----------------------
-FROM node:21-bullseye-slim
+FROM node:21-bullseye-slim as production
+
 WORKDIR /app
 
-# Instalar pnpm
-ENV PNPM_HOME=/usr/local/bin
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Copiar archivos necesarios del builder
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
+# Copiar solo los archivos necesarios
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
 COPY --from=builder /app/assets ./assets
 
-# Instalar solo dependencias de producción
-RUN pnpm install --prod
-
 # Configuración de producción
-ENV NODE_ENV=production
-ENV PORT=3000
+ENV NODE_ENV=production \
+    PORT=3000
 
-# Verificar que los archivos necesarios existen
-RUN ls -la /app/dist && \
-    test -f /app/dist/app.js
+# Verificación de salud
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
-EXPOSE 3000
+EXPOSE ${PORT}
+
+# Usar un usuario no root
+RUN useradd -r -u 1001 -g root botuser && \
+    chown -R botuser:root /app
+
+USER botuser
+
 CMD ["node", "--enable-source-maps", "./dist/app.js"]

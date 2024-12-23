@@ -216,6 +216,79 @@ class SheetManager {
       throw new Error('Error al crear el evento en el calendario');
     }
   }
+
+  async getUserConv(number: string): Promise<any[]> {
+    try {
+      if (!number) {
+        throw new Error('Se requiere un número de teléfono');
+      }
+
+      const result = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${number}!A:B`,
+      });
+
+      const rows = result.data.values;
+      if (!rows || rows.length === 0) {
+        return [];
+      }
+
+      // Tomar las últimas preguntas/respuestas (hasta un máximo de 3) y revertir el orden
+      const lastConversations = rows.slice(-3).reverse();
+
+      // Formatear las respuestas en el formato solicitado
+      return lastConversations.flatMap(([userQuestion, assistantAnswer]) => [
+        { role: "user", content: userQuestion },
+        { role: "assistant", content: assistantAnswer }
+      ]);
+    } catch (error) {
+      console.error("Error al obtener la conversación del usuario:", error);
+      throw new Error('Error al obtener el historial de conversación');
+    }
+  }
+
+  async addConverToUser(
+    number: string,
+    conversation: { role: string; content: string }[]
+  ): Promise<void> {
+    try {
+      if (!number) {
+        throw new Error('Se requiere un número de teléfono');
+      }
+
+      const question = conversation.find((c) => c.role === "user")?.content;
+      const answer = conversation.find((c) => c.role === "assistant")?.content;
+
+      if (!question || !answer) {
+        throw new Error("La conversación debe contener tanto una pregunta como una respuesta");
+      }
+
+      // Leer las filas actuales
+      const sheetData = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${number}!A:C`,
+      });
+
+      const rows = sheetData.data.values || [];
+      const date = new Date().toISOString();
+
+      // Agregar la nueva conversación en la primera fila
+      rows.unshift([question, answer, date]);
+
+      // Escribir las filas de nuevo en la hoja
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: this.spreadsheetId,
+        range: `${number}!A:C`,
+        valueInputOption: "RAW",
+        requestBody: {
+          values: rows,
+        },
+      });
+    } catch (error) {
+      console.error("Error al agregar la conversación:", error);
+      throw new Error('Error al guardar la conversación');
+    }
+  }
 }
 
 export default new SheetManager(
