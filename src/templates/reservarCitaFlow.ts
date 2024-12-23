@@ -3,6 +3,9 @@ import sheetsServices from "../services/sheetsServices";
 
 const reservarCitaFlow = addKeyword('Reservar cita')
   .addAction(async (ctx, ctxFn) => {
+    ctx.reply('¡Genial! Para agendar tu cita, por favor proporciona la fecha y la hora en el siguiente formato: Reservar cita para el [fecha] a [hora].');
+  })
+  .addAction(async (ctx, ctxFn) => {
     const mensaje = ctx.message.text;
     const regex = /Reservar cita para el (.+) a (.+)/;
     const matches = mensaje.match(regex);

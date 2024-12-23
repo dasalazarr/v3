@@ -5,6 +5,7 @@ import { registerFlow } from "./registerFlow";
 import { reservarCitaFlow } from './reservarCitaFlow';
 
 const mainFlow = addKeyword(EVENTS.WELCOME)
+  .addAnswer('¡Bienvenido! ¿En qué puedo ayudarte?')
   .addAction(async (ctx, ctxFn) => {
     const isUser = await sheetsServices.userExists(ctx.from);
     if (!isUser) {
@@ -12,9 +13,11 @@ const mainFlow = addKeyword(EVENTS.WELCOME)
     }else{
         ctxFn.gotoFlow(faqFlow)
     } 
-
   })
-  .addKeyword('Reservar cita')
-  .gotoFlow(reservarCitaFlow)
 
-export { mainFlow };
+const reservarCitaKeyword = addKeyword('Reservar cita')
+  .addAction((ctx, { gotoFlow }) => {
+    return gotoFlow(reservarCitaFlow)
+  })
+
+export { mainFlow, reservarCitaKeyword };
