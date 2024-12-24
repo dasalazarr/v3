@@ -77,7 +77,7 @@ class SheetManager {
     }
   }
 
-      // Función para obtener las preguntas/respuestas invertidas
+  // Función para obtener las preguntas/respuestas invertidas
   async getUserConv(number: string): Promise<any[]> {
     try {
       const result = await this.sheets.spreadsheets.values.get({
@@ -110,15 +110,61 @@ class SheetManager {
     }
   }
 
+  async getUserThread(number: string): Promise<string | null> {
+    try {
+      const result = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: "Users!A:D",
+      });
+
+      const rows = result.data.values || [];
+      const userRow = rows.find(row => row[0] === number);
+      return userRow?.[3] || null;
+    } catch (error) {
+      console.error("Error al obtener thread del usuario:", error);
+      return null;
+    }
+  }
+
+  async saveUserThread(number: string, threadId: string): Promise<void> {
+    try {
+      const result = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: "Users!A:D",
+      });
+
+      const rows = result.data.values || [];
+      const userRowIndex = rows.findIndex(row => row[0] === number);
+
+      const range = userRowIndex !== -1 
+        ? `Users!D${userRowIndex + 1}`
+        : "Users!A:D";
+
+      const values = userRowIndex !== -1
+        ? [[threadId]]
+        : [[number, "", "", threadId]];
+
+      await this.sheets.spreadsheets.values[userRowIndex !== -1 ? 'update' : 'append']({
+        spreadsheetId: this.spreadsheetId,
+        range,
+        valueInputOption: "RAW",
+        ...(userRowIndex === -1 && { insertDataOption: "INSERT_ROWS" }),
+        requestBody: { values }
+      });
+    } catch (error) {
+      console.error("Error al guardar thread del usuario:", error);
+    }
+  }
+
   async createUser(number: string, name: string, mail:string): Promise<void> {
     try {
         // Agregar el usuario a la pestaña 'Users'
         await this.sheets.spreadsheets.values.append({
           spreadsheetId: this.spreadsheetId,
-          range: "Users!A:C",
+          range: "Users!A:D",
           valueInputOption: "RAW",
           requestBody: {
-            values: [[number, name, mail]],
+            values: [[number, name, mail, ""]],
           },
         });
       
@@ -150,5 +196,3 @@ class SheetManager {
         config.privateKey,
         config.clientEmail
       );
-
-
