@@ -14,10 +14,9 @@ COPY package.json tsconfig.json rollup.config.js ./
 # 2. Instalar dependencias (en modo build)
 RUN pnpm install
 
-# 3. Copiar código fuente
+# 3. Copiar código fuente y archivos de configuración
 COPY src/ ./src/
-
-# 4. Copiar carpeta assets (IMPORTANTE para que el build la vea si la necesitas en build)
+COPY .env ./
 COPY assets/ ./assets/
 
 # 5. Construir la aplicación
@@ -36,9 +35,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Copiamos del builder:
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/dist ./dist
-# (OPCIONAL) Copiar también los assets originales.
-# Esto es esencial si tu aplicación en runtime 
-# necesita leer los archivos estáticos:
+COPY --from=builder /app/.env ./
 COPY --from=builder /app/assets ./assets
 
 # Instalar solo dependencias de producción
