@@ -27,6 +27,12 @@ class aiServices {
 
   async chatWithAssistant(message: string, threadId?: string): Promise<{ response: string; threadId: string }> {
     try {
+      if (!config.assistant_id) {
+        throw new Error("assistant_id no está configurado en las variables de entorno");
+      }
+
+      console.log("Using assistant_id:", config.assistant_id);
+      
       const thread = threadId 
         ? { id: threadId }
         : await this.openAI.beta.threads.create();
@@ -55,9 +61,11 @@ class aiServices {
       return { response: "No se pudo obtener una respuesta", threadId: thread.id };
     } catch (err) {
       console.error("Error al conectar con OpenAI Assistant:", err);
+      if (err instanceof Error) {
+        console.error("Detalles del error:", err.message);
+      }
       return { response: "ERROR", threadId: threadId || "" };
     }
-  
   }
 }
 
