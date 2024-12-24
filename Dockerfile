@@ -16,7 +16,6 @@ RUN pnpm install
 
 # 3. Copiar código fuente y archivos de configuración
 COPY src/ ./src/
-COPY .env ./
 COPY assets/ ./assets/
 
 # 5. Construir la aplicación
