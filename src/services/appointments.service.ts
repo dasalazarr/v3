@@ -16,20 +16,31 @@ export class AppointmentService {
   private calendarId: string;
 
   constructor() {
-    // Initialize Google OAuth2 client
-    const auth = new google.auth.JWT({
-      email: process.env.clientEmail,
-      key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      scopes: [
-        'https://www.googleapis.com/auth/calendar',
-        'https://www.googleapis.com/auth/spreadsheets'
-      ]
-    });
+    try {
+      // Initialize Google OAuth2 client
+      console.log('Initializing Google OAuth2 client...');
+      console.log('Client Email:', process.env.clientEmail);
+      console.log('Calendar ID:', process.env.GOOGLE_CALENDAR_ID);
+      
+      const auth = new google.auth.JWT({
+        email: process.env.clientEmail,
+        key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        scopes: [
+          'https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/spreadsheets'
+        ]
+      });
 
-    this.calendar = google.calendar({ version: 'v3', auth });
-    this.sheets = google.sheets({ version: 'v4', auth });
-    this.spreadsheetId = process.env.spreadsheetId || '';
-    this.calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+      this.calendar = google.calendar({ version: 'v3', auth });
+      this.sheets = google.sheets({ version: 'v4', auth });
+      this.spreadsheetId = process.env.spreadsheetId || '';
+      this.calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+      
+      console.log('Google services initialized successfully');
+    } catch (error) {
+      console.error('Error initializing Google services:', error);
+      throw error;
+    }
   }
 
   /**
@@ -85,6 +96,13 @@ export class AppointmentService {
    * Schedule a new appointment
    */
   async scheduleAppointment(appointment: Appointment): Promise<string> {
+    console.log('Starting appointment scheduling...');
+    console.log('Appointment details:', {
+      title: appointment.title,
+      startTime: appointment.startTime,
+      endTime: appointment.endTime
+    });
+
     // Validate dates
     if (appointment.startTime >= appointment.endTime) {
       throw new Error('End time must be after start time');
@@ -95,6 +113,7 @@ export class AppointmentService {
     }
 
     // Check for conflicts
+    console.log('Checking for conflicts...');
     const hasConflicts = await this.checkConflicts(
       appointment.startTime,
       appointment.endTime
@@ -105,6 +124,7 @@ export class AppointmentService {
     }
 
     try {
+      console.log('Creating calendar event...');
       // Create Calendar event
       const event = await this.calendar.events.insert({
         calendarId: this.calendarId,
@@ -113,24 +133,36 @@ export class AppointmentService {
           description: appointment.description,
           start: {
             dateTime: appointment.startTime.toISOString(),
+            timeZone: 'America/Bogota'
           },
           end: {
             dateTime: appointment.endTime.toISOString(),
+            timeZone: 'America/Bogota'
           },
         },
       });
 
       if (!event.data.id) {
-        throw new Error('Failed to create calendar event');
+        throw new Error('Failed to create calendar event: No event ID returned');
       }
 
+      console.log('Calendar event created successfully:', event.data.id);
+
       // Add to spreadsheet
+      console.log('Adding to spreadsheet...');
       await this.addToSheet(event.data.id, appointment);
+      console.log('Added to spreadsheet successfully');
 
       return event.data.id;
     } catch (error) {
       console.error('Error scheduling appointment:', error);
-      throw new Error('Failed to schedule appointment');
+      if (error.response) {
+        console.error('Google API Error:', {
+          status: error.response.status,
+          data: error.response.data
+        });
+      }
+      throw new Error(`Failed to schedule appointment: ${error.message}`);
     }
   }
 
