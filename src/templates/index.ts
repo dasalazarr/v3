@@ -4,10 +4,12 @@ import { registerFlow } from "./registerFlow";
 import { faqFlow } from "./faqFlow";
 import { appointmentFlow, cancelAppointmentFlow } from "./appointmentFlow";
 
-export default createFlow([
+const flows = createFlow([
     mainFlow,
     registerFlow,
     faqFlow,
     appointmentFlow,
     cancelAppointmentFlow
 ]);
+
+export default flows;

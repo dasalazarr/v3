@@ -1,12 +1,14 @@
-import { addKeyword } from "@builderbot/bot";
+import { addKeyword, EVENTS } from "@builderbot/bot";
 import { AppointmentController } from '../services/appointments.controller';
 
 const appointmentController = new AppointmentController();
 
 // Estado temporal para almacenar los datos de la cita durante el flujo
-const appointmentData = new Map();
+const appointmentData = new Map<string, any>();
 
-export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar'])
+export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar'], {
+  sensitive: true
+})
   .addAnswer(
     '¡Claro! Te ayudo a agendar una cita. ¿Para qué fecha te gustaría? (Por favor, usa el formato DD/MM/YYYY)',
     { capture: true },
@@ -20,7 +22,11 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar'])
       }
       
       const [, day, month, year] = date.match(dateRegex);
-      const appointmentDate = new Date(year, month - 1, day);
+      const appointmentDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day)
+      );
       
       if (appointmentDate < new Date()) {
         await fallBack('La fecha no puede ser en el pasado. Por favor, ingresa una fecha futura.');
