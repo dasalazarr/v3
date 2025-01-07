@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { JWT } from 'google-auth-library';
 
 interface Appointment {
   startTime: Date;
