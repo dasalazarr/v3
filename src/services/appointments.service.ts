@@ -18,7 +18,7 @@ export class AppointmentService {
   constructor() {
     // Initialize Google OAuth2 client
     const auth = new google.auth.JWT({
-      email: process.env.CLIENT_EMAIL,
+      email: process.env.clientEmail,
       key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       scopes: [
         'https://www.googleapis.com/auth/calendar',
@@ -28,7 +28,7 @@ export class AppointmentService {
 
     this.calendar = google.calendar({ version: 'v3', auth });
     this.sheets = google.sheets({ version: 'v4', auth });
-    this.spreadsheetId = process.env.SPREADSHEET_ID || '';
+    this.spreadsheetId = process.env.spreadsheetId || '';
     this.calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
   }
 
