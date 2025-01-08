@@ -51,17 +51,18 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar'], {
       const [, hours, minutes] = time.match(timeRegex);
       const data = appointmentData.get(ctx.from);
       const appointmentDate = data.date;
-      appointmentDate.setHours(parseInt(hours), parseInt(minutes));
-      
+      appointmentDate.setUTCHours(parseInt(hours) + 5, parseInt(minutes));
+
       // Validar horario de atención (asumiendo 9:00 a 18:00)
-      if (appointmentDate.getHours() < 9 || appointmentDate.getHours() >= 18) {
+      const localHour = parseInt(hours); // Usar la hora ingresada directamente
+      if (localHour < 9 || localHour >= 18) {
         await fallBack('El horario de atención es de 9:00 a 18:00. Por favor, elige otro horario.');
         return;
       }
 
       appointmentData.set(ctx.from, { 
         ...data, 
-        startTime: appointmentDate,
+        startTime: new Date(appointmentDate),
         endTime: new Date(appointmentDate.getTime() + 60 * 60 * 1000) // 1 hora de duración
       });
     }

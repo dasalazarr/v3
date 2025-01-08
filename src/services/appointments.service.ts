@@ -133,11 +133,11 @@ export class AppointmentService {
           description: appointment.description,
           start: {
             dateTime: appointment.startTime.toISOString(),
-            timeZone: 'America/Bogota'
+            timeZone: 'America/Lima'  // UTC-5
           },
           end: {
             dateTime: appointment.endTime.toISOString(),
-            timeZone: 'America/Bogota'
+            timeZone: 'America/Lima'  // UTC-5
           },
         },
       });
