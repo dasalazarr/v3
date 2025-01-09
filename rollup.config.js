@@ -6,8 +6,17 @@ export default {
         file: 'dist/app.js',
         format: 'esm',
     },
+    external: [
+        '@builderbot/bot',
+        'googleapis',
+        'google-auth-library',
+        'dotenv'
+    ],
     onwarn: (warning) => {
         if (warning.code === 'UNRESOLVED_IMPORT') return
     },
-    plugins: [typescript()],
+    plugins: [typescript({
+        tsconfig: './tsconfig.json',
+        clean: true
+    })],
 }
