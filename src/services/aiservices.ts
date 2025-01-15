@@ -15,13 +15,23 @@ class aiServices {
     this.openAI = new OpenAI({ apiKey });
   }
 
+  private cleanFormatting(text: string): string {
+    return text
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/###/g, '')
+      .replace(/\n\s*#/g, '\n')
+      .trim();
+  }
+
   private formatResponse(content: string): FormattedResponse {
+    const cleanContent = this.cleanFormatting(content);
     try {
-      const parsed = JSON.parse(content);
+      const parsed = JSON.parse(cleanContent);
       if (parsed.resumenEjecutivo) return parsed;
     } catch {
       return {
-        resumenEjecutivo: content,
+        resumenEjecutivo: cleanContent,
         datosClave: [],
         recomendacionPrincipal: "",
         proximosPasos: []
