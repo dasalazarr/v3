@@ -1,6 +1,13 @@
 import OpenAI from "openai";
 import { config } from "~/config";
 
+interface FormattedResponse {
+  resumenEjecutivo: string;
+  datosClave?: string[];
+  recomendacionPrincipal?: string;
+  proximosPasos?: string[];
+}
+
 class aiServices {
   private openAI: OpenAI;
 
@@ -8,7 +15,21 @@ class aiServices {
     this.openAI = new OpenAI({ apiKey });
   }
 
-  async chat(prompt: string, messages: any[]): Promise<string> {
+  private formatResponse(content: string): FormattedResponse {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.resumenEjecutivo) return parsed;
+    } catch {
+      return {
+        resumenEjecutivo: content,
+        datosClave: [],
+        recomendacionPrincipal: "",
+        proximosPasos: []
+      };
+    }
+  }
+
+  async chat(prompt: string, messages: any[]): Promise<FormattedResponse> {
     try {
       const completion = await this.openAI.chat.completions.create({
         model: config.Model,
@@ -18,10 +39,11 @@ class aiServices {
         ],
       });
 
-      return completion.choices[0]?.message?.content || "No response";
+      const content = completion.choices[0]?.message?.content || "No response";
+      return this.formatResponse(content);
     } catch (err) {
       console.error("Error al conectar con OpenAI:", err);
-      return "ERROR";
+      return this.formatResponse("ERROR");
     }
   }
 
