@@ -6,11 +6,11 @@ const appointmentController = new AppointmentController();
 // Estado temporal para almacenar los datos de la cita durante el flujo
 const appointmentData = new Map<string, any>();
 
-export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar'], {
+export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'reunion'], {
   sensitive: true
 })
   .addAnswer(
-    '¡Claro! Te ayudo a agendar una cita. ¿Para qué fecha te gustaría? (Por favor, usa el formato DD/MM/YYYY)',
+    '¡Claro! Te ayudo a agendar una reunion. ¿Para qué fecha te gustaría? (Por favor, usa el formato DD/MM/YYYY)',
     { capture: true },
     async (ctx, { fallBack }) => {
       const date = ctx.body;
@@ -37,7 +37,7 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar'], {
     }
   )
   .addAnswer(
-    '¿A qué hora te gustaría la cita? (Por favor, usa formato 24hrs, ejemplo: 14:30)',
+    '¿A qué hora te gustaría la reunion? (Por favor, usa formato 24hrs, ejemplo: 14:30)',
     { capture: true },
     async (ctx, { fallBack }) => {
       const time = ctx.body;
@@ -68,7 +68,7 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar'], {
     }
   )
   .addAnswer(
-    '¿Cuál es el motivo de tu cita?',
+    '¿Cuál es el motivo de tu reunion',
     { capture: true },
     async (ctx) => {
       const data = appointmentData.get(ctx.from);

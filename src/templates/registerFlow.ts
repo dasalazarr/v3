@@ -2,7 +2,7 @@ import { addKeyword, EVENTS } from "@builderbot/bot";
 import sheetsServices from "~/services/sheetsServices";
 
 const registerFlow = addKeyword(EVENTS.ACTION)
-  .addAnswer("¿Quieres comenzar con el Registro?", { 
+  .addAnswer("Khipu quiere conocer. Por favor registra tus datos", { 
     capture: true, 
     buttons: [{ body: "Sí, quiero!" }, { body: "No, gracias!" }] 
   },
