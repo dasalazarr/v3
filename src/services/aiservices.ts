@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { config } from "~/config";
+import RagService from './ragService';
 
 interface FormattedResponse {
   resumenEjecutivo: string;
@@ -8,11 +9,18 @@ interface FormattedResponse {
   proximosPasos?: string[];
 }
 
+interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 class aiServices {
   private openAI: OpenAI;
+  private ragService: RagService;
 
   constructor(apiKey: string) {
     this.openAI = new OpenAI({ apiKey });
+    this.ragService = new RagService();
   }
 
   private cleanFormatting(text: string): string {
@@ -39,32 +47,50 @@ class aiServices {
     }
   }
 
-  async chat(prompt: string, messages: any[]): Promise<FormattedResponse> {
+  async chat(prompt: string, messages: ChatMessage[], useRag: boolean = false): Promise<FormattedResponse> {
     try {
+      let context: string[] = [];
+      let systemPrompt = prompt;
+
+      if (useRag) {
+        try {
+          context = await this.ragService.queryDocuments(prompt);
+          if (context.length > 0) {
+            const ragPrompt = await this.ragService.generateResponse(prompt, context);
+            systemPrompt = ragPrompt;
+          }
+        } catch (ragError) {
+          console.error('Error en RAG, continuando sin contexto:', ragError);
+        }
+      }
+
       const completion = await this.openAI.chat.completions.create({
         model: config.Model,
         messages: [
-          { role: "system", content: prompt },
+          { role: "system", content: systemPrompt },
           ...messages,
         ],
+        temperature: useRag ? 0.3 : 0.7, // Menor temperatura para respuestas basadas en RAG
       });
 
-      const content = completion.choices[0]?.message?.content || "No response";
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from OpenAI');
+      }
+
       return this.formatResponse(content);
     } catch (err) {
-      console.error("Error al conectar con OpenAI:", err);
-      return this.formatResponse("ERROR");
+      console.error("Error en chat:", err);
+      return this.formatResponse(err instanceof Error ? err.message : "Error desconocido");
     }
   }
 
   async chatWithAssistant(message: string, threadId?: string): Promise<{ response: string; threadId: string }> {
-    try {
-      if (!config.assistant_id) {
-        throw new Error("assistant_id no está configurado en las variables de entorno");
-      }
+    if (!config.assistant_id) {
+      throw new Error("assistant_id no está configurado en las variables de entorno");
+    }
 
-      console.log("Using assistant_id:", config.assistant_id);
-      
+    try {
       const thread = threadId 
         ? { id: threadId }
         : await this.openAI.beta.threads.create();
@@ -78,25 +104,24 @@ class aiServices {
         assistant_id: config.assistant_id
       });
 
-      if (run.status === 'completed') {
-        const messages = await this.openAI.beta.threads.messages.list(thread.id);
-        const lastMessage = messages.data.find(msg => msg.role === 'assistant');
-        
-        if (lastMessage && lastMessage.content && lastMessage.content[0].type === 'text') {
-          return { 
-            response: lastMessage.content[0].text.value,
-            threadId: thread.id 
-          };
-        }
+      if (run.status !== 'completed') {
+        throw new Error(`Run failed with status: ${run.status}`);
       }
 
-      return { response: "No se pudo obtener una respuesta", threadId: thread.id };
-    } catch (err) {
-      console.error("Error al conectar con OpenAI Assistant:", err);
-      if (err instanceof Error) {
-        console.error("Detalles del error:", err.message);
+      const messages = await this.openAI.beta.threads.messages.list(thread.id);
+      const lastMessage = messages.data.find(msg => msg.role === 'assistant');
+      
+      if (lastMessage?.content?.[0]?.type !== 'text') {
+        throw new Error('No valid response from assistant');
       }
-      return { response: "ERROR", threadId: threadId || "" };
+
+      return { 
+        response: lastMessage.content[0].text.value,
+        threadId: thread.id 
+      };
+    } catch (error) {
+      console.error('Error in chatWithAssistant:', error);
+      throw error;
     }
   }
 }

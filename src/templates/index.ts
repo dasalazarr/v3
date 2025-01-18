@@ -3,13 +3,15 @@ import { mainFlow } from "./mainflow";
 import { registerFlow } from "./registerFlow";
 import { faqFlow } from "./faqFlow";
 import { appointmentFlow, cancelAppointmentFlow } from "./appointmentFlow";
+import { contractFlow } from "./contractFlow";
 
 const flows = createFlow([
     mainFlow,
     registerFlow,
     faqFlow,
     appointmentFlow,
-    cancelAppointmentFlow
+    cancelAppointmentFlow,
+    contractFlow
 ]);
 
 export default flows;
