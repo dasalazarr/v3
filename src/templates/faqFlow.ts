@@ -20,7 +20,7 @@ export const faqFlow = addKeyword(EVENTS.ACTION)
         return endFlow("Error de configuración del servicio.");
       }
 
-      const AI = new aiServices(config.apiKey);
+      const AI = new aiServices();
       console.log("🔍 Buscando thread para:", ctx.from);
       const threadId = await sheetsServices.getUserThread(ctx.from);
       console.log("Thread encontrado:", threadId || "Nuevo usuario");

@@ -3,11 +3,15 @@ import { MemoryDB as Database } from "@builderbot/bot";
 import { provider } from "./provider";
 import { config } from "./config";
 import templates from "./templates";
+import aiServices from "./services/aiservices";
 
 const PORT = process.env.PORT || config.PORT || 3000;
 
 const main = async () => {
   try {
+    // Inicializar servicios
+    const ai = new aiServices();
+    
     const { handleCtx, httpServer } = await createBot({
       flow: templates,
       provider: provider,

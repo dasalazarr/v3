@@ -1,7 +1,7 @@
 import { ChromaClient, Collection } from 'chromadb';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { Document } from 'langchain/document';
-import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
+import { OpenAIEmbeddings } from '@langchain/openai';
 import { config } from '~/config';
 
 interface DocumentMetadata {

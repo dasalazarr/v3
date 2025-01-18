@@ -18,8 +18,11 @@ class aiServices {
   private openAI: OpenAI;
   private ragService: RagService;
 
-  constructor(apiKey: string) {
-    this.openAI = new OpenAI({ apiKey });
+  constructor() {
+    if (!config.apiKey) {
+      throw new Error("OpenAI API key is not configured. Please set OPENAI_API_KEY or apiKey in your environment variables.");
+    }
+    this.openAI = new OpenAI({ apiKey: config.apiKey });
     this.ragService = new RagService();
   }
 

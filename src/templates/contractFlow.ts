@@ -1,8 +1,8 @@
 import { addKeyword } from "@builderbot/bot";
-import aiServices from '../services/aiservices';
+import aiServices from "~/services/aiservices";
 import RagService from '../services/ragService';
 
-const aiService = new aiServices(process.env.OPENAI_API_KEY);
+const aiService = new aiServices();
 const ragService = new RagService();
 
 export const contractFlow = addKeyword(['contrato', 'documento'])
