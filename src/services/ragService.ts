@@ -18,13 +18,15 @@ class RagService {
     private initialized: boolean = false;
 
     constructor() {
+        // Inicializar ChromaDB con configuración persistente
         this.chromaClient = new ChromaClient({
-            path: "http://localhost:8000",  // ChromaDB server URL
+            path: "http://localhost:8000",
             fetchOptions: {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                signal: AbortSignal.timeout(60000)  // 60 second timeout
+                // Aumentar el timeout y añadir retry
+                signal: AbortSignal.timeout(120000), // 2 minutos de timeout
             }
         });
         this.embeddings = new OpenAIEmbeddings({
@@ -34,20 +36,58 @@ class RagService {
 
     private async ensureInitialized(): Promise<void> {
         if (!this.initialized) {
-            await this.initializeCollection();
-            this.initialized = true;
+            let retries = 3;
+            while (retries > 0) {
+                try {
+                    await this.initializeCollection();
+                    this.initialized = true;
+                    break;
+                } catch (error) {
+                    console.error(`Error initializing collection (${retries} retries left):`, error);
+                    retries--;
+                    if (retries === 0) {
+                        throw new Error('Failed to initialize RAG collection after multiple attempts');
+                    }
+                    // Esperar antes de reintentar
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            }
         }
     }
 
     private async initializeCollection(): Promise<void> {
         try {
-            this.collection = await this.chromaClient.getOrCreateCollection({
-                name: "contracts_collection",
-                metadata: { "hnsw:space": "cosine" }
-            });
+            const embeddingFunction = {
+                generate: async (texts: string[]) => {
+                    const embeddings = await this.embeddings.embedDocuments(texts);
+                    return embeddings;
+                },
+                dim: 1536 // Dimensión de los embeddings de OpenAI
+            };
+
+            // Intentar obtener la colección existente primero
+            try {
+                this.collection = await this.chromaClient.getCollection({
+                    name: "contracts_collection",
+                    embeddingFunction
+                });
+                console.log("Collection retrieved successfully");
+            } catch (error) {
+                // Si la colección no existe, crearla
+                console.log("Creating new collection...");
+                this.collection = await this.chromaClient.createCollection({
+                    name: "contracts_collection",
+                    embeddingFunction,
+                    metadata: { 
+                        "hnsw:space": "cosine",
+                        "description": "Collection for storing contract embeddings"
+                    }
+                });
+                console.log("New collection created successfully");
+            }
         } catch (error) {
-            console.error('Error initializing collection:', error);
-            throw new Error('Failed to initialize RAG collection');
+            console.error('Error in initializeCollection:', error);
+            throw new Error('Failed to initialize RAG collection: ' + (error as Error).message);
         }
     }
 
