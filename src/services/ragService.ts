@@ -18,7 +18,15 @@ class RagService {
     private initialized: boolean = false;
 
     constructor() {
-        this.chromaClient = new ChromaClient();
+        this.chromaClient = new ChromaClient({
+            path: "http://localhost:8000",  // ChromaDB server URL
+            fetchOptions: {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                signal: AbortSignal.timeout(60000)  // 60 second timeout
+            }
+        });
         this.embeddings = new OpenAIEmbeddings({
             openAIApiKey: config.apiKey,
         });
