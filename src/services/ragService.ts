@@ -18,15 +18,13 @@ class RagService {
     private initialized: boolean = false;
 
     constructor() {
-        // Inicializar ChromaDB con configuración persistente
+        // Inicializar ChromaDB en modo persistente local
         this.chromaClient = new ChromaClient({
-            path: "http://localhost:8000",
+            path: "./chroma_db",  // Directorio local para almacenamiento
             fetchOptions: {
                 headers: {
                     'Content-Type': 'application/json',
-                },
-                // Aumentar el timeout y añadir retry
-                signal: AbortSignal.timeout(120000), // 2 minutos de timeout
+                }
             }
         });
         this.embeddings = new OpenAIEmbeddings({
@@ -46,10 +44,12 @@ class RagService {
                     console.error(`Error initializing collection (${retries} retries left):`, error);
                     retries--;
                     if (retries === 0) {
-                        throw new Error('Failed to initialize RAG collection after multiple attempts');
+                        // Si fallamos después de todos los reintentos, continuamos sin RAG
+                        console.warn('Failed to initialize RAG, continuing without context');
+                        this.initialized = true; // Evitar más reintentos
+                        return;
                     }
-                    // Esperar antes de reintentar
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
         }
@@ -59,71 +59,77 @@ class RagService {
         try {
             const embeddingFunction = {
                 generate: async (texts: string[]) => {
-                    const embeddings = await this.embeddings.embedDocuments(texts);
-                    return embeddings;
+                    try {
+                        const embeddings = await this.embeddings.embedDocuments(texts);
+                        return embeddings;
+                    } catch (error) {
+                        console.error('Error generating embeddings:', error);
+                        return texts.map(() => new Array(1536).fill(0)); // Fallback embeddings
+                    }
                 },
-                dim: 1536 // Dimensión de los embeddings de OpenAI
+                dim: 1536
             };
 
-            // Intentar obtener la colección existente primero
             try {
+                console.log("Attempting to get existing collection...");
                 this.collection = await this.chromaClient.getCollection({
                     name: "contracts_collection",
                     embeddingFunction
                 });
-                console.log("Collection retrieved successfully");
+                console.log("Successfully retrieved existing collection");
             } catch (error) {
-                // Si la colección no existe, crearla
-                console.log("Creating new collection...");
+                console.log("Collection not found, creating new one...");
                 this.collection = await this.chromaClient.createCollection({
                     name: "contracts_collection",
                     embeddingFunction,
-                    metadata: { 
+                    metadata: {
                         "hnsw:space": "cosine",
                         "description": "Collection for storing contract embeddings"
                     }
                 });
-                console.log("New collection created successfully");
+                console.log("Successfully created new collection");
             }
         } catch (error) {
             console.error('Error in initializeCollection:', error);
-            throw new Error('Failed to initialize RAG collection: ' + (error as Error).message);
+            throw new Error('Failed to initialize RAG collection: ' + (error instanceof Error ? error.message : String(error)));
         }
     }
 
     async addDocument(content: string, metadata: DocumentMetadata): Promise<boolean> {
-        await this.ensureInitialized();
-        
         try {
+            await this.ensureInitialized();
+            
+            if (!this.collection) {
+                console.warn('Collection not initialized, skipping document addition');
+                return false;
+            }
+
             if (!content.trim()) {
                 throw new Error('Empty document content');
             }
 
-            const splitter = new RecursiveCharacterTextSplitter({
+            // Dividir el documento en chunks manejables
+            const textSplitter = new RecursiveCharacterTextSplitter({
                 chunkSize: 1000,
-                chunkOverlap: 200,
+                chunkOverlap: 200
             });
 
-            const docs = await splitter.createDocuments([content]);
-            const embeddings = await this.embeddings.embedDocuments(
-                docs.map(doc => doc.pageContent)
-            );
-
-            if (!this.collection) {
-                throw new Error('Collection not initialized');
+            const docs = await textSplitter.createDocuments([content]);
+            
+            // Procesar cada chunk
+            for (let i = 0; i < docs.length; i++) {
+                const doc = docs[i];
+                await this.collection.add({
+                    ids: [`${metadata.userId}_${Date.now()}_${i}`],
+                    metadatas: [{ ...metadata, chunk: i, totalChunks: docs.length }],
+                    documents: [doc.pageContent]
+                });
             }
-
-            await this.collection.add({
-                ids: docs.map((_, i) => `doc_${Date.now()}_${i}`),
-                embeddings,
-                documents: docs.map(doc => doc.pageContent),
-                metadatas: docs.map((_, index) => ({ ...metadata, chunkIndex: index })),
-            });
 
             return true;
         } catch (error) {
             console.error('Error adding document:', error);
-            throw new Error('Failed to add document to RAG system');
+            return false;
         }
     }
 
