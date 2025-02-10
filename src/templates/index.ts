@@ -9,10 +9,12 @@ const flows = createFlow([
     faqFlow,
     appointmentFlow,
     cancelAppointmentFlow,
-    contractFlow
+    contractFlow,
 ]);
 
 export {
     mainFlow,
     faqFlow,
 };
+
+export default flows;
