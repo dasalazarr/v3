@@ -258,4 +258,44 @@ export class AppointmentService {
       throw new Error('Failed to cancel appointment');
     }
   }
+
+  /**
+   * Get all appointments from calendar
+   */
+  async getAppointments(): Promise<Appointment[]> {
+    try {
+      const response = await this.calendar.events.list({
+        calendarId: this.calendarId,
+        timeMin: new Date().toISOString(),
+        maxResults: 100,
+        singleEvents: true,
+        orderBy: 'startTime',
+      });
+
+      return response.data.items.map(event => ({
+        title: event.summary || '',
+        description: event.description || '',
+        startTime: new Date(event.start.dateTime || event.start.date),
+        endTime: new Date(event.end.dateTime || event.end.date),
+        status: this.getAppointmentStatus(event.status),
+      }));
+    } catch (error) {
+      console.error('Error getting appointments:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Convert Google Calendar event status to Appointment status
+   */
+  private getAppointmentStatus(status?: string): 'confirmed' | 'pending' | 'cancelled' {
+    switch (status) {
+      case 'confirmed':
+        return 'confirmed';
+      case 'cancelled':
+        return 'cancelled';
+      default:
+        return 'pending';
+    }
+  }
 }

@@ -40,6 +40,25 @@ export class AppointmentController {
   }
 
   /**
+   * Get all upcoming appointments
+   * @returns Array of upcoming appointments
+   */
+  async getUpcomingAppointments() {
+    try {
+      const now = new Date();
+      const appointments = await this.appointmentService.getAppointments();
+      
+      return appointments.filter(appointment => {
+        const appointmentDate = new Date(appointment.startTime);
+        return appointmentDate > now && appointment.status === 'confirmed';
+      });
+    } catch (error) {
+      console.error('Error getting upcoming appointments:', error);
+      return [];
+    }
+  }
+
+  /**
    * Update an existing appointment
    */
   async updateAppointment(
