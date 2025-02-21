@@ -1,15 +1,19 @@
 import { addKeyword } from '@builderbot/bot';
-import SheetManager from '../../services/sheetsServices';
-import aiServices from '../../services/aiservices';
+import { container } from 'tsyringe';
+import { SheetManager } from '../../services/sheetsServices';
+import { AIServices } from '../../services/aiservices';
+
+// Get singleton instances
+const sheetManager = container.resolve<SheetManager>('SheetManager');
+const aiService = container.resolve<AIServices>('AIService');
 
 export const appointmentFlow = addKeyword(['cita', 'agendar', 'reservar'])
   .addAction(async (ctx) => {
     const { from: phoneNumber } = ctx;
-    const aiService = new aiServices();
     
     try {
       // Obtener historial de conversaciones para contexto
-      const conversations = await SheetManager.getUserConv(phoneNumber);
+      const conversations = await sheetManager.getUserConv(phoneNumber);
       
       // Crear el prompt con el contexto del historial
       const systemPrompt = `Eres un asistente especializado en gestión de citas. 
@@ -51,38 +55,35 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'reservar'])
         await ctx.sendText(`📅 Resumen de tu cita:\n\nFecha: ${cita.fecha}\nHora: ${cita.hora}\nServicio: ${cita.servicio}\nDuración estimada: ${cita.duracion}`);
       }
 
-      // Si faltan datos, solicitar la información necesaria
-      if (!aiResponse.datosCompletos && aiResponse.datosFaltantes) {
-        await ctx.sendText('Para completar tu cita, necesito los siguientes datos:');
-        await ctx.sendText(aiResponse.datosFaltantes.join('\n'));
+      // Si faltan datos, solicitar la información faltante
+      if (!aiResponse.datosCompletos && aiResponse.datosFaltantes?.length > 0) {
+        await ctx.sendText(`\n❗ Necesito algunos datos adicionales:\n${aiResponse.datosFaltantes.join('\n')}`);
       }
 
-      // Si hay sugerencias de horarios disponibles
-      if (aiResponse.sugerenciasHorario && aiResponse.sugerenciasHorario.length > 0) {
-        await ctx.sendText('Horarios disponibles sugeridos:');
-        await ctx.sendText(aiResponse.sugerenciasHorario.join('\n'));
+      // Si hay sugerencias de horarios, mostrarlas
+      if (aiResponse.sugerenciasHorario?.length > 0) {
+        await ctx.sendText(`\n⏰ Horarios disponibles:\n${aiResponse.sugerenciasHorario.join('\n')}`);
       }
 
-      // Enviar recordatorios importantes
-      if (aiResponse.recordatorios && aiResponse.recordatorios.length > 0) {
-        await ctx.sendText('⚠️ Recordatorios importantes:');
-        await ctx.sendText(aiResponse.recordatorios.join('\n'));
+      // Mostrar recordatorios importantes
+      if (aiResponse.recordatorios?.length > 0) {
+        await ctx.sendText(`\n📝 Recordatorios importantes:\n${aiResponse.recordatorios.join('\n')}`);
       }
 
-      // Registrar la interacción
-      await SheetManager.addConverToUser(phoneNumber, [
+      // Guardar la conversación
+      await sheetManager.addConverToUser(phoneNumber, [
         { role: 'user', content: ctx.body },
-        { role: 'assistant', content: JSON.stringify(aiResponse) }
+        { role: 'assistant', content: aiResponse.respuesta }
       ]);
-      
+
     } catch (error) {
-      console.error('Error en appointment flow:', error);
-      await ctx.sendText('Lo siento, hubo un error al procesar tu solicitud de cita. ¿Podrías intentarlo nuevamente?');
+      console.error('Error en appointmentFlow:', error);
+      await ctx.sendText('Lo siento, tuve un problema procesando tu solicitud de cita. ¿Podrías intentarlo de nuevo?');
       
       // Registrar el error
-      await SheetManager.addConverToUser(phoneNumber, [
+      await sheetManager.addConverToUser(phoneNumber, [
         { role: 'user', content: ctx.body },
-        { role: 'assistant', content: 'Error: ' + error.message }
+        { role: 'assistant', content: 'Error: ' + (error instanceof Error ? error.message : String(error)) }
       ]);
     }
   });
@@ -90,31 +91,30 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'reservar'])
 export const appointmentStatusFlow = addKeyword(['estado', 'verificar', 'confirmar'])
   .addAction(async (ctx) => {
     const { from: phoneNumber } = ctx;
-    const aiService = new aiServices();
     
     try {
       // Obtener historial de conversaciones para contexto
-      const conversations = await SheetManager.getUserConv(phoneNumber);
+      const conversations = await sheetManager.getUserConv(phoneNumber);
       
       // Crear el prompt con el contexto del historial
       const systemPrompt = `Eres un asistente especializado en gestión de citas. 
-      Revisa el historial de conversaciones y proporciona información sobre el estado de las citas del cliente.
+      Verifica y proporciona información sobre el estado de las citas del cliente.
       
       Historial reciente de conversación:
       ${conversations.map(conv => `${conv.role}: ${conv.content}`).join('\n')}
       
       Estructura tu respuesta en formato JSON:
       {
-        "respuesta": "Información principal sobre el estado de la cita",
-        "citaEncontrada": boolean,
-        "detallesCita": {
+        "respuesta": "Respuesta principal sobre el estado de la cita",
+        "estadoCita": {
           "fecha": "Fecha de la cita",
           "hora": "Hora de la cita",
           "servicio": "Tipo de servicio",
-          "estado": "Confirmada | Pendiente | Cancelada"
+          "estado": "Confirmada | Pendiente | Cancelada",
+          "observaciones": "Observaciones importantes"
         },
-        "accionesPosibles": ["acción1", "acción2"],
-        "recordatorios": ["recordatorio1", "recordatorio2"]
+        "recordatorios": ["recordatorio1", "recordatorio2"],
+        "accionesDisponibles": ["accion1", "accion2"]
       }`;
 
       // Obtener respuesta de GPT-4
@@ -128,38 +128,36 @@ export const appointmentStatusFlow = addKeyword(['estado', 'verificar', 'confirm
       // Enviar la respuesta principal
       await ctx.sendText(aiResponse.respuesta);
 
-      // Si se encontró una cita, mostrar los detalles
-      if (aiResponse.citaEncontrada && aiResponse.detallesCita) {
-        const cita = aiResponse.detallesCita;
-        await ctx.sendText(`📅 Detalles de tu cita:\n\nFecha: ${cita.fecha}\nHora: ${cita.hora}\nServicio: ${cita.servicio}\nEstado: ${cita.estado}`);
+      // Mostrar detalles de la cita si están disponibles
+      if (aiResponse.estadoCita) {
+        const cita = aiResponse.estadoCita;
+        await ctx.sendText(`📅 Detalles de tu cita:\n\nFecha: ${cita.fecha}\nHora: ${cita.hora}\nServicio: ${cita.servicio}\nEstado: ${cita.estado}\n\n📝 ${cita.observaciones}`);
       }
 
-      // Mostrar acciones posibles
-      if (aiResponse.accionesPosibles && aiResponse.accionesPosibles.length > 0) {
-        await ctx.sendText('Acciones disponibles:');
-        await ctx.sendText(aiResponse.accionesPosibles.join('\n'));
+      // Mostrar recordatorios importantes
+      if (aiResponse.recordatorios?.length > 0) {
+        await ctx.sendText(`\n⚠️ Recordatorios importantes:\n${aiResponse.recordatorios.join('\n')}`);
       }
 
-      // Enviar recordatorios importantes
-      if (aiResponse.recordatorios && aiResponse.recordatorios.length > 0) {
-        await ctx.sendText('⚠️ Recordatorios importantes:');
-        await ctx.sendText(aiResponse.recordatorios.join('\n'));
+      // Mostrar acciones disponibles
+      if (aiResponse.accionesDisponibles?.length > 0) {
+        await ctx.sendText(`\n✨ Acciones disponibles:\n${aiResponse.accionesDisponibles.join('\n')}`);
       }
 
-      // Registrar la interacción
-      await SheetManager.addConverToUser(phoneNumber, [
+      // Guardar la conversación
+      await sheetManager.addConverToUser(phoneNumber, [
         { role: 'user', content: ctx.body },
-        { role: 'assistant', content: JSON.stringify(aiResponse) }
+        { role: 'assistant', content: aiResponse.respuesta }
       ]);
-      
+
     } catch (error) {
-      console.error('Error en appointment status flow:', error);
-      await ctx.sendText('Lo siento, hubo un error al verificar el estado de tu cita. ¿Podrías intentarlo nuevamente?');
+      console.error('Error en appointmentStatusFlow:', error);
+      await ctx.sendText('Lo siento, tuve un problema verificando el estado de tu cita. ¿Podrías intentarlo de nuevo?');
       
       // Registrar el error
-      await SheetManager.addConverToUser(phoneNumber, [
+      await sheetManager.addConverToUser(phoneNumber, [
         { role: 'user', content: ctx.body },
-        { role: 'assistant', content: 'Error: ' + error.message }
+        { role: 'assistant', content: 'Error: ' + (error instanceof Error ? error.message : String(error)) }
       ]);
     }
   });

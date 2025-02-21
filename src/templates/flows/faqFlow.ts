@@ -1,16 +1,20 @@
 import { addKeyword } from '@builderbot/bot';
-import SheetManager from '../../services/sheetsServices';
-import aiServices from '../../services/aiservices';
+import { container } from 'tsyringe';
+import { SheetManager } from '../../services/sheetsServices';
+import { AIServices } from '../../services/aiservices';
 import { MessageIntent } from '../../services/messageClassifier';
+
+// Get singleton instances
+const sheetManager = container.resolve<SheetManager>('SheetManager');
+const aiService = container.resolve<AIServices>('AIService');
 
 export const faqFlow = addKeyword(['ayuda', 'pregunta', 'cómo', 'qué'])
   .addAction(async (ctx) => {
     const { from: phoneNumber } = ctx;
-    const aiService = new aiServices();
     
     try {
       // Obtener historial de conversaciones para contexto
-      const conversations = await SheetManager.getUserConv(phoneNumber);
+      const conversations = await sheetManager.getUserConv(phoneNumber);
       
       // Crear el prompt con el contexto del historial
       const systemPrompt = `Eres un asistente virtual experto en atención al cliente. 
@@ -30,6 +34,12 @@ export const faqFlow = addKeyword(['ayuda', 'pregunta', 'cómo', 'qué'])
         "infoAdicionalNecesaria": ["dato1", "dato2"] // si requiereMasInfo es true
       }`;
 
+      // Buscar preguntas similares
+      const similarQuestions = await aiService.searchSimilarQuestions(ctx.body);
+      if (similarQuestions.length > 0) {
+        systemPrompt += `\n\nPreguntas similares encontradas:\n${similarQuestions.join('\n')}`;
+      }
+
       // Obtener respuesta de GPT-4
       const result = await aiService.chat(systemPrompt, [
         { role: 'user', content: ctx.body }
@@ -42,31 +52,29 @@ export const faqFlow = addKeyword(['ayuda', 'pregunta', 'cómo', 'qué'])
       await ctx.sendText(aiResponse.respuesta);
 
       // Si hay sugerencias, enviarlas
-      if (aiResponse.sugerencias && aiResponse.sugerencias.length > 0) {
-        await ctx.sendText('Algunas sugerencias relacionadas:');
-        await ctx.sendText(aiResponse.sugerencias.join('\n'));
+      if (aiResponse.sugerencias?.length > 0) {
+        await ctx.sendText(`\n💡 También podrías estar interesado en:\n${aiResponse.sugerencias.join('\n')}`);
       }
 
       // Si se necesita más información
-      if (aiResponse.requiereMasInfo) {
-        await ctx.sendText('Para ayudarte mejor, necesito algunos detalles adicionales:');
-        await ctx.sendText(aiResponse.infoAdicionalNecesaria.join('\n'));
+      if (aiResponse.requiereMasInfo && aiResponse.infoAdicionalNecesaria?.length > 0) {
+        await ctx.sendText(`\n❓ Para ayudarte mejor, necesito saber:\n${aiResponse.infoAdicionalNecesaria.join('\n')}`);
       }
 
-      // Registrar la interacción
-      await SheetManager.addConverToUser(phoneNumber, [
+      // Guardar la conversación
+      await sheetManager.addConverToUser(phoneNumber, [
         { role: 'user', content: ctx.body },
-        { role: 'assistant', content: JSON.stringify(aiResponse) }
+        { role: 'assistant', content: aiResponse.respuesta }
       ]);
-      
+
     } catch (error) {
-      console.error('Error en FAQ flow:', error);
-      await ctx.sendText('Lo siento, hubo un error al procesar tu pregunta. ¿Podrías reformularla?');
+      console.error('Error en faqFlow:', error);
+      await ctx.sendText('Lo siento, tuve un problema procesando tu pregunta. ¿Podrías intentarlo de nuevo?');
       
       // Registrar el error
-      await SheetManager.addConverToUser(phoneNumber, [
+      await sheetManager.addConverToUser(phoneNumber, [
         { role: 'user', content: ctx.body },
-        { role: 'assistant', content: 'Error: ' + error.message }
+        { role: 'assistant', content: 'Error: ' + (error instanceof Error ? error.message : String(error)) }
       ]);
     }
   });

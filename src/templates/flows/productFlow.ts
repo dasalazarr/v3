@@ -1,15 +1,19 @@
 import { addKeyword } from '@builderbot/bot';
-import SheetManager from '../../services/sheetsServices';
-import aiServices from '../../services/aiservices';
+import { container } from 'tsyringe';
+import { SheetManager } from '../../services/sheetsServices';
+import { AIServices } from '../../services/aiservices';
+
+// Get singleton instances
+const sheetManager = container.resolve<SheetManager>('SheetManager');
+const aiService = container.resolve<AIServices>('AIService');
 
 export const productFlow = addKeyword(['producto', 'precio', 'catálogo'])
   .addAction(async (ctx) => {
     const { from: phoneNumber } = ctx;
-    const aiService = new aiServices();
     
     try {
       // Obtener historial de conversaciones para contexto
-      const conversations = await SheetManager.getUserConv(phoneNumber);
+      const conversations = await sheetManager.getUserConv(phoneNumber);
       
       // Crear el prompt con el contexto del historial
       const systemPrompt = `Eres un experto asesor de ventas. 
@@ -49,38 +53,35 @@ export const productFlow = addKeyword(['producto', 'precio', 'catálogo'])
         await ctx.sendText(`📦 ${detalles.nombre}\n💰 ${detalles.precio}\n\n✨ Características principales:\n${detalles.características.join('\n')}\n\n📍 ${detalles.disponibilidad}`);
       }
 
-      // Enviar sugerencias de productos relacionados
-      if (aiResponse.sugerencias && aiResponse.sugerencias.length > 0) {
-        await ctx.sendText('También te podrían interesar:');
-        await ctx.sendText(aiResponse.sugerencias.join('\n'));
+      // Enviar sugerencias si hay
+      if (aiResponse.sugerencias?.length > 0) {
+        await ctx.sendText(`\n🔍 También te pueden interesar:\n${aiResponse.sugerencias.join('\n')}`);
       }
 
-      // Enviar promociones relevantes
-      if (aiResponse.promocionesRelevantes && aiResponse.promocionesRelevantes.length > 0) {
-        await ctx.sendText('🎉 Promociones actuales:');
-        await ctx.sendText(aiResponse.promocionesRelevantes.join('\n'));
+      // Enviar promociones si hay
+      if (aiResponse.promocionesRelevantes?.length > 0) {
+        await ctx.sendText(`\n🎉 Promociones activas:\n${aiResponse.promocionesRelevantes.join('\n')}`);
       }
 
-      // Hacer preguntas adicionales si es necesario
-      if (aiResponse.preguntasAdicionales && aiResponse.preguntasAdicionales.length > 0) {
-        await ctx.sendText('Para ayudarte mejor, ¿podrías responder estas preguntas?');
-        await ctx.sendText(aiResponse.preguntasAdicionales.join('\n'));
+      // Hacer preguntas adicionales si hay
+      if (aiResponse.preguntasAdicionales?.length > 0) {
+        await ctx.sendText(`\n❓ Para ayudarte mejor:\n${aiResponse.preguntasAdicionales[0]}`);
       }
 
-      // Registrar la interacción
-      await SheetManager.addConverToUser(phoneNumber, [
+      // Guardar la conversación
+      await sheetManager.addConverToUser(phoneNumber, [
         { role: 'user', content: ctx.body },
-        { role: 'assistant', content: JSON.stringify(aiResponse) }
+        { role: 'assistant', content: aiResponse.respuestaPrincipal }
       ]);
-      
+
     } catch (error) {
-      console.error('Error en product flow:', error);
-      await ctx.sendText('Lo siento, hubo un error al procesar tu consulta sobre productos. ¿Podrías intentarlo nuevamente?');
+      console.error('Error en productFlow:', error);
+      await ctx.sendText('Lo siento, tuve un problema procesando tu consulta. ¿Podrías intentarlo de nuevo?');
       
       // Registrar el error
-      await SheetManager.addConverToUser(phoneNumber, [
+      await sheetManager.addConverToUser(phoneNumber, [
         { role: 'user', content: ctx.body },
-        { role: 'assistant', content: 'Error: ' + error.message }
+        { role: 'assistant', content: 'Error: ' + (error instanceof Error ? error.message : String(error)) }
       ]);
     }
   });

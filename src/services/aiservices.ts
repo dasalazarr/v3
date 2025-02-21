@@ -1,6 +1,8 @@
 import OpenAI from "openai";
 import { config } from "~/config";
-import RagService from './ragService';
+import { RagService } from './ragService';
+import { injectable, inject, container } from 'tsyringe';
+import { MessageIntent } from "./messageClassifier";
 
 interface FormattedResponse {
   resumenEjecutivo: string;
@@ -14,16 +16,30 @@ interface ChatMessage {
   content: string;
 }
 
-class aiServices {
-  private openAI: OpenAI;
-  private ragService: RagService;
+interface MessageClassification {
+  intent: MessageIntent;
+  confidence: number;
+  sentiment: string;
+  urgency: string;
+  additionalContext?: string;
+}
 
-  constructor() {
-    if (!config.apiKey) {
+interface ConfigType {
+  apiKey: string;
+}
+
+@injectable()
+export class AIServices {
+  private openAI: OpenAI;
+  
+  constructor(
+    @inject('Config') private readonly config: ConfigType,
+    @inject('RagService') private readonly ragService: RagService
+  ) {
+    if (!this.config.apiKey) {
       throw new Error("OpenAI API key is not configured. Please set OPENAI_API_KEY or apiKey in your environment variables.");
     }
-    this.openAI = new OpenAI({ apiKey: config.apiKey });
-    this.ragService = new RagService();
+    this.openAI = new OpenAI({ apiKey: this.config.apiKey });
   }
 
   private cleanFormatting(text: string): string {
@@ -50,83 +66,74 @@ class aiServices {
     }
   }
 
-  async chat(prompt: string, messages: ChatMessage[], useRag: boolean = false): Promise<FormattedResponse> {
+  async chat(systemPrompt: string, messages: ChatMessage[]): Promise<FormattedResponse> {
     try {
-      let context: string[] = [];
-      let systemPrompt = prompt;
-
-      if (useRag) {
-        try {
-          context = await this.ragService.queryDocuments(prompt);
-          if (context.length > 0) {
-            const ragPrompt = await this.ragService.generateResponse(prompt, context);
-            systemPrompt = ragPrompt;
-          }
-        } catch (ragError) {
-          console.error('Error en RAG, continuando sin contexto:', ragError);
-        }
-      }
-
       const completion = await this.openAI.chat.completions.create({
-        model: config.Model,
+        model: "gpt-4",
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages,
+          ...messages
         ],
-        temperature: useRag ? 0.3 : 0.7, // Menor temperatura para respuestas basadas en RAG
+        temperature: 0.7,
+        max_tokens: 500,
       });
 
-      const content = completion.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No response from OpenAI');
-      }
-
-      return this.formatResponse(content);
-    } catch (err) {
-      console.error("Error en chat:", err);
-      return this.formatResponse(err instanceof Error ? err.message : "Error desconocido");
-    }
-  }
-
-  async chatWithAssistant(message: string, threadId?: string): Promise<{ response: string; threadId: string }> {
-    if (!config.assistant_id) {
-      throw new Error("assistant_id no está configurado en las variables de entorno");
-    }
-
-    try {
-      const thread = threadId 
-        ? { id: threadId }
-        : await this.openAI.beta.threads.create();
-
-      await this.openAI.beta.threads.messages.create(thread.id, {
-        role: "user",
-        content: message
-      });
-
-      const run = await this.openAI.beta.threads.runs.createAndPoll(thread.id, {
-        assistant_id: config.assistant_id
-      });
-
-      if (run.status !== 'completed') {
-        throw new Error(`Run failed with status: ${run.status}`);
-      }
-
-      const messages = await this.openAI.beta.threads.messages.list(thread.id);
-      const lastMessage = messages.data.find(msg => msg.role === 'assistant');
-      
-      if (lastMessage?.content?.[0]?.type !== 'text') {
-        throw new Error('No valid response from assistant');
-      }
-
-      return { 
-        response: lastMessage.content[0].text.value,
-        threadId: thread.id 
-      };
+      return this.formatResponse(completion.choices[0]?.message?.content || "");
     } catch (error) {
-      console.error('Error in chatWithAssistant:', error);
+      console.error("Error in chat completion:", error);
       throw error;
     }
   }
+
+  async classifyMessage(message: string): Promise<MessageClassification> {
+    const systemPrompt = `Analiza el siguiente mensaje de WhatsApp y clasifícalo según estas categorías:
+      - PRODUCT_INQUIRY: Consultas sobre productos, precios o catálogo
+      - FAQ: Preguntas frecuentes o solicitudes de información general
+      - APPOINTMENT_SCHEDULING: Solicitudes para agendar o programar citas
+      - APPOINTMENT_STATUS: Consultas sobre el estado de citas existentes
+      - UNKNOWN: Si no corresponde a ninguna categoría anterior
+
+      Responde en formato JSON con los siguientes campos:
+      {
+        "intent": "CATEGORIA",
+        "confidence": 0.0-1.0,
+        "sentiment": "positivo|neutral|negativo",
+        "urgency": "alta|media|baja",
+        "additionalContext": "contexto adicional relevante"
+      }`;
+
+    try {
+      const result = await this.chat(systemPrompt, [
+        { role: 'user', content: message }
+      ]);
+
+      const classification = JSON.parse(result.resumenEjecutivo);
+      return {
+        intent: classification.intent as MessageIntent,
+        confidence: classification.confidence,
+        sentiment: classification.sentiment,
+        urgency: classification.urgency,
+        additionalContext: classification.additionalContext
+      };
+    } catch (error) {
+      console.error('Error clasificando mensaje:', error);
+      return {
+        intent: MessageIntent.UNKNOWN,
+        confidence: 0,
+        sentiment: 'neutral',
+        urgency: 'media',
+        additionalContext: 'Error en la clasificación'
+      };
+    }
+  }
+
+  async searchSimilarQuestions(question: string): Promise<string[]> {
+    return this.ragService.searchSimilarQuestions(question);
+  }
 }
 
-export default aiServices;
+// Register dependencies
+container.register<ConfigType>('Config', { useValue: { apiKey: config.apiKey } });
+
+// Export singleton instance
+export default container.resolve(AIServices);

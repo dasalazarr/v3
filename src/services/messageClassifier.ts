@@ -1,6 +1,6 @@
 import { EVENTS } from '@builderbot/bot';
-import { injectable, inject } from 'tsyringe';
-import aiServices from './aiservices';
+import { injectable, inject, container } from 'tsyringe';
+import { AIServices } from './aiservices';
 import { redis } from '../config';
 
 // Define our own context interface based on the available properties
@@ -36,7 +36,7 @@ export class MessageClassifier {
   private cacheKey = 'msg_classifier:';
   
   constructor(
-    @inject('AIService') private aiService: aiServices,
+    @inject('AIService') private aiService: AIServices,
     @inject('Redis') private redis: any
   ) {}
 
@@ -52,73 +52,42 @@ export class MessageClassifier {
         return JSON.parse(cached);
       }
 
-      // Si no está en cache, clasificar
-      const systemPrompt = `Analiza el siguiente mensaje de WhatsApp y clasifícalo según estas categorías:
-        - PRODUCT_INQUIRY: Consultas sobre productos, precios o catálogo
-        - FAQ: Preguntas frecuentes o solicitudes de información general
-        - APPOINTMENT_SCHEDULING: Solicitudes para agendar o programar citas
-        - APPOINTMENT_STATUS: Consultas sobre el estado de citas existentes
-        - UNKNOWN: Si no corresponde a ninguna categoría anterior`;
-
-      const result = await this.aiService.chat(systemPrompt, [
-        { role: 'user', content: message }
-      ]);
-
-      // Extraer la información del resultado
-      const aiResponse = JSON.parse(result.resumenEjecutivo);
-
-      const classification: ClassifiedMessage = {
-        intent: aiResponse.intent as MessageIntent,
-        confidence: aiResponse.confidence,
+      // Classify message using AI
+      const classification = await this.aiService.classifyMessage(message);
+      
+      const result: ClassifiedMessage = {
+        intent: classification.intent || MessageIntent.UNKNOWN,
+        confidence: classification.confidence || 0,
         originalMessage: message,
         phoneNumber,
         timestamp: new Date(),
-        analysis: aiResponse.analysis
+        analysis: {
+          sentiment: classification.sentiment || 'neutral',
+          urgency: classification.urgency || 'normal',
+          additionalContext: classification.additionalContext
+        }
       };
 
-      // Cache result
-      await this.redis.set(cacheKey, JSON.stringify(classification), 'EX', 3600);
-      
-      return classification;
+      // Cache the result
+      await this.redis.set(cacheKey, JSON.stringify(result), 'EX', 3600); // Cache for 1 hour
+
+      return result;
     } catch (error) {
-      console.error('Error clasificando mensaje:', error);
-      return this.fallbackClassification(message, phoneNumber);
+      console.error('Error classifying message:', error);
+      return {
+        intent: MessageIntent.UNKNOWN,
+        confidence: 0,
+        originalMessage: message,
+        phoneNumber,
+        timestamp: new Date()
+      };
     }
-  }
-
-  private fallbackClassification(message: string, phoneNumber: string): ClassifiedMessage {
-    const normalizedMessage = message.toLowerCase();
-    const keywords = {
-      [MessageIntent.PRODUCT_INQUIRY]: ['precio', 'producto', 'catálogo', 'costo', 'cuánto', 'vale'],
-      [MessageIntent.FAQ]: ['cómo', 'qué', 'cuando', 'dónde', 'por qué', 'ayuda'],
-      [MessageIntent.APPOINTMENT_SCHEDULING]: ['agendar', 'cita', 'reservar', 'programar'],
-      [MessageIntent.APPOINTMENT_STATUS]: ['estado', 'verificar', 'confirmar', 'mi cita']
-    };
-
-    let bestMatch = MessageIntent.UNKNOWN;
-    let highestScore = 0;
-
-    for (const [intent, intentKeywords] of Object.entries(keywords)) {
-      const matches = intentKeywords.filter(keyword => normalizedMessage.includes(keyword));
-      const score = matches.length / intentKeywords.length;
-      if (score > highestScore) {
-        highestScore = score;
-        bestMatch = intent as MessageIntent;
-      }
-    }
-
-    return {
-      intent: highestScore > 0.3 ? bestMatch : MessageIntent.UNKNOWN,
-      confidence: highestScore,
-      originalMessage: message,
-      phoneNumber,
-      timestamp: new Date(),
-      analysis: {
-        sentiment: 'neutral',
-        urgency: 'media'
-      }
-    };
   }
 }
 
-export const messageClassifier = new MessageClassifier();
+// Register dependencies
+container.register('Redis', { useValue: redis });
+container.registerSingleton('MessageClassifier', MessageClassifier);
+
+// Export singleton instance
+export default container.resolve(MessageClassifier);

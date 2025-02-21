@@ -1,6 +1,7 @@
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { config } from '~/config';
+import { injectable, inject, container } from 'tsyringe';
 
 interface DocumentMetadata {
     type: string;
@@ -16,14 +17,17 @@ interface DocumentEntry {
     embedding?: number[];
 }
 
-class RagService {
+@injectable()
+export class RagService {
     private embeddings: OpenAIEmbeddings;
     private documents: DocumentEntry[] = [];
     private initialized: boolean = false;
 
-    constructor() {
+    constructor(
+        @inject('Config') private readonly config: { apiKey: string }
+    ) {
         this.embeddings = new OpenAIEmbeddings({
-            openAIApiKey: config.apiKey,
+            openAIApiKey: this.config.apiKey,
         });
     }
 
@@ -49,35 +53,20 @@ class RagService {
             });
 
             const docs = await textSplitter.createDocuments([content]);
-            
+
             // Procesar cada chunk
-            for (let i = 0; i < docs.length; i++) {
-                const doc = docs[i];
-                const docId = `${metadata.userId}_${Date.now()}_${i}`;
-                
-                try {
-                    // Generar embedding
-                    const embedding = await this.embeddings.embedQuery(doc.pageContent);
-                    
-                    // Almacenar documento
-                    this.documents.push({
-                        id: docId,
-                        content: doc.pageContent,
-                        metadata: { ...metadata, chunk: i, totalChunks: docs.length },
-                        embedding
-                    });
-                } catch (error) {
-                    console.error('Error generating embedding:', error);
-                    // Almacenar sin embedding en caso de error
-                    this.documents.push({
-                        id: docId,
-                        content: doc.pageContent,
-                        metadata: { ...metadata, chunk: i, totalChunks: docs.length }
-                    });
-                }
+            for (const doc of docs) {
+                const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+                const embedding = await this.embeddings.embedQuery(doc.pageContent);
+
+                this.documents.push({
+                    id: docId,
+                    content: doc.pageContent,
+                    metadata: metadata,
+                    embedding: embedding
+                });
             }
 
-            console.log(`Added ${docs.length} chunks to in-memory storage`);
             return true;
         } catch (error) {
             console.error('Error adding document:', error);
@@ -85,74 +74,57 @@ class RagService {
         }
     }
 
-    async queryDocuments(query: string, numResults: number = 3): Promise<string[]> {
+    async queryDocuments(query: string, limit: number = 5): Promise<string[]> {
         try {
             await this.ensureInitialized();
 
             if (this.documents.length === 0) {
-                return ['No hay documentos almacenados para consultar.'];
+                return [];
             }
 
-            // Generar embedding para la consulta
             const queryEmbedding = await this.embeddings.embedQuery(query);
 
-            // Filtrar documentos que tienen embeddings
-            const docsWithEmbeddings = this.documents.filter(doc => doc.embedding);
-
-            if (docsWithEmbeddings.length === 0) {
-                // Si no hay documentos con embeddings, devolver los más recientes
-                return this.documents
-                    .slice(-numResults)
-                    .map(doc => doc.content);
-            }
-
-            // Calcular similitud coseno
-            const similarities = docsWithEmbeddings.map(doc => ({
-                content: doc.content,
-                score: this.cosineSimilarity(queryEmbedding, doc.embedding!)
+            // Calcular similitud coseno con todos los documentos
+            const similarities = this.documents.map(doc => ({
+                doc,
+                similarity: this.cosineSimilarity(queryEmbedding, doc.embedding || [])
             }));
 
             // Ordenar por similitud y obtener los top N resultados
-            return similarities
-                .sort((a, b) => b.score - a.score)
-                .slice(0, numResults)
-                .map(result => result.content);
+            similarities.sort((a, b) => b.similarity - a.similarity);
+            return similarities.slice(0, limit).map(item => item.doc.content);
 
         } catch (error) {
             console.error('Error querying documents:', error);
-            // En caso de error, devolver los documentos más recientes
-            return this.documents
-                .slice(-numResults)
-                .map(doc => doc.content);
+            return [];
         }
     }
 
-    private cosineSimilarity(vecA: number[], vecB: number[]): number {
-        const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
-        const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
-        const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
-        return dotProduct / (magnitudeA * magnitudeB);
+    private cosineSimilarity(a: number[], b: number[]): number {
+        if (a.length !== b.length) return 0;
+        
+        let dotProduct = 0;
+        let normA = 0;
+        let normB = 0;
+        
+        for (let i = 0; i < a.length; i++) {
+            dotProduct += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+        
+        if (normA === 0 || normB === 0) return 0;
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
-    async generateResponse(query: string, context: string[]): Promise<string> {
-        if (!context || context.length === 0) {
-            return "No hay información relevante disponible.";
-        }
-
-        const contextText = context.join('\n\n');
-        const prompt = `
-Basado en el siguiente contexto, responde la pregunta.
-
-Contexto:
-${contextText}
-
-Pregunta:
-${query}
-
-Respuesta:`;
-
-        return prompt;
+    async searchSimilarQuestions(question: string): Promise<string[]> {
+        return this.queryDocuments(question, 3);
     }
 }
 
-export default RagService;
+// Register dependencies
+container.register('Config', { useValue: { apiKey: config.apiKey } });
+container.registerSingleton('RagService', RagService);
+
+// Export singleton instance
+export default container.resolve(RagService);

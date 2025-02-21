@@ -5,7 +5,7 @@ import { provider } from "./provider";
 import { config } from "./config";
 import templates from "./templates";
 import aiServices from "./services/aiservices";
-import redis from 'redis';
+import { redis } from './config';  // Importar desde config donde ya está inicializado
 
 const PORT = process.env.PORT || config.PORT || 3000;
 
@@ -28,7 +28,7 @@ const main = async () => {
       console.log('Cerrando servidor...');
       try {
         await provider.stop();
-        await redis.quit();
+        await redis.disconnect();  // Usar disconnect() en lugar de quit() para ioredis
         console.log('Bot y servicios cerrados exitosamente');
         process.exit(0);
       } catch (error) {

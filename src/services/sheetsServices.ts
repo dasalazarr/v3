@@ -1,22 +1,32 @@
 import { google } from "googleapis";
 import { sheets_v4 } from "googleapis/build/src/apis/sheets";
 import { config } from "../config";
+import { injectable, inject, container } from "tsyringe";
 
-class SheetManager {
+interface ConfigType {
+  privateKey: string;
+  clientEmail: string;
+  spreadsheetId: string;
+}
+
+@injectable()
+export class SheetManager {
   private sheets: sheets_v4.Sheets;
   private spreadsheetId: string;
 
-  constructor(spreadsheetId: string, privateKey: string, clientEmail: string) {
+  constructor(
+    @inject('Config') private readonly config: ConfigType
+  ) {
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        private_key: privateKey,
-        client_email: clientEmail,
+        private_key: this.config.privateKey,
+        client_email: this.config.clientEmail,
       },
       scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
 
     this.sheets = google.sheets({ version: "v4", auth });
-    this.spreadsheetId = spreadsheetId;
+    this.spreadsheetId = this.config.spreadsheetId;
   }
 
   // Función para verificar si un usuario existe
@@ -45,40 +55,103 @@ class SheetManager {
     conversation: { role: string, content: string }[]
   ): Promise<void> {
     try {
-      const question = conversation.find((c) => c.role === "user")?.content;
-      const answer = conversation.find((c) => c.role === "assistant")?.content;
-      const date = new Date().toISOString(); // Fecha en formato UTC
+      // Verificar si el usuario existe
+      const exists = await this.userExists(number);
 
-      if (!question || !answer)
-        throw new Error("La conversación debe contener tanto una pregunta como una respuesta.");
+      if (!exists) {
+        // Si el usuario no existe, crear una nueva pestaña para él
+        await this.createUserSheet(number);
+      }
 
-      // Leer las filas actuales para empujarlas hacia abajo
-      const sheetData = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${number}!A:C`,
-      });
+      // Obtener las conversaciones existentes
+      const existingConvs = await this.getUserConv(number);
 
-      const rows = sheetData.data.values || [];
+      // Agregar la nueva conversación al inicio
+      const newConvs = [...conversation, ...existingConvs];
 
-      // Agregar la nueva conversación en la primera fila
-      rows.unshift([question, answer, date]);
-
-      // Escribir las filas de nuevo en la hoja
+      // Actualizar la pestaña del usuario
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `${number}!A:C`,
+        range: `${number}!A1`,
         valueInputOption: "RAW",
         requestBody: {
-          values: rows,
+          values: newConvs.map((conv) => [conv.role, conv.content]),
         },
       });
     } catch (error) {
-      console.error("Error al agregar la conversación:", error);
+      console.error("Error al agregar conversación:", error);
+      throw error;
+    }
+  }
+
+  // Función para obtener las conversaciones de un usuario
+  async getUserConv(number: string): Promise<{ role: string, content: string }[]> {
+    try {
+      const result = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${number}!A:B`,
+      });
+
+      const rows = result.data.values;
+      if (rows) {
+        return rows.map((row) => ({
+          role: row[0],
+          content: row[1],
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.error("Error al obtener conversaciones:", error);
+      return [];
+    }
+  }
+
+  // Función para crear una nueva pestaña para un usuario
+  private async createUserSheet(number: string): Promise<void> {
+    try {
+      // Agregar el número a la lista de usuarios
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId: this.spreadsheetId,
+        range: "Users!A:A",
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[number]],
+        },
+      });
+
+      // Crear una nueva pestaña para el usuario
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: this.spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: number,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      // Configurar los encabezados de la pestaña
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: this.spreadsheetId,
+        range: `${number}!A1:B1`,
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [["Role", "Content"]],
+        },
+      });
+    } catch (error) {
+      console.error("Error al crear pestaña de usuario:", error);
+      throw error;
     }
   }
 
   // Función para obtener las preguntas/respuestas invertidas
-  async getUserConv(number: string): Promise<any[]> {
+  async getUserConvInvert(number: string): Promise<any[]> {
     try {
       const result = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
@@ -189,10 +262,13 @@ class SheetManager {
     }
   }  
 
-  
+}
 
-  export default new SheetManager(
-        config.spreadsheetId,
-        config.privateKey,
-        config.clientEmail
-      );
+// Register dependencies
+container.register<ConfigType>('Config', {
+  useValue: {
+    privateKey: config.privateKey,
+    clientEmail: config.clientEmail,
+    spreadsheetId: config.spreadsheetId
+  }
+});

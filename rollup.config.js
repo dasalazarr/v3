@@ -10,7 +10,14 @@ export default {
         '@builderbot/bot',
         'googleapis',
         'google-auth-library',
-        'dotenv'
+        'dotenv',
+        'ioredis',
+        'reflect-metadata',
+        'tsyringe',
+        'chromadb',
+        '@langchain/openai',
+        'langchain',
+        'openai'
     ],
     onwarn: (warning) => {
         if (warning.code === 'UNRESOLVED_IMPORT') return
