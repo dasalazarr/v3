@@ -1,17 +1,17 @@
+import 'reflect-metadata';
 import { createBot } from "@builderbot/bot";
 import { MemoryDB as Database } from "@builderbot/bot";
 import { provider } from "./provider";
 import { config } from "./config";
 import templates from "./templates";
 import aiServices from "./services/aiservices";
+import redis from 'redis';
 
 const PORT = process.env.PORT || config.PORT || 3000;
 
 const main = async () => {
   try {
     // Inicializar servicios
-    const ai = new aiServices();
-    
     const { handleCtx, httpServer } = await createBot({
       flow: templates,
       provider: provider,
@@ -28,7 +28,8 @@ const main = async () => {
       console.log('Cerrando servidor...');
       try {
         await provider.stop();
-        console.log('Bot cerrado exitosamente');
+        await redis.quit();
+        console.log('Bot y servicios cerrados exitosamente');
         process.exit(0);
       } catch (error) {
         console.error('Error durante el cierre:', error);
@@ -36,18 +37,10 @@ const main = async () => {
       }
     };
 
-    // Manejadores de señales del sistema
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
-    
-    // Manejador de errores no capturados
-    process.on('uncaughtException', (error) => {
-      console.error('Error no capturado:', error);
-      shutdown();
-    });
-
   } catch (error) {
-    console.error('Error al iniciar el bot:', error);
+    console.error('Error iniciando el bot:', error);
     process.exit(1);
   }
 };

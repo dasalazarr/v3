@@ -15,12 +15,15 @@
     "@builderbot/bot": "1.2.2",
     "@builderbot/provider-meta": "1.2.2",
     "@langchain/openai": "^0.0.14",
-    "chromadb": "^1.8.1",
+    "chromadb": "^1.10.4",
     "dotenv": "^16.4.7",
     "google-auth-library": "^9.4.1",
     "googleapis": "^144.0.0",
+    "ioredis": "^5.5.0",
     "langchain": "^0.1.12",
-    "openai": "^4.77.0"
+    "openai": "^4.77.0",
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.8.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
