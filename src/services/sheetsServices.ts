@@ -42,71 +42,121 @@ class SheetManager {
   // Función para agregar una conversación al inicio de la pestaña del usuario
   async addConverToUser(
     number: string,
-    conversation: { role: string, content: string }[]
+    conversation: { role: string; content: string }[]
   ): Promise<void> {
     try {
       const question = conversation.find((c) => c.role === "user")?.content;
       const answer = conversation.find((c) => c.role === "assistant")?.content;
       const date = new Date().toISOString(); // Fecha en formato UTC
 
-      if (!question || !answer)
-        throw new Error("La conversación debe contener tanto una pregunta como una respuesta.");
+      // Verificar si el usuario existe
+      const exists = await this.userExists(number);
 
-      // Leer las filas actuales para empujarlas hacia abajo
-      const sheetData = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${number}!A:C`,
-      });
+      if (!exists) {
+        // Si el usuario no existe, crear una nueva pestaña para él
+        try {
+          await this.sheets.spreadsheets.batchUpdate({
+            spreadsheetId: this.spreadsheetId,
+            requestBody: {
+              requests: [
+                {
+                  addSheet: {
+                    properties: {
+                      title: number,
+                    },
+                  },
+                },
+              ],
+            },
+          });
+        } catch (error) {
+          console.error("Error al crear nueva pestaña:", error);
+          throw error;
+        }
+      }
 
-      const rows = sheetData.data.values || [];
+      // Agregar la conversación al inicio de la pestaña del usuario
+      const values = [[date, question, answer]];
 
-      // Agregar la nueva conversación en la primera fila
-      rows.unshift([question, answer, date]);
-
-      // Escribir las filas de nuevo en la hoja
-      await this.sheets.spreadsheets.values.update({
-        spreadsheetId: this.spreadsheetId,
-        range: `${number}!A:C`,
-        valueInputOption: "RAW",
-        requestBody: {
-          values: rows,
-        },
-      });
+      try {
+        await this.sheets.spreadsheets.values.append({
+          spreadsheetId: this.spreadsheetId,
+          range: `${number}!A:C`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values,
+          },
+        });
+      } catch (error) {
+        console.error("Error al agregar conversación:", error);
+        throw error;
+      }
     } catch (error) {
-      console.error("Error al agregar la conversación:", error);
+      console.error("Error en addConverToUser:", error);
+      throw error;
     }
   }
 
-  // Función para obtener las preguntas/respuestas invertidas
-  async getUserConv(number: string): Promise<any[]> {
+  async createUser(number: string, name: string, mail: string): Promise<void> {
+    try {
+      // Agregar el usuario a la pestaña 'Users'
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId: this.spreadsheetId,
+        range: "Users!A:D",
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[number, name, mail, ""]],
+        },
+      });
+
+      // Crear una nueva pestaña con el nombre del número de teléfono
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: this.spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: number,
+                },
+              },
+            },
+          ],
+        },
+      });
+    } catch (error) {
+      console.error("Error al crear usuario o nueva pestaña:", error);
+      throw error;
+    }
+  }
+
+  async appendToSheet(sheetName: string, row: any[]): Promise<void> {
+    try {
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId: this.spreadsheetId,
+        range: `${sheetName}!A:Z`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [row]
+        }
+      });
+    } catch (error) {
+      console.error(`Error al agregar datos a ${sheetName}:`, error);
+      throw error;
+    }
+  }
+
+  async getSheetData(sheetName: string): Promise<any[][]> {
     try {
       const result = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${number}!A:B`, // Asumiendo que las preguntas están en A y respuestas en B
+        range: `${sheetName}!A:Z`,
       });
 
-      const rows = result.data.values;
-      if (!rows || rows.length === 0) {
-        return [];
-      }
-
-      // Tomar las últimas preguntas/respuestas (hasta un máximo de 3) y revertir el orden
-      const lastConversations = rows.slice(-3).reverse();
-
-      // Formatear las respuestas en el formato solicitado
-      const formattedConversations = [];
-      for (let i = 0; i < lastConversations.length; i++) {
-        const [userQuestion, assistantAnswer] = lastConversations[i];
-        formattedConversations.push(
-          { role: "user", content: userQuestion },
-          { role: "assistant", content: assistantAnswer }
-        );
-      }
-
-      return formattedConversations;
+      return result.data.values || [];
     } catch (error) {
-      console.error("Error al obtener la conversación del usuario:", error);
-      return [];
+      console.error(`Error al obtener datos de ${sheetName}:`, error);
+      throw error;
     }
   }
 
@@ -153,46 +203,17 @@ class SheetManager {
       });
     } catch (error) {
       console.error("Error al guardar thread del usuario:", error);
+      throw error;
     }
   }
+}
 
-  async createUser(number: string, name: string, mail:string): Promise<void> {
-    try {
-        // Agregar el usuario a la pestaña 'Users'
-        await this.sheets.spreadsheets.values.append({
-          spreadsheetId: this.spreadsheetId,
-          range: "Users!A:D",
-          valueInputOption: "RAW",
-          requestBody: {
-            values: [[number, name, mail, ""]],
-          },
-        });
-      
-        // Crear una nueva pestaña con el nombre del número de teléfono
-        await this.sheets.spreadsheets.batchUpdate({
-          spreadsheetId: this.spreadsheetId,
-          requestBody: {
-            requests: [
-              {
-                addSheet: {
-                  properties: {
-                    title: number,
-                  },
-                },
-              },
-            ],
-          },
-        });
-      } catch (error) {
-        console.error("Error al crear usuario o nueva pestaña:", error);
-      }
-    }
-  }  
+export { SheetManager };
 
-  
+const sheetManager = new SheetManager(
+    config.spreadsheetId,
+    config.privateKey,
+    config.clientEmail
+);
 
-  export default new SheetManager(
-        config.spreadsheetId,
-        config.privateKey,
-        config.clientEmail
-      );
+export default sheetManager;
