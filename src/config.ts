@@ -2,17 +2,17 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
-  apiKey: process.env.API_KEY || '',
+  apiKey: process.env.apiKey || process.env.API_KEY || '',
   assistant_id: process.env.ASSISTANT_ID || '',
   baseURL: 'https://api.deepseek.com',
   model: 'deepseek-chat',
-  Model: 'deepseek-chat', // Para compatibilidad con código existente
-  spreadsheetId: process.env.SPREADSHEET_ID || '',
-  privateKey: process.env.PRIVATE_KEY?.replace(/\\n/g, '\n') || '',
-  clientEmail: process.env.CLIENT_EMAIL || '',
-  jwtToken: process.env.JWT_TOKEN || '',
-  numberId: process.env.NUMBER_ID || '',
+  Model: process.env.Model || 'deepseek-chat',
+  spreadsheetId: process.env.spreadsheetId || '',
+  privateKey: process.env.privateKey?.replace(/\\n/g, '\n') || '',
+  clientEmail: process.env.clientEmail || '',
+  jwtToken: process.env.jwtToken || '',
+  numberId: process.env.numberId || '',
   PORT: process.env.PORT || 3000,
-  verifyToken: process.env.VERIFY_TOKEN || 'VERIFY_TOKEN',
+  verifyToken: process.env.verifyToken || '',
   version: '1.0.0'
 };
