@@ -7,16 +7,27 @@ class SheetManager {
   private spreadsheetId: string;
 
   constructor(spreadsheetId: string, privateKey: string, clientEmail: string) {
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        private_key: privateKey,
-        client_email: clientEmail,
-      },
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
+    if (!spreadsheetId || !privateKey || !clientEmail) {
+      throw new Error('Missing required Google Sheets configuration. Check your .env file.');
+    }
 
-    this.sheets = google.sheets({ version: "v4", auth });
-    this.spreadsheetId = spreadsheetId;
+    try {
+      const auth = new google.auth.GoogleAuth({
+        credentials: {
+          type: 'service_account',
+          project_id: 'whatsai-445316',
+          private_key: privateKey,
+          client_email: clientEmail,
+        },
+        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+      });
+
+      this.sheets = google.sheets({ version: "v4", auth });
+      this.spreadsheetId = spreadsheetId;
+    } catch (error) {
+      console.error('Error initializing Google Sheets:', error);
+      throw error;
+    }
   }
 
   // Función para verificar si un usuario existe
@@ -209,6 +220,12 @@ class SheetManager {
 }
 
 export { SheetManager };
+
+// Log de configuración para debug
+console.log('Google Sheets Configuration:');
+console.log('SpreadsheetId:', config.spreadsheetId ? 'Set' : 'Not Set');
+console.log('Client Email:', config.clientEmail ? config.clientEmail : 'Not Set');
+console.log('Private Key:', config.privateKey ? 'Set' : 'Not Set');
 
 const sheetManager = new SheetManager(
     config.spreadsheetId,
