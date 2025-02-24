@@ -20,12 +20,22 @@ const getBaseUrl = () => {
   return url;
 };
 
+// Validate Meta credentials
+const getMetaCredentials = () => {
+  const jwtToken = process.env.jwtToken;
+  const numberId = process.env.numberId;
+  const verifyToken = process.env.verifyToken;
+
+  if (!jwtToken || !numberId || !verifyToken) {
+    console.error("⚠️ Faltan credenciales de Meta WhatsApp");
+  }
+
+  return { jwtToken, numberId, verifyToken };
+};
+
 export const config = {
   PORT: process.env.PORT ?? 3000,
-  jwtToken: process.env.jwtToken,
-  numberId: process.env.numberId,
-  verifyToken: process.env.verifyToken,
-  version: "v20.0",
+  ...getMetaCredentials(),
   Model: process.env.Model || process.env.model || "deepseek-chat",
   baseURL: getBaseUrl(),
   apiKey: getApiKey(),
@@ -38,9 +48,9 @@ export const config = {
 // Verificación de variables críticas
 const requiredVars = {
   'API Key': config.apiKey,
-  'Assistant ID': config.assistant_id,
   'JWT Token': config.jwtToken,
   'Number ID': config.numberId,
+  'Verify Token': config.verifyToken,
   'Spreadsheet ID': config.spreadsheetId,
   'Private Key': config.privateKey,
   'Client Email': config.clientEmail,
