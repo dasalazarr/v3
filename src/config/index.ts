@@ -11,7 +11,7 @@ export const config = {
   verifyToken: process.env.verifyToken,
   version: "v20.0",
   Model: process.env.Model || process.env.model || "deepseek-chat",
-  baseURL: process.env.baseURL || "https://api.deepseek.com/v1",
+  baseURL: process.env.baseURL || "https://api.deepseek.com",  
   apiKey: process.env.apiKey || process.env.API_KEY,
   assistant_id: process.env.ASSISTANT_ID || process.env.assistant_id,
   spreadsheetId: process.env.spreadsheetId,
