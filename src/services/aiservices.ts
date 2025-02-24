@@ -1,8 +1,11 @@
 import OpenAI from "openai";
 import { config } from "~/config";
+import * as fs from 'fs';
+import * as path from 'path';
 
 class aiServices {
   private openAI: OpenAI;
+  private systemPrompt: string;
 
   constructor(apiKey: string) {
     console.log("Initializing AI service with baseURL:", config.baseURL);
@@ -12,17 +15,26 @@ class aiServices {
       apiKey,
       baseURL: config.baseURL || "https://api.deepseek.com"
     });
+
+    // Load system prompt
+    try {
+      const promptPath = path.join(process.cwd(), 'assets', 'prompts', 'prompt_DeepSeek.txt');
+      this.systemPrompt = fs.readFileSync(promptPath, 'utf-8');
+      console.log("✅ Sistema prompt cargado correctamente");
+    } catch (error) {
+      console.error("❌ Error al cargar el prompt:", error);
+      this.systemPrompt = "Eres un asistente amable y profesional de Gabriani.";
+    }
   }
 
   async chat(prompt: string, messages: any[]): Promise<string> {
     try {
       console.log("Making API request with model:", config.Model);
-      console.log("Using baseURL:", config.baseURL);
       
       const completion = await this.openAI.chat.completions.create({
         model: config.Model || "deepseek-chat",
         messages: [
-          { role: "system", content: prompt },
+          { role: "system", content: this.systemPrompt }, // Use loaded system prompt
           ...messages.map(msg => ({
             role: msg.role || "user",
             content: msg.content
@@ -52,7 +64,7 @@ class aiServices {
 
   async chatWithAssistant(message: string): Promise<{ response: string; threadId: string }> {
     try {
-      const response = await this.chat("You are a helpful assistant.", [
+      const response = await this.chat(this.systemPrompt, [
         { role: "user", content: message }
       ]);
 
