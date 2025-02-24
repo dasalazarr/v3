@@ -7,14 +7,14 @@ class aiServices {
   constructor(apiKey: string) {
     this.openAI = new OpenAI({ 
       apiKey,
-      baseURL: config.baseURL 
+      baseURL: config.baseURL || "https://api.deepseek.com/v1"  // Default DeepSeek URL
     });
   }
 
   async chat(prompt: string, messages: any[]): Promise<string> {
     try {
       const completion = await this.openAI.chat.completions.create({
-        model: config.model,
+        model: config.Model || "deepseek-chat",  // Use uppercase Model from config
         messages: [
           { role: "system", content: prompt },
           ...messages,

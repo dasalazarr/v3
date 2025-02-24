@@ -10,9 +10,10 @@ export const config = {
   numberId: process.env.numberId,
   verifyToken: process.env.verifyToken,
   version: "v20.0",
-  Model: process.env.Model || "gpt-3.5-turbo",
-  apiKey: process.env.apiKey || process.env.OPENAI_API_KEY, // Soporte para ambos formatos
-  assistant_id: process.env.ASSISTANT_ID || process.env.assistant_id, // Soporte para ambos formatos
+  Model: process.env.Model || process.env.model || "deepseek-chat",
+  baseURL: process.env.baseURL || "https://api.deepseek.com/v1",
+  apiKey: process.env.apiKey || process.env.API_KEY,
+  assistant_id: process.env.ASSISTANT_ID || process.env.assistant_id,
   spreadsheetId: process.env.spreadsheetId,
   privateKey: process.env.privateKey,
   clientEmail: process.env.clientEmail
@@ -26,7 +27,9 @@ const requiredVars = {
   'Number ID': config.numberId,
   'Spreadsheet ID': config.spreadsheetId,
   'Private Key': config.privateKey,
-  'Client Email': config.clientEmail
+  'Client Email': config.clientEmail,
+  'Base URL': config.baseURL,
+  'Model': config.Model
 };
 
 // Verificar variables críticas
