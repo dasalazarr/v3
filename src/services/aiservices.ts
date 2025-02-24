@@ -10,7 +10,7 @@ class aiServices {
     
     this.openAI = new OpenAI({ 
       apiKey,
-      baseURL: config.baseURL || "https://api.deepseek.com/v1"
+      baseURL: config.baseURL || "https://api.deepseek.com"
     });
   }
 
@@ -23,20 +23,30 @@ class aiServices {
         model: config.Model || "deepseek-chat",
         messages: [
           { role: "system", content: prompt },
-          ...messages,
+          ...messages.map(msg => ({
+            role: msg.role || "user",
+            content: msg.content
+          }))
         ],
         temperature: 0.7,
-        max_tokens: 1000
+        max_tokens: 2000
       });
 
-      return completion.choices[0]?.message?.content || "No response";
+      if (!completion.choices?.[0]?.message?.content) {
+        console.error("No response content in completion:", completion);
+        return "Lo siento, hubo un error al procesar tu mensaje.";
+      }
+
+      return completion.choices[0].message.content;
     } catch (err: any) {
       console.error("Error al conectar con DeepSeek. Detalles:");
       console.error("Status:", err.status);
       console.error("Message:", err.message);
-      console.error("Response:", err.response?.data);
-      console.error("Headers:", err.response?.headers);
-      return "ERROR";
+      if (err.response) {
+        console.error("Response data:", err.response.data);
+        console.error("Response headers:", err.response.headers);
+      }
+      return "Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.";
     }
   }
 
