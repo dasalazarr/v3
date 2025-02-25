@@ -1,82 +1,216 @@
-import OpenAI from "openai";
-import { config } from "~/config";
+import { config } from "../config";
 import * as fs from 'fs';
 import * as path from 'path';
+import sheetsService from './sheetsServices';
+
+interface ExpenseCommand {
+  type: 'expense';
+  date: string;
+  description: string;
+  category: string;
+  amount: number;
+  paymentMethod: string;
+  notes?: string;
+}
 
 class aiServices {
-  private openAI: OpenAI;
   private systemPrompt: string;
+  private baseURL: string;
+  private apiKey: string;
 
-  constructor(apiKey: string) {
-    console.log("Initializing AI service with baseURL:", config.baseURL);
-    console.log("Using model:", config.Model);
-    
-    this.openAI = new OpenAI({ 
-      apiKey,
-      baseURL: config.baseURL || "https://api.deepseek.com"
-    });
+  constructor() {
+    this.baseURL = config.baseURL || "https://api.deepseek.com/v1";
+    this.apiKey = config.apiKey;
 
     // Load system prompt
     try {
       const promptPath = path.join(process.cwd(), 'assets', 'prompts', 'prompt_DeepSeek.txt');
-      this.systemPrompt = fs.readFileSync(promptPath, 'utf-8');
+      this.systemPrompt = fs.readFileSync(promptPath, 'utf8');
       console.log("✅ Sistema prompt cargado correctamente");
     } catch (error) {
       console.error("❌ Error al cargar el prompt:", error);
-      this.systemPrompt = "Eres un asistente amable y profesional de Gabriani.";
+      this.systemPrompt = "Eres un asistente amable y profesional de Khipu.";
     }
+  }
+
+  private parseExpenseCommand(text: string): ExpenseCommand | null {
+    // Patrones comunes de expresión de gastos
+    const patterns = [
+      // "Gasté 50 en comida"
+      /gast[eéó]\s+(\d+)\s+(?:en|por)\s+(.+)/i,
+      // "Pagué 30 por transporte"
+      /pag[uúü][eéó]\s+(\d+)\s+(?:en|por)\s+(.+)/i,
+      // "Compré comida por 25"
+      /compr[eéó]\s+(.+)\s+por\s+(\d+)/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        let amount: number;
+        let description: string;
+
+        if (pattern.toString().includes('compr[eéó]')) {
+          description = match[1];
+          amount = parseInt(match[2]);
+        } else {
+          amount = parseInt(match[1]);
+          description = match[2];
+        }
+
+        // Inferir categoría basada en palabras clave
+        const category = this.inferCategory(description.toLowerCase());
+
+        return {
+          type: 'expense',
+          date: new Date().toLocaleDateString('es-ES'),
+          description,
+          category,
+          amount,
+          paymentMethod: 'Efectivo', // Default
+          notes: ''
+        };
+      }
+    }
+
+    return null;
+  }
+
+  private inferCategory(description: string): string {
+    const categoryKeywords: Record<string, string[]> = {
+      'Alimentación': ['comida', 'almuerzo', 'cena', 'desayuno', 'restaurante', 'mercado'],
+      'Transporte': ['taxi', 'bus', 'metro', 'gasolina', 'uber', 'transporte'],
+      'Entretenimiento': ['cine', 'película', 'juego', 'concierto', 'evento'],
+      'Salud': ['medicina', 'doctor', 'farmacia', 'médico', 'hospital'],
+      'Educación': ['libro', 'curso', 'clase', 'escuela', 'universidad'],
+      'Hogar': ['casa', 'alquiler', 'servicios', 'luz', 'agua', 'gas'],
+      'Otros': []
+    };
+
+    for (const [category, keywords] of Object.entries(categoryKeywords)) {
+      if (keywords.some(keyword => description.includes(keyword))) {
+        return category;
+      }
+    }
+
+    return 'Otros';
   }
 
   async chat(prompt: string, messages: any[]): Promise<string> {
     try {
-      console.log("Making API request with model:", config.Model);
+      console.log("Making API request to DeepSeek with model:", config.Model);
+
+      // Verificar si es un comando de gasto
+      const expenseCommand = this.parseExpenseCommand(prompt);
       
-      const completion = await this.openAI.chat.completions.create({
-        model: config.Model || "deepseek-chat",
-        messages: [
-          { role: "system", content: this.systemPrompt }, // Use loaded system prompt
-          ...messages.map(msg => ({
-            role: msg.role || "user",
-            content: msg.content
-          }))
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
+      if (expenseCommand) {
+        await sheetsService.addExpense(expenseCommand);
+        
+        // Obtener totales por categoría
+        const totals = await sheetsService.getTotalsByCategory();
+        
+        // Formatear respuesta
+        const response = [
+          `✅ Gasto registrado exitosamente:`,
+          `📝 Descripción: ${expenseCommand.description}`,
+          `💰 Monto: $${expenseCommand.amount}`,
+          `🏷️ Categoría: ${expenseCommand.category}`,
+          `\nResumen del mes:`,
+          ...Object.entries(totals).map(([cat, total]) => 
+            `${cat}: $${total.toFixed(2)}`
+          )
+        ].join('\n');
+
+        return response;
+      }
+
+      // Llamada a la API de DeepSeek
+      const response = await fetch(`${this.baseURL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: config.Model || "deepseek-chat",
+          messages: [
+            {
+              role: "system",
+              content: this.systemPrompt
+            },
+            ...messages,
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000
+        })
       });
 
-      if (!completion.choices?.[0]?.message?.content) {
-        console.error("No response content in completion:", completion);
-        return "Lo siento, hubo un error al procesar tu mensaje.";
+      if (!response.ok) {
+        throw new Error(`DeepSeek API error: ${response.status} - ${response.statusText}`);
       }
 
-      return completion.choices[0].message.content;
-    } catch (err: any) {
-      console.error("Error al conectar con DeepSeek. Detalles:");
-      console.error("Status:", err.status);
-      console.error("Message:", err.message);
-      if (err.response) {
-        console.error("Response data:", err.response.data);
-        console.error("Response headers:", err.response.headers);
+      const data = await response.json();
+      return data.choices[0].message.content;
+
+    } catch (error: any) {
+      console.error("Error in DeepSeek chat completion:", error);
+
+      // Manejo específico de errores
+      if (error.message?.includes('401')) {
+        return "Error de autenticación con DeepSeek. Por favor, verifica tu API key.";
+      } else if (error.message?.includes('429')) {
+        return "Se ha excedido el límite de solicitudes a DeepSeek. Por favor, intenta más tarde.";
+      } else if (error.message?.includes('500')) {
+        return "Error en el servidor de DeepSeek. Por favor, intenta más tarde.";
       }
-      return "Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.";
+
+      return "Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta nuevamente.";
     }
   }
 
-  async chatWithAssistant(message: string): Promise<{ response: string; threadId: string }> {
+  async processMessage(message: string): Promise<string> {
     try {
-      const response = await this.chat(this.systemPrompt, [
-        { role: "user", content: message }
-      ]);
+      // Verificar si es un comando de gasto
+      const expenseCommand = this.parseExpenseCommand(message);
+      
+      if (expenseCommand) {
+        await sheetsService.addExpense(expenseCommand);
+        
+        // Obtener totales por categoría
+        const totals = await sheetsService.getTotalsByCategory();
+        
+        // Formatear respuesta
+        const response = [
+          `✅ Gasto registrado exitosamente:`,
+          `📝 Descripción: ${expenseCommand.description}`,
+          `💰 Monto: $${expenseCommand.amount}`,
+          `🏷️ Categoría: ${expenseCommand.category}`,
+          `\nResumen del mes:`,
+          ...Object.entries(totals).map(([cat, total]) => 
+            `${cat}: $${total.toFixed(2)}`
+          )
+        ].join('\n');
 
-      return { 
-        response,
-        threadId: ''
-      };
+        return response;
+      }
+
+      // Si no es un comando de gasto, procesar con DeepSeek
+      const messages = [
+        { role: 'system', content: this.systemPrompt },
+        { role: 'user', content: message }
+      ];
+
+      return await this.chat(message, messages);
+
     } catch (error) {
-      console.error("Error en chatWithAssistant:", error);
-      throw error;
+      console.error('Error processing message:', error);
+      return 'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta nuevamente.';
     }
   }
 }
 
-export default aiServices;
+export default new aiServices();

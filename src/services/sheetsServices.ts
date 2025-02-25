@@ -1,236 +1,319 @@
-import { google } from "googleapis";
-import { sheets_v4 } from "googleapis/build/src/apis/sheets";
-import { config } from "../config";
+import { google } from 'googleapis';
+import { config } from '../config';
 
-class SheetManager {
-  private sheets: sheets_v4.Sheets;
-  private spreadsheetId: string;
+interface Expense {
+  date: string;
+  description: string;
+  category: string;
+  amount: number;
+  paymentMethod: string;
+  notes?: string;
+}
 
-  constructor(spreadsheetId: string, privateKey: string, clientEmail: string) {
-    if (!spreadsheetId || !privateKey || !clientEmail) {
-      throw new Error('Missing required Google Sheets configuration. Check your .env file.');
-    }
+class SheetsService {
+  private sheets;
+  private readonly CATEGORIES = [
+    "Alimentación",
+    "Transporte",
+    "Entretenimiento",
+    "Salud",
+    "Educación",
+    "Hogar",
+    "Otros"
+  ];
 
-    try {
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          type: 'service_account',
-          project_id: 'whatsai-445316',
-          private_key: privateKey,
-          client_email: clientEmail,
-        },
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-      });
+  private readonly PAYMENT_METHODS = [
+    "Efectivo",
+    "Tarjeta de Crédito",
+    "Tarjeta de Débito",
+    "Transferencia"
+  ];
 
-      this.sheets = google.sheets({ version: "v4", auth });
-      this.spreadsheetId = spreadsheetId;
-    } catch (error) {
-      console.error('Error initializing Google Sheets:', error);
-      throw error;
-    }
+  constructor() {
+    const auth = new google.auth.JWT({
+      email: config.clientEmail,
+      key: config.privateKey?.replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+
+    this.sheets = google.sheets({ version: 'v4', auth });
   }
 
-  // Función para verificar si un usuario existe
-  async userExists(number: string): Promise<boolean> {
-    try {
-      const result = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: "Users!A:A", // Asumiendo que los números de teléfono están en la columna A
-      });
-
-      const rows = result.data.values;
-      if (rows) {
-        const numbers = rows.map((row) => row[0]);
-        return numbers.includes(number);
-      }
-      return false;
-    } catch (error) {
-      console.error("Error al verificar si el usuario existe:", error);
-      return false;
-    }
+  private getMonthSheetName(): string {
+    const date = new Date();
+    const months = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+    return `Gastos_${months[date.getMonth()]}_${date.getFullYear()}`;
   }
 
-  // Función para agregar una conversación al inicio de la pestaña del usuario
-  async addConverToUser(
-    number: string,
-    conversation: { role: string; content: string }[]
-  ): Promise<void> {
+  async initializeExpenseSheet(): Promise<string> {
     try {
-      const question = conversation.find((c) => c.role === "user")?.content;
-      const answer = conversation.find((c) => c.role === "assistant")?.content;
-      const date = new Date().toISOString(); // Fecha en formato UTC
+      const sheetName = this.getMonthSheetName();
+      
+      // Verificar si la hoja ya existe
+      const sheets = await this.sheets.spreadsheets.get({
+        spreadsheetId: config.spreadsheetId
+      });
 
-      // Verificar si el usuario existe
-      const exists = await this.userExists(number);
+      const existingSheet = sheets.data.sheets?.find(
+        sheet => sheet.properties?.title === sheetName
+      );
 
-      if (!exists) {
-        // Si el usuario no existe, crear una nueva pestaña para él
-        try {
-          await this.sheets.spreadsheets.batchUpdate({
-            spreadsheetId: this.spreadsheetId,
-            requestBody: {
-              requests: [
-                {
-                  addSheet: {
-                    properties: {
-                      title: number,
-                    },
-                  },
-                },
-              ],
-            },
-          });
-        } catch (error) {
-          console.error("Error al crear nueva pestaña:", error);
-          throw error;
-        }
-      }
-
-      // Agregar la conversación al inicio de la pestaña del usuario
-      const values = [[date, question, answer]];
-
-      try {
-        await this.sheets.spreadsheets.values.append({
-          spreadsheetId: this.spreadsheetId,
-          range: `${number}!A:C`,
-          valueInputOption: "USER_ENTERED",
+      if (!existingSheet) {
+        // Crear nueva hoja
+        await this.sheets.spreadsheets.batchUpdate({
+          spreadsheetId: config.spreadsheetId,
           requestBody: {
-            values,
-          },
-        });
-      } catch (error) {
-        console.error("Error al agregar conversación:", error);
-        throw error;
-      }
-    } catch (error) {
-      console.error("Error en addConverToUser:", error);
-      throw error;
-    }
-  }
-
-  async createUser(number: string, name: string, mail: string): Promise<void> {
-    try {
-      // Agregar el usuario a la pestaña 'Users'
-      await this.sheets.spreadsheets.values.append({
-        spreadsheetId: this.spreadsheetId,
-        range: "Users!A:D",
-        valueInputOption: "RAW",
-        requestBody: {
-          values: [[number, name, mail, ""]],
-        },
-      });
-
-      // Crear una nueva pestaña con el nombre del número de teléfono
-      await this.sheets.spreadsheets.batchUpdate({
-        spreadsheetId: this.spreadsheetId,
-        requestBody: {
-          requests: [
-            {
+            requests: [{
               addSheet: {
                 properties: {
-                  title: number,
-                },
-              },
-            },
-          ],
-        },
-      });
+                  title: sheetName
+                }
+              }
+            }]
+          }
+        });
+
+        // Configurar encabezados y formato
+        await this.setupSheetFormat(sheetName);
+      }
+
+      return sheetName;
     } catch (error) {
-      console.error("Error al crear usuario o nueva pestaña:", error);
+      console.error('Error al inicializar hoja de gastos:', error);
       throw error;
     }
   }
 
-  async appendToSheet(sheetName: string, row: any[]): Promise<void> {
+  private async setupSheetFormat(sheetName: string) {
     try {
-      await this.sheets.spreadsheets.values.append({
-        spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A:Z`,
-        valueInputOption: 'USER_ENTERED',
+      // Configurar encabezados
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: config.spreadsheetId,
+        range: `${sheetName}!A1:F1`,
+        valueInputOption: 'RAW',
         requestBody: {
-          values: [row]
+          values: [[
+            'Fecha',
+            'Descripción',
+            'Categoría',
+            'Monto',
+            'Método de Pago',
+            'Notas'
+          ]]
         }
       });
+
+      // Configurar validación de datos y formato
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: config.spreadsheetId,
+        requestBody: {
+          requests: [
+            // Formato de fecha
+            {
+              repeatCell: {
+                range: {
+                  sheetId: await this.getSheetId(sheetName),
+                  startColumnIndex: 0,
+                  endColumnIndex: 1
+                },
+                cell: {
+                  userEnteredFormat: {
+                    numberFormat: {
+                      type: 'DATE',
+                      pattern: 'dd/mm/yyyy'
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.numberFormat'
+              }
+            },
+            // Formato de moneda
+            {
+              repeatCell: {
+                range: {
+                  sheetId: await this.getSheetId(sheetName),
+                  startColumnIndex: 3,
+                  endColumnIndex: 4
+                },
+                cell: {
+                  userEnteredFormat: {
+                    numberFormat: {
+                      type: 'CURRENCY',
+                      pattern: '"$"#,##0.00'
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat.numberFormat'
+              }
+            },
+            // Validación de categorías
+            {
+              setDataValidation: {
+                range: {
+                  sheetId: await this.getSheetId(sheetName),
+                  startColumnIndex: 2,
+                  endColumnIndex: 3,
+                  startRowIndex: 1
+                },
+                rule: {
+                  condition: {
+                    type: 'ONE_OF_LIST',
+                    values: this.CATEGORIES.map(cat => ({ userEnteredValue: cat }))
+                  },
+                  strict: true,
+                  showCustomUi: true
+                }
+              }
+            },
+            // Validación de métodos de pago
+            {
+              setDataValidation: {
+                range: {
+                  sheetId: await this.getSheetId(sheetName),
+                  startColumnIndex: 4,
+                  endColumnIndex: 5,
+                  startRowIndex: 1
+                },
+                rule: {
+                  condition: {
+                    type: 'ONE_OF_LIST',
+                    values: this.PAYMENT_METHODS.map(method => ({ userEnteredValue: method }))
+                  },
+                  strict: true,
+                  showCustomUi: true
+                }
+              }
+            }
+          ]
+        }
+      });
+
+      // Configurar formato condicional para montos altos
+      await this.setupConditionalFormatting(sheetName);
+
     } catch (error) {
-      console.error(`Error al agregar datos a ${sheetName}:`, error);
+      console.error('Error al configurar formato de hoja:', error);
       throw error;
     }
   }
 
-  async getSheetData(sheetName: string): Promise<any[][]> {
+  private async getSheetId(sheetName: string): Promise<number> {
+    const response = await this.sheets.spreadsheets.get({
+      spreadsheetId: config.spreadsheetId
+    });
+
+    const sheet = response.data.sheets?.find(
+      s => s.properties?.title === sheetName
+    );
+
+    if (!sheet?.properties?.sheetId) {
+      throw new Error(`No se encontró la hoja ${sheetName}`);
+    }
+
+    return sheet.properties.sheetId;
+  }
+
+  private async setupConditionalFormatting(sheetName: string) {
+    const sheetId = await this.getSheetId(sheetName);
+    
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: config.spreadsheetId,
+      requestBody: {
+        requests: [{
+          addConditionalFormatRule: {
+            rule: {
+              ranges: [{
+                sheetId: sheetId,
+                startColumnIndex: 3,
+                endColumnIndex: 4
+              }],
+              booleanRule: {
+                condition: {
+                  type: 'NUMBER_GREATER',
+                  values: [{ userEnteredValue: '100' }]
+                },
+                format: {
+                  backgroundColor: {
+                    red: 0.9,
+                    green: 0.8,
+                    blue: 0.8
+                  }
+                }
+              }
+            }
+          }
+        }]
+      }
+    });
+  }
+
+  async addExpense(expense: Expense): Promise<void> {
     try {
-      const result = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A:Z`,
+      const sheetName = await this.initializeExpenseSheet();
+      
+      // Obtener la siguiente fila disponible
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: `${sheetName}!A:A`
       });
 
-      return result.data.values || [];
+      const nextRow = (response.data.values?.length || 1) + 1;
+
+      // Agregar el gasto
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: config.spreadsheetId,
+        range: `${sheetName}!A${nextRow}:F${nextRow}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[
+            expense.date,
+            expense.description,
+            expense.category,
+            expense.amount,
+            expense.paymentMethod,
+            expense.notes || ''
+          ]]
+        }
+      });
+
+      console.log(`✅ Gasto registrado en ${sheetName}`);
     } catch (error) {
-      console.error(`Error al obtener datos de ${sheetName}:`, error);
+      console.error('Error al agregar gasto:', error);
       throw error;
     }
   }
 
-  async getUserThread(number: string): Promise<string | null> {
+  async getTotalsByCategory(sheetName?: string): Promise<Record<string, number>> {
     try {
-      const result = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: "Users!A:D",
+      const currentSheet = sheetName || await this.getMonthSheetName();
+      
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: `${currentSheet}!C2:D`
       });
 
-      const rows = result.data.values || [];
-      const userRow = rows.find(row => row[0] === number);
-      return userRow?.[3] || null;
+      const totals: Record<string, number> = {};
+      
+      if (response.data.values) {
+        response.data.values.forEach(row => {
+          const category = row[0];
+          const amount = parseFloat(row[1]) || 0;
+          
+          if (category) {
+            totals[category] = (totals[category] || 0) + amount;
+          }
+        });
+      }
+
+      return totals;
     } catch (error) {
-      console.error("Error al obtener thread del usuario:", error);
-      return null;
-    }
-  }
-
-  async saveUserThread(number: string, threadId: string): Promise<void> {
-    try {
-      const result = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: "Users!A:D",
-      });
-
-      const rows = result.data.values || [];
-      const userRowIndex = rows.findIndex(row => row[0] === number);
-
-      const range = userRowIndex !== -1 
-        ? `Users!D${userRowIndex + 1}`
-        : "Users!A:D";
-
-      const values = userRowIndex !== -1
-        ? [[threadId]]
-        : [[number, "", "", threadId]];
-
-      await this.sheets.spreadsheets.values[userRowIndex !== -1 ? 'update' : 'append']({
-        spreadsheetId: this.spreadsheetId,
-        range,
-        valueInputOption: "RAW",
-        ...(userRowIndex === -1 && { insertDataOption: "INSERT_ROWS" }),
-        requestBody: { values }
-      });
-    } catch (error) {
-      console.error("Error al guardar thread del usuario:", error);
+      console.error('Error al obtener totales por categoría:', error);
       throw error;
     }
   }
 }
 
-export { SheetManager };
-
-// Log de configuración para debug
-console.log('Google Sheets Configuration:');
-console.log('SpreadsheetId:', config.spreadsheetId ? 'Set' : 'Not Set');
-console.log('Client Email:', config.clientEmail ? config.clientEmail : 'Not Set');
-console.log('Private Key:', config.privateKey ? 'Set' : 'Not Set');
-
-const sheetManager = new SheetManager(
-    config.spreadsheetId,
-    config.privateKey,
-    config.clientEmail
-);
-
-export default sheetManager;
+export default new SheetsService();
