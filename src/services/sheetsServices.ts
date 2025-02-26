@@ -370,10 +370,52 @@ export class SheetsService {
 
   async addConverToUser(phoneNumber: string, messages: Array<{role: string, content: string}>): Promise<void> {
     try {
-      // Assuming there's a 'Conversations' sheet with columns: PhoneNumber, Timestamp, UserMessage, BotResponse
+      const sheetName = 'Conversations';
+      
+      // Check if the Conversations sheet exists
+      const sheets = await this.sheets.spreadsheets.get({
+        spreadsheetId: config.spreadsheetId
+      });
+
+      const existingSheet = sheets.data.sheets?.find(
+        sheet => sheet.properties?.title === sheetName
+      );
+
+      if (!existingSheet) {
+        // Create the Conversations sheet if it doesn't exist
+        await this.sheets.spreadsheets.batchUpdate({
+          spreadsheetId: config.spreadsheetId,
+          requestBody: {
+            requests: [{
+              addSheet: {
+                properties: {
+                  title: sheetName
+                }
+              }
+            }]
+          }
+        });
+
+        // Set up headers
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId: config.spreadsheetId,
+          range: `${sheetName}!A1:D1`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: {
+            values: [[
+              'PhoneNumber', 
+              'Timestamp', 
+              'UserMessage', 
+              'BotResponse'
+            ]]
+          }
+        });
+      }
+
+      // Get the next available row
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: config.spreadsheetId,
-        range: 'Conversations!A:A'
+        range: `${sheetName}!A:A`
       });
 
       const nextRow = (response.data.values?.length || 0) + 1;
@@ -385,7 +427,7 @@ export class SheetsService {
 
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: config.spreadsheetId,
-        range: `Conversations!A${nextRow}:D${nextRow}`,
+        range: `${sheetName}!A${nextRow}:D${nextRow}`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [[
