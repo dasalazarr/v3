@@ -16,20 +16,14 @@ export const faqFlow = addKeyword(EVENTS.ACTION)
 
       // Use aiServices directly without 'new' since it's already instantiated
       console.log("💬 Enviando mensaje al asistente");
-      const response = await aiServices.processMessage(ctx.body);
+      const response = await aiServices.processMessage(ctx.body, ctx.from);
 
       if (!response) {
         console.error("❌ No se recibió respuesta del asistente");
         return endFlow("No pude procesar tu mensaje. Por favor, intenta de nuevo.");
       }
 
-      // Guardar conversación
-      console.log("📝 Guardando conversación en sheets");
-      await sheetsServices.addConverToUser(ctx.from, [
-        { role: "user", content: ctx.body },
-        { role: "assistant", content: response }
-      ]);
-
+      // Ya no es necesario guardar la conversación aquí, ya que se hace dentro de processMessage
       console.log("✅ Respuesta enviada");
       return endFlow(response);
     } catch (error) {

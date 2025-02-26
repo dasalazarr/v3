@@ -486,6 +486,60 @@ export class SheetsService {
     }
   }
 
+  async getLastUserConversations(phoneNumber: string, limit: number = 5): Promise<Array<{timestamp: string, userMessage: string, botResponse: string}>> {
+    try {
+      // Verificar si existe la hoja de conversaciones
+      const sheetExists = await this.sheetExists('Conversations');
+      if (!sheetExists) {
+        console.log('La hoja de conversaciones no existe');
+        return [];
+      }
+
+      // Obtener todas las conversaciones del usuario
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: 'Conversations!A:D'
+      });
+
+      if (!response.data.values || response.data.values.length <= 1) {
+        return [];
+      }
+
+      // Filtrar por número de teléfono y ordenar por timestamp (más reciente primero)
+      const headers = response.data.values[0];
+      const phoneIndex = headers.findIndex((h: string) => h.toLowerCase().includes('phone') || h.toLowerCase().includes('teléfono'));
+      const timestampIndex = headers.findIndex((h: string) => h.toLowerCase().includes('timestamp') || h.toLowerCase().includes('fecha'));
+      const userMessageIndex = headers.findIndex((h: string) => h.toLowerCase().includes('user') || h.toLowerCase().includes('usuario'));
+      const botResponseIndex = headers.findIndex((h: string) => h.toLowerCase().includes('bot') || h.toLowerCase().includes('asistente'));
+
+      if (phoneIndex === -1 || timestampIndex === -1 || userMessageIndex === -1 || botResponseIndex === -1) {
+        console.error('Estructura de columnas incorrecta en la hoja de conversaciones');
+        return [];
+      }
+
+      const userConversations = response.data.values
+        .slice(1) // Omitir encabezados
+        .filter((row: string[]) => row[phoneIndex] === phoneNumber)
+        .sort((a: string[], b: string[]) => {
+          // Ordenar por timestamp descendente (más reciente primero)
+          const dateA = new Date(a[timestampIndex]).getTime();
+          const dateB = new Date(b[timestampIndex]).getTime();
+          return dateB - dateA;
+        })
+        .slice(0, limit) // Limitar al número solicitado
+        .map((row: string[]) => ({
+          timestamp: row[timestampIndex],
+          userMessage: row[userMessageIndex],
+          botResponse: row[botResponseIndex]
+        }));
+
+      return userConversations;
+    } catch (error) {
+      console.error('Error al obtener conversaciones del usuario:', error);
+      return [];
+    }
+  }
+
   /**
    * Appends a row of data to a specified sheet
    * @param sheetName The name of the sheet to append data to
@@ -549,6 +603,23 @@ export class SheetsService {
     } catch (error) {
       console.error(`Error getting data from sheet ${sheetName}:`, error);
       throw error;
+    }
+  }
+
+  private async sheetExists(sheetName: string): Promise<boolean> {
+    try {
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId: config.spreadsheetId
+      });
+
+      const sheet = response.data.sheets?.find(
+        s => s.properties?.title === sheetName
+      );
+
+      return sheet !== undefined;
+    } catch (error) {
+      console.error('Error al verificar si la hoja existe:', error);
+      return false;
     }
   }
 }
