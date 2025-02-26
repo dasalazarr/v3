@@ -14,9 +14,9 @@ export const faqFlow = addKeyword(EVENTS.ACTION)
         return endFlow("Por favor, envía un mensaje con contenido.");
       }
 
-      const AI = new aiServices(config.apiKey);
+      // Use aiServices directly without 'new' since it's already instantiated
       console.log("💬 Enviando mensaje al asistente");
-      const { response } = await AI.chatWithAssistant(ctx.body);
+      const response = await aiServices.processMessage(ctx.body);
 
       if (!response) {
         console.error("❌ No se recibió respuesta del asistente");

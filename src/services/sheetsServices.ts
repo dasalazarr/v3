@@ -314,6 +314,135 @@ class SheetsService {
       throw error;
     }
   }
+
+  async userExists(phoneNumber: string): Promise<boolean> {
+    try {
+      // Assuming there's a 'Users' sheet with phone numbers in column A
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: 'Users!A:A'
+      });
+
+      if (!response.data.values) {
+        return false;
+      }
+
+      // Check if the phone number exists in the list
+      return response.data.values.some(row => row[0] === phoneNumber);
+    } catch (error) {
+      console.error('Error al verificar si el usuario existe:', error);
+      return false;
+    }
+  }
+
+  async createUser(phoneNumber: string, name: string, email: string): Promise<void> {
+    try {
+      // Assuming there's a 'Users' sheet with columns: PhoneNumber, Name, Email, RegisterDate, LastActive
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: 'Users!A:A'
+      });
+
+      const nextRow = (response.data.values?.length || 0) + 1;
+      const currentDate = new Date().toISOString();
+
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: config.spreadsheetId,
+        range: `Users!A${nextRow}:E${nextRow}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[
+            phoneNumber,
+            name,
+            email,
+            currentDate,
+            currentDate
+          ]]
+        }
+      });
+
+      console.log(`✅ Usuario registrado: ${name} (${phoneNumber})`);
+    } catch (error) {
+      console.error('Error al crear usuario:', error);
+      throw error;
+    }
+  }
+
+  async addConverToUser(phoneNumber: string, messages: Array<{role: string, content: string}>): Promise<void> {
+    try {
+      // Assuming there's a 'Conversations' sheet with columns: PhoneNumber, Timestamp, UserMessage, BotResponse
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: 'Conversations!A:A'
+      });
+
+      const nextRow = (response.data.values?.length || 0) + 1;
+      const currentDate = new Date().toISOString();
+
+      // Extract user message and bot response from messages array
+      const userMessage = messages.find(msg => msg.role === 'user')?.content || '';
+      const botResponse = messages.find(msg => msg.role === 'assistant')?.content || '';
+
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: config.spreadsheetId,
+        range: `Conversations!A${nextRow}:D${nextRow}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[
+            phoneNumber,
+            currentDate,
+            userMessage,
+            botResponse
+          ]]
+        }
+      });
+
+      // Update user's LastActive timestamp
+      await this.updateUserLastActive(phoneNumber);
+
+      console.log(`✅ Conversación registrada para: ${phoneNumber}`);
+    } catch (error) {
+      console.error('Error al registrar conversación:', error);
+      throw error;
+    }
+  }
+
+  private async updateUserLastActive(phoneNumber: string): Promise<void> {
+    try {
+      // Find the user's row
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: 'Users!A:A'
+      });
+
+      if (!response.data.values) {
+        console.error('No se encontraron usuarios');
+        return;
+      }
+
+      const userRowIndex = response.data.values.findIndex(row => row[0] === phoneNumber);
+      
+      if (userRowIndex === -1) {
+        console.error(`Usuario no encontrado: ${phoneNumber}`);
+        return;
+      }
+
+      const rowNumber = userRowIndex + 1; // Sheets is 1-indexed
+      const currentDate = new Date().toISOString();
+
+      // Update LastActive timestamp (column E)
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: config.spreadsheetId,
+        range: `Users!E${rowNumber}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[currentDate]]
+        }
+      });
+    } catch (error) {
+      console.error('Error al actualizar LastActive del usuario:', error);
+    }
+  }
 }
 
 export default new SheetsService();
