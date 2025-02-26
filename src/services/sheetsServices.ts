@@ -10,7 +10,7 @@ interface Expense {
   notes?: string;
 }
 
-class SheetsService {
+export class SheetsService {
   private sheets;
   private readonly CATEGORIES = [
     "Alimentación",
@@ -441,6 +441,72 @@ class SheetsService {
       });
     } catch (error) {
       console.error('Error al actualizar LastActive del usuario:', error);
+    }
+  }
+
+  /**
+   * Appends a row of data to a specified sheet
+   * @param sheetName The name of the sheet to append data to
+   * @param rowData The array of values to append as a new row
+   */
+  async appendToSheet(sheetName: string, rowData: any[]): Promise<void> {
+    try {
+      // If sheetName is "Expenses", use the current month's expense sheet
+      const targetSheet = sheetName === "Expenses" 
+        ? await this.initializeExpenseSheet()
+        : sheetName;
+      
+      // Get the next available row
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: `${targetSheet}!A:A`
+      });
+
+      const nextRow = (response.data.values?.length || 1) + 1;
+      
+      // Calculate the range based on the number of columns in rowData
+      const lastColumn = String.fromCharCode(65 + rowData.length - 1); // A + number of columns - 1
+      
+      // Append the data
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: config.spreadsheetId,
+        range: `${targetSheet}!A${nextRow}:${lastColumn}${nextRow}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [rowData]
+        }
+      });
+
+      console.log(`✅ Data appended to ${targetSheet}`);
+    } catch (error) {
+      console.error(`Error appending to sheet ${sheetName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieves all data from a specified sheet
+   * @param sheetName The name of the sheet to get data from
+   * @returns An array of rows, where each row is an array of cell values
+   */
+  async getSheetData(sheetName: string): Promise<string[][]> {
+    try {
+      // If sheetName is "Expenses", use the current month's expense sheet
+      const targetSheet = sheetName === "Expenses" 
+        ? await this.initializeExpenseSheet()
+        : sheetName;
+      
+      // Get all data from the sheet
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: `${targetSheet}!A:Z` // Get all columns
+      });
+
+      // Return the values or an empty array if no data
+      return response.data.values || [];
+    } catch (error) {
+      console.error(`Error getting data from sheet ${sheetName}:`, error);
+      throw error;
     }
   }
 }

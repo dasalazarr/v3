@@ -1,5 +1,5 @@
 import { injectable, inject } from "tsyringe";
-import { SheetManager } from "./sheetsServices";
+import sheetsServices, { SheetsService } from "./sheetsServices";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -8,6 +8,8 @@ export interface Expense {
   category: string;
   amount: number;
   description: string;
+  paymentMethod?: string;
+  notes?: string;
 }
 
 class ExpenseError extends Error {
@@ -20,7 +22,7 @@ class ExpenseError extends Error {
 @injectable()
 export class ExpenseService {
   constructor(
-    @inject("SheetManager") private sheetManager: SheetManager
+    @inject("SheetsService") private sheetManager: SheetsService = sheetsServices
   ) {}
 
   async addExpense(expense: Expense): Promise<void> {
@@ -45,9 +47,11 @@ export class ExpenseService {
       const formattedDate = format(expense.date, "dd/MM/yyyy");
       const row = [
         formattedDate,
+        expense.description.trim(),
         expense.category.trim(),
         expense.amount.toFixed(2),
-        expense.description.trim()
+        expense.paymentMethod || "Efectivo", // Default payment method
+        expense.notes || ""
       ];
 
       await this.sheetManager.appendToSheet("Expenses", row);
@@ -63,9 +67,13 @@ export class ExpenseService {
       const categories: Record<string, number> = {};
 
       expenses.forEach(row => {
-        if (!row || row.length < 3) return; // Ignorar filas inválidas
+        if (!row || row.length < 4) return; // Ignorar filas inválidas
         
-        const [dateStr, category, amountStr] = row;
+        // Row structure: [date, description, category, amount, paymentMethod, notes]
+        const dateStr = row[0];
+        const category = row[2];
+        const amountStr = row[3];
+        
         const expenseDate = this.parseDate(dateStr);
         
         if (!expenseDate) return; // Ignorar fechas inválidas
@@ -92,9 +100,12 @@ export class ExpenseService {
       const expenses = await this.sheetManager.getSheetData("Expenses");
       
       return expenses.reduce((total, row) => {
-        if (!row || row.length < 3) return total;
+        if (!row || row.length < 4) return total;
         
-        const [dateStr, _, amountStr] = row;
+        // Row structure: [date, description, category, amount, paymentMethod, notes]
+        const dateStr = row[0];
+        const amountStr = row[3];
+        
         const expenseDate = this.parseDate(dateStr);
         
         if (!expenseDate || expenseDate < startOfMonth) return total;
