@@ -832,6 +832,44 @@ export class SheetsService {
       throw error;
     }
   }
+
+  /**
+   * Retrieves all users from the Users sheet
+   * @returns Array of user objects with phoneNumber, name, and email
+   */
+  async getAllUsers(): Promise<Array<{phoneNumber: string, name: string, email: string}>> {
+    try {
+      // Check if the Users sheet exists
+      const sheetExists = await this.sheetExists('Users');
+      if (!sheetExists) {
+        console.error('Users sheet does not exist');
+        return [];
+      }
+      
+      // Get all data from the Users sheet
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: 'Users!A:C'  // Assuming columns A=phoneNumber, B=name, C=email
+      });
+      
+      if (!response.data.values || response.data.values.length <= 1) {
+        // No users or only headers
+        return [];
+      }
+      
+      // Skip the header row (index 0)
+      const users = response.data.values.slice(1).map(row => ({
+        phoneNumber: row[0] || '',
+        name: row[1] || '',
+        email: row[2] || ''
+      }));
+      
+      return users;
+    } catch (error) {
+      console.error('Error retrieving users:', error);
+      return [];
+    }
+  }
 }
 
 export default new SheetsService();

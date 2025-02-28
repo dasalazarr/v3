@@ -130,6 +130,46 @@ const budgetFlow = addKeyword(['presupuesto', 'presupuestos'])
   .addAnswer('...', { capture: true }, async () => {...});
 ```
 
+## Error Handling and Resilience
+
+### Error Handling Strategy
+
+The application implements a comprehensive error handling strategy:
+
+1. **Granular Error Catching**
+   - Each method includes try-catch blocks to handle specific errors
+   - Detailed error logging with context information for easier debugging
+   - Appropriate default values returned on error to prevent cascading failures
+
+2. **Service Resilience**
+   - Services are designed to handle API failures gracefully
+   - Retry mechanisms for transient errors in external API calls
+   - Fallback strategies when primary operations fail
+
+3. **Data Validation**
+   - Input validation before processing to prevent errors
+   - Output validation to ensure data integrity
+   - Schema validation for external data sources
+
+### Optimization Techniques
+
+The application implements several optimization techniques to improve performance:
+
+1. **Caching Strategy**
+   - In-memory caching for frequently accessed data
+   - TTL (Time-To-Live) mechanism for cache invalidation
+   - Selective caching for high-cost operations
+
+2. **API Call Optimization**
+   - Batched operations to reduce API calls
+   - Pagination for large data sets
+   - Request throttling to prevent rate limiting
+
+3. **Resource Management**
+   - Connection pooling for external services
+   - Memory usage optimization
+   - Asynchronous processing for I/O-bound operations
+
 ## Optimización y Rendimiento
 
 ### Manejo Asíncrono

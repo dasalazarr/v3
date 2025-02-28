@@ -123,8 +123,33 @@ CREATE INDEX conversations_timestamp_idx ON conversations(timestamp);
    - `getExpenseData(month, year)`: Obtiene datos de gastos de un mes específico
 
 4. **Gestión de Conversaciones**
-   - `addConversToUser(phoneNumber, messages)`: Registra conversaciones entre usuarios y el bot
+   - `addConverToUser(phoneNumber, messages)`: Registra conversaciones entre usuarios y el bot
    - Crea automáticamente la hoja "Conversations" si no existe
+
+### SheetsService
+
+The `SheetsService` class is responsible for all interactions with Google Sheets. It provides methods for creating, reading, updating, and deleting data in Google Sheets.
+
+#### Key Methods
+
+- `initializeSheets()`: Creates all required sheets if they don't exist
+- `createSheet(sheetName, headers)`: Creates a new sheet with optional headers
+- `sheetExists(sheetName)`: Checks if a sheet exists (with caching)
+- `appendToSheet(sheetName, rowData)`: Appends a row of data to a sheet
+- `updateSheetRow(sheetName, rowIndex, values)`: Updates a specific row in a sheet
+- `updateCell(sheetName, row, column, value)`: Updates a specific cell in a sheet
+- `getSheetData(sheetName, range)`: Gets data from a specific range in a sheet (with caching)
+- `getAllUsers()`: Retrieves all users from the Users sheet
+- `userExists(phoneNumber)`: Checks if a user exists
+- `createUser(phoneNumber, name, email)`: Creates a new user
+- `getLastUserConversations(phoneNumber, limit)`: Gets recent conversations for a user
+
+#### Optimization Features
+
+- **Caching**: Implements in-memory caching for sheet existence and data retrieval
+- **TTL**: Time-To-Live mechanism for cache invalidation
+- **Error Handling**: Comprehensive error handling with detailed logging
+- **Data Validation**: Validates input data and handles edge cases
 
 ### ExpenseService
 1. **Registro y Análisis de Gastos**
@@ -288,23 +313,17 @@ La clase `SheetsService` es el componente central para interactuar con Google Sh
    - Crea automáticamente la hoja "Conversations" si no existe
 
 ### ExpenseService
-
-La clase `ExpenseService` proporciona una capa de abstracción para operaciones relacionadas con gastos:
-
 1. **Registro y Validación**
    - `addExpense(expense)`: Valida y registra un nuevo gasto
    - Realiza validaciones de datos (fecha válida, categoría, monto positivo, descripción)
 
 2. **Análisis y Reportes**
-   - `getExpensesByCategory(startDate?, endDate?)`: Obtiene gastos agrupados por categoría en un rango de fechas
+   - `getExpensesByCategory(startDate, endDate)`: Obtiene gastos agrupados por categoría en un rango de fechas
    - `getMonthlyExpenses()`: Calcula el total de gastos del mes actual
    - `parseDate(dateStr)`: Convierte strings de fecha al formato Date
-   - `isDateInRange(date, startDate?, endDate?)`: Verifica si una fecha está dentro de un rango
+   - `isDateInRange(date, startDate, endDate)`: Verifica si una fecha está en un rango
 
 ### AIServices
-
-La clase `aiServices` gestiona la interacción con modelos de IA:
-
 1. **Procesamiento de Mensajes**
    - `processMessage(message)`: Procesa mensajes de usuario y determina si son comandos de gastos
    - `chat(prompt, messages)`: Interactúa con la API de DeepSeek para generar respuestas
