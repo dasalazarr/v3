@@ -66,7 +66,7 @@ class AlertService {
       ];
       
       // Add the alert to the sheet
-      await this.sheetManager.appendRow("Alerts", alertData);
+      await this.sheetManager.appendToSheet("Alerts", alertData);
       
     } catch (error) {
       console.error("Error al guardar alerta:", error);

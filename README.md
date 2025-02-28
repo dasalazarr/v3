@@ -49,10 +49,93 @@ NUMBER_ID=id_numero_whatsapp
 │   ├── config/       # Configuración y variables de entorno
 │   ├── services/     # Lógica de negocio
 │   │   ├── aiServices.ts    # Integración OpenAI
-│   │   └── sheetsServices.ts # Conexión Google Sheets
-│   ├── templates/    # Flujos de conversación
-│   └── app.ts        # Punto de entrada principal
+│   │   ├── sheetsServices.ts # Integración Google Sheets
+│   │   ├── expenseService.ts # Gestión de gastos
+│   │   ├── budgetService.ts  # Gestión de presupuestos
+│   │   ├── alertService.ts   # Sistema de alertas
+│   │   └── scheduledTasks.ts # Tareas programadas
+│   ├── templates/    # Flujos conversacionales
+│   │   ├── index.ts          # Punto de entrada de flujos
+│   │   ├── mainFlow.ts       # Flujo principal
+│   │   ├── registerFlow.ts   # Registro de usuarios
+│   │   ├── expenseFlow.ts    # Registro de gastos
+│   │   ├── budgetFlow.ts     # Gestión de presupuestos
+│   │   └── reportFlow.ts     # Generación de reportes
+│   ├── app.ts        # Punto de entrada de la aplicación
+│   └── provider/     # Configuración del proveedor de WhatsApp
+├── instructions/     # Documentación detallada
+└── assets/          # Recursos estáticos
 ```
+
+## Arquitectura del Sistema
+
+### Servicios Principales
+
+#### 1. SheetsService
+Gestiona todas las interacciones con Google Sheets, incluyendo:
+- Creación y gestión de hojas de cálculo
+- Almacenamiento de datos de usuarios y gastos
+- Consultas y análisis de datos
+
+#### 2. ExpenseService
+Maneja el registro y análisis de gastos:
+- Validación de datos de gastos
+- Categorización de gastos
+- Cálculo de totales por categoría y período
+
+#### 3. BudgetService
+Gestiona los presupuestos de los usuarios:
+- Creación y actualización de presupuestos
+- Monitoreo de límites de gasto
+- Detección de anomalías en patrones de gasto
+
+#### 4. AlertService
+Sistema de notificaciones para usuarios:
+- Alertas de umbral de presupuesto
+- Notificaciones de gastos anómalos
+- Recordatorios personalizados
+
+### Patrones de Diseño Implementados
+
+#### Inyección de Dependencias
+Utilizamos `tsyringe` para gestionar dependencias entre servicios, lo que facilita:
+- Pruebas unitarias mediante mocking
+- Desacoplamiento de componentes
+- Gestión centralizada de instancias
+
+#### Singleton Pattern
+Los servicios principales se implementan como singletons para garantizar:
+- Una única instancia por servicio
+- Estado compartido consistente
+- Optimización de recursos
+
+#### Builder Pattern
+Los flujos conversacionales utilizan el patrón Builder a través del framework BuilderBot:
+- Construcción fluida de conversaciones
+- Separación clara de responsabilidades
+- Fácil mantenimiento y extensión
+
+## Optimizaciones Implementadas
+
+### 1. Sistema de Caché
+- Implementación de caché en memoria para reducir llamadas a Google Sheets API
+- TTL (Time-To-Live) configurable para invalidación automática de caché
+- Caché selectiva para operaciones frecuentes como verificación de existencia de hojas
+
+### 2. Manejo Asíncrono
+- Uso consistente de async/await para operaciones I/O
+- Procesamiento en paralelo cuando es posible
+- Evitar bloqueos en el hilo principal
+
+### 3. Manejo Robusto de Errores
+- Clases de error personalizadas para diferentes tipos de fallos
+- Logging estratégico para facilitar el diagnóstico
+- Recuperación automática de errores transitorios
+
+### 4. Tareas Programadas
+- Sistema de tareas en segundo plano para procesos periódicos
+- Detección automática de anomalías en patrones de gasto
+- Generación y envío de alertas basadas en umbrales
 
 ## Despliegue
 ```bash

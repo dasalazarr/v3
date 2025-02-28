@@ -805,6 +805,33 @@ export class SheetsService {
     
     return letter;
   }
+
+  /**
+   * Updates a specific cell in a sheet
+   * @param sheetName The name of the sheet
+   * @param row The row index (1-based)
+   * @param column The column index (1-based)
+   * @param value The value to set in the cell
+   */
+  async updateCell(sheetName: string, row: number, column: number, value: any): Promise<void> {
+    try {
+      const columnLetter = String.fromCharCode(64 + column); // Convert column index to letter (1 -> A, 2 -> B, etc.)
+      
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: config.spreadsheetId,
+        range: `${sheetName}!${columnLetter}${row}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[value]]
+        }
+      });
+      
+      console.log(`Cell ${columnLetter}${row} in sheet "${sheetName}" updated successfully`);
+    } catch (error) {
+      console.error(`Error updating cell ${column}${row} in sheet "${sheetName}":`, error);
+      throw error;
+    }
+  }
 }
 
 export default new SheetsService();
