@@ -130,6 +130,50 @@ const budgetFlow = addKeyword(['presupuesto', 'presupuestos'])
   .addAnswer('...', { capture: true }, async () => {...});
 ```
 
+## Dependency Injection with tsyringe
+
+The application uses `tsyringe` for dependency injection, which provides several benefits:
+
+1. **Loose Coupling**
+   - Services are decoupled from their dependencies
+   - Dependencies are injected at runtime
+   - Makes testing easier through mocking
+
+2. **Singleton Management**
+   - Services are registered as singletons
+   - Ensures only one instance of each service exists
+   - Provides consistent state across the application
+
+3. **Setup Requirements**
+   - Requires `reflect-metadata` polyfill
+   - Must be imported at the top of the entry point file
+   - Uses TypeScript decorators for registration
+
+### Example Usage
+
+```typescript
+// Registration
+@singleton()
+class SheetsService {
+  // Service implementation
+}
+
+// Injection
+@singleton()
+class BudgetService {
+  constructor(
+    @inject(SheetsService) private sheetManager: SheetsService
+  ) {}
+  
+  // Service methods
+}
+
+// Default export (instance, not class)
+export default new BudgetService();
+```
+
+This pattern is used throughout the application to manage dependencies and ensure proper service instantiation.
+
 ## Error Handling and Resilience
 
 ### Error Handling Strategy
