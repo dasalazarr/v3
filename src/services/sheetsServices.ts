@@ -1,5 +1,6 @@
-import { google } from 'googleapis';
+import { google, sheets_v4 } from 'googleapis';
 import { config } from '../config';
+import { injectable } from 'tsyringe';
 
 interface Expense {
   date: string;
@@ -10,8 +11,9 @@ interface Expense {
   notes?: string;
 }
 
+@injectable()
 export class SheetsService {
-  private sheets;
+  private sheets: sheets_v4.Sheets;
   private readonly CATEGORIES = [
     "Alimentación",
     "Transporte",
@@ -29,14 +31,47 @@ export class SheetsService {
     "Transferencia"
   ];
 
-  constructor() {
-    const auth = new google.auth.JWT({
-      email: config.clientEmail,
-      key: config.privateKey?.replace(/\\n/g, '\n'),
-      scopes: ['https://www.googleapis.com/auth/spreadsheets']
-    });
+  private sheetCache: Map<string, boolean> = new Map(); // Cache for sheet existence
+  private sheetDataCache: Map<string, any[][]> = new Map(); // Cache for sheet data
+  private cacheTTL: number = 5 * 60 * 1000; // 5 minutes TTL for cache
+  private cacheTimestamps: Map<string, number> = new Map(); // Timestamps for cache invalidation
 
-    this.sheets = google.sheets({ version: 'v4', auth });
+  constructor() {
+    try {
+      const auth = new google.auth.JWT({
+        email: config.clientEmail,
+        key: config.privateKey,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      });
+
+      this.sheets = google.sheets({ version: 'v4', auth });
+    } catch (error) {
+      console.error('Error initializing SheetsService:', error);
+      throw new Error('Failed to initialize Google Sheets API client');
+    }
+  }
+
+  /**
+   * Clear all caches
+   */
+  clearCaches(): void {
+    this.sheetCache.clear();
+    this.sheetDataCache.clear();
+    this.cacheTimestamps.clear();
+    console.log('Sheet caches cleared');
+  }
+
+  /**
+   * Check if a cache entry is still valid
+   * @param key The cache key
+   * @returns True if the cache entry is valid, false otherwise
+   */
+  private isCacheValid(key: string): boolean {
+    const timestamp = this.cacheTimestamps.get(key);
+    if (!timestamp) return false;
+    
+    const now = Date.now();
+    return (now - timestamp) < this.cacheTTL;
   }
 
   private getMonthSheetName(): string {
@@ -53,6 +88,10 @@ export class SheetsService {
       const sheetName = this.getMonthSheetName();
       
       // Verificar si la hoja ya existe
+      if (this.sheetCache.has(sheetName) && this.isCacheValid(sheetName)) {
+        return sheetName;
+      }
+
       const sheets = await this.sheets.spreadsheets.get({
         spreadsheetId: config.spreadsheetId
       });
@@ -79,6 +118,9 @@ export class SheetsService {
         // Configurar encabezados y formato
         await this.setupSheetFormat(sheetName);
       }
+
+      this.sheetCache.set(sheetName, true);
+      this.cacheTimestamps.set(sheetName, Date.now());
 
       return sheetName;
     } catch (error) {
@@ -290,23 +332,44 @@ export class SheetsService {
     try {
       const currentSheet = sheetName || await this.getMonthSheetName();
       
+      if (this.sheetDataCache.has(currentSheet) && this.isCacheValid(currentSheet)) {
+        const data = this.sheetDataCache.get(currentSheet);
+        if (data) {
+          const totals: Record<string, number> = {};
+          data.forEach(row => {
+            const category = row[2];
+            const amount = parseFloat(row[3]) || 0;
+            
+            if (category) {
+              totals[category] = (totals[category] || 0) + amount;
+            }
+          });
+          return totals;
+        }
+      }
+
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: config.spreadsheetId,
         range: `${currentSheet}!C2:D`
       });
 
+      if (!response.data.values) {
+        return {};
+      }
+
       const totals: Record<string, number> = {};
       
-      if (response.data.values) {
-        response.data.values.forEach(row => {
-          const category = row[0];
-          const amount = parseFloat(row[1]) || 0;
-          
-          if (category) {
-            totals[category] = (totals[category] || 0) + amount;
-          }
-        });
-      }
+      response.data.values.forEach(row => {
+        const category = row[0];
+        const amount = parseFloat(row[1]) || 0;
+        
+        if (category) {
+          totals[category] = (totals[category] || 0) + amount;
+        }
+      });
+
+      this.sheetDataCache.set(currentSheet, response.data.values);
+      this.cacheTimestamps.set(currentSheet, Date.now());
 
       return totals;
     } catch (error) {
@@ -373,43 +436,50 @@ export class SheetsService {
       const sheetName = 'Conversations';
       
       // Check if the Conversations sheet exists
-      const sheets = await this.sheets.spreadsheets.get({
-        spreadsheetId: config.spreadsheetId
-      });
+      if (this.sheetCache.has(sheetName) && this.isCacheValid(sheetName)) {
+        // Do nothing
+      } else {
+        const sheets = await this.sheets.spreadsheets.get({
+          spreadsheetId: config.spreadsheetId
+        });
 
-      const existingSheet = sheets.data.sheets?.find(
-        sheet => sheet.properties?.title === sheetName
-      );
+        const existingSheet = sheets.data.sheets?.find(
+          sheet => sheet.properties?.title === sheetName
+        );
 
-      if (!existingSheet) {
-        // Create the Conversations sheet if it doesn't exist
-        await this.sheets.spreadsheets.batchUpdate({
-          spreadsheetId: config.spreadsheetId,
-          requestBody: {
-            requests: [{
-              addSheet: {
-                properties: {
-                  title: sheetName
+        if (!existingSheet) {
+          // Create the Conversations sheet if it doesn't exist
+          await this.sheets.spreadsheets.batchUpdate({
+            spreadsheetId: config.spreadsheetId,
+            requestBody: {
+              requests: [{
+                addSheet: {
+                  properties: {
+                    title: sheetName
+                  }
                 }
-              }
-            }]
-          }
-        });
+              }]
+            }
+          });
 
-        // Set up headers
-        await this.sheets.spreadsheets.values.update({
-          spreadsheetId: config.spreadsheetId,
-          range: `${sheetName}!A1:D1`,
-          valueInputOption: 'USER_ENTERED',
-          requestBody: {
-            values: [[
-              'PhoneNumber', 
-              'Timestamp', 
-              'UserMessage', 
-              'BotResponse'
-            ]]
-          }
-        });
+          // Set up headers
+          await this.sheets.spreadsheets.values.update({
+            spreadsheetId: config.spreadsheetId,
+            range: `${sheetName}!A1:D1`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+              values: [[
+                'PhoneNumber', 
+                'Timestamp', 
+                'UserMessage', 
+                'BotResponse'
+              ]]
+            }
+          });
+        }
+
+        this.sheetCache.set(sheetName, true);
+        this.cacheTimestamps.set(sheetName, Date.now());
       }
 
       // Get the next available row
@@ -489,16 +559,31 @@ export class SheetsService {
   async getLastUserConversations(phoneNumber: string, limit: number = 5): Promise<Array<{timestamp: string, userMessage: string, botResponse: string}>> {
     try {
       // Verificar si existe la hoja de conversaciones
-      const sheetExists = await this.sheetExists('Conversations');
-      if (!sheetExists) {
-        console.log('La hoja de conversaciones no existe');
-        return [];
+      const sheetName = 'Conversations';
+      if (this.sheetCache.has(sheetName) && this.isCacheValid(sheetName)) {
+        // Do nothing
+      } else {
+        const sheets = await this.sheets.spreadsheets.get({
+          spreadsheetId: config.spreadsheetId
+        });
+
+        const existingSheet = sheets.data.sheets?.find(
+          sheet => sheet.properties?.title === sheetName
+        );
+
+        if (!existingSheet) {
+          console.log('La hoja de conversaciones no existe');
+          return [];
+        }
+
+        this.sheetCache.set(sheetName, true);
+        this.cacheTimestamps.set(sheetName, Date.now());
       }
 
       // Obtener todas las conversaciones del usuario
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: config.spreadsheetId,
-        range: 'Conversations!A:D'
+        range: `${sheetName}!A:D`
       });
 
       if (!response.data.values || response.data.values.length <= 1) {
@@ -592,6 +677,13 @@ export class SheetsService {
         ? await this.initializeExpenseSheet()
         : sheetName;
       
+      if (this.sheetDataCache.has(targetSheet) && this.isCacheValid(targetSheet)) {
+        const data = this.sheetDataCache.get(targetSheet);
+        if (data) {
+          return data;
+        }
+      }
+
       // Get all data from the sheet
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: config.spreadsheetId,
@@ -599,15 +691,22 @@ export class SheetsService {
       });
 
       // Return the values or an empty array if no data
-      return response.data.values || [];
+      const data = response.data.values || [];
+      this.sheetDataCache.set(targetSheet, data);
+      this.cacheTimestamps.set(targetSheet, Date.now());
+      return data;
     } catch (error) {
       console.error(`Error getting data from sheet ${sheetName}:`, error);
       throw error;
     }
   }
 
-  private async sheetExists(sheetName: string): Promise<boolean> {
+  async sheetExists(sheetName: string): Promise<boolean> {
     try {
+      if (this.sheetCache.has(sheetName) && this.isCacheValid(sheetName)) {
+        return this.sheetCache.get(sheetName) || false;
+      }
+
       const response = await this.sheets.spreadsheets.get({
         spreadsheetId: config.spreadsheetId
       });
@@ -616,11 +715,95 @@ export class SheetsService {
         s => s.properties?.title === sheetName
       );
 
-      return sheet !== undefined;
+      const exists = sheet !== undefined;
+      this.sheetCache.set(sheetName, exists);
+      this.cacheTimestamps.set(sheetName, Date.now());
+      return exists;
     } catch (error) {
       console.error('Error al verificar si la hoja existe:', error);
       return false;
     }
+  }
+
+  /**
+   * Creates a new sheet with the given name and optional headers
+   * @param sheetName The name of the sheet to create
+   * @param headers Optional array of header column names
+   */
+  async createSheet(sheetName: string, headers?: string[]): Promise<void> {
+    try {
+      // Add the sheet to the spreadsheet
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: config.spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: sheetName
+                }
+              }
+            }
+          ]
+        }
+      });
+
+      // If headers are provided, add them as the first row
+      if (headers && headers.length > 0) {
+        await this.appendToSheet(sheetName, headers);
+      }
+
+      console.log(`Sheet "${sheetName}" created successfully`);
+    } catch (error) {
+      console.error(`Error creating sheet "${sheetName}":`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Updates a specific row in a sheet
+   * @param sheetName The name of the sheet
+   * @param rowIndex The row index to update (1-based)
+   * @param values The values to set in the row
+   */
+  async updateSheetRow(sheetName: string, rowIndex: number, values: any[]): Promise<void> {
+    try {
+      // Get the number of columns in the row
+      const columnCount = values.length;
+      const lastColumn = String.fromCharCode(65 + columnCount - 1); // A + number of columns - 1
+      
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: config.spreadsheetId,
+        range: `${sheetName}!A${rowIndex}:${lastColumn}${rowIndex}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [values]
+        }
+      });
+      
+      console.log(`Row ${rowIndex} in sheet "${sheetName}" updated successfully`);
+    } catch (error) {
+      console.error(`Error updating row ${rowIndex} in sheet "${sheetName}":`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Converts a column index to a letter (e.g., 1 -> A, 2 -> B, 27 -> AA)
+   * @param index The column index (1-based)
+   * @returns The column letter
+   */
+  private columnIndexToLetter(index: number): string {
+    let temp: number;
+    let letter = '';
+    
+    while (index > 0) {
+      temp = (index - 1) % 26;
+      letter = String.fromCharCode(temp + 65) + letter;
+      index = (index - temp - 1) / 26;
+    }
+    
+    return letter;
   }
 }
 

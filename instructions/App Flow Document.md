@@ -150,6 +150,57 @@ Khipu procesa estas consultas, accede a la información almacenada en Google She
 
 Para consultas por categoría, el sistema filtra los gastos según la categoría mencionada y el período de tiempo especificado o implícito. Luego suma los montos y presenta el total junto con un desglose de los gastos más significativos si es relevante.
 
+## Flujos de Presupuesto y Alertas
+
+### Flujo de Creación de Presupuesto
+
+Este flujo permite a los usuarios establecer límites de gasto para categorías específicas:
+
+1. **Activación**: El usuario envía mensajes que contienen palabras clave como "presupuesto", "límite" o "alerta"
+2. **Selección de Categoría**: El sistema solicita la categoría para la cual establecer un presupuesto
+3. **Definición de Monto**: El usuario especifica el monto máximo a gastar
+4. **Configuración de Alertas**: El usuario decide si desea recibir alertas cuando se acerque al límite
+5. **Confirmación**: El sistema confirma la creación del presupuesto y lo almacena
+
+Ejemplo de interacción:
+```
+Usuario: "Quiero establecer un presupuesto"
+Bot: "¡Hola! Vamos a configurar un presupuesto para tus gastos. 📊"
+Bot: "¿Para qué categoría quieres establecer un presupuesto? Por ejemplo: Alimentación, Transporte, Entretenimiento, etc."
+Usuario: "Alimentación"
+Bot: "Has seleccionado la categoría: Alimentación"
+Bot: "¿Cuál es el monto máximo que quieres gastar en esta categoría mensualmente?"
+Usuario: "500"
+Bot: "Has establecido un presupuesto de $500.00 para Alimentación"
+Bot: "¿Quieres recibir alertas cuando superes el 80% y el 100% de este presupuesto?"
+Usuario: "Sí"
+Bot: "¡Perfecto! Te enviaré alertas cuando estés cerca de alcanzar tu límite."
+Bot: "¡Listo! Tu presupuesto para Alimentación ha sido establecido en $500.00. Recibirás alertas cuando alcances el 80% y 100% del límite."
+```
+
+### Flujo de Consulta de Presupuestos
+
+Permite a los usuarios revisar sus presupuestos actuales:
+
+1. **Activación**: El usuario solicita información sobre sus presupuestos
+2. **Procesamiento**: El sistema recupera todos los presupuestos del usuario
+3. **Presentación**: Se muestra un resumen de los presupuestos activos
+4. **Estado Actual**: Para cada presupuesto, se muestra el progreso actual respecto al límite
+
+### Flujo de Alertas Automáticas
+
+Sistema proactivo que notifica a los usuarios sobre su situación presupuestaria:
+
+1. **Monitoreo Continuo**: El sistema verifica regularmente el estado de los presupuestos
+2. **Detección de Umbrales**: Identifica cuando un gasto alcanza el 80% o 100% del presupuesto
+3. **Detección de Anomalías**: Compara patrones de gasto con históricos para identificar anomalías
+4. **Notificación**: Envía alertas automáticas cuando se cumplen las condiciones
+
+Tipos de alertas:
+- **Alertas de Umbral**: Cuando se alcanza el 80% del presupuesto
+- **Alertas de Exceso**: Cuando se supera el 100% del presupuesto
+- **Alertas de Anomalía**: Cuando se detecta un gasto inusualmente alto en una categoría
+
 ## Recordatorios y Alertas
 
 El sistema puede configurarse para enviar recordatorios periódicos para el registro de gastos. Por ejemplo, al final del día puede preguntar: "¿Has registrado todos tus gastos de hoy? Es importante mantener un registro completo para un mejor control financiero."

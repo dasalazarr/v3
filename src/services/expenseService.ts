@@ -136,3 +136,5 @@ export class ExpenseService {
     return true;
   }
 }
+
+export default new ExpenseService();

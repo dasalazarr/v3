@@ -3,6 +3,7 @@ import { MemoryDB as Database } from "@builderbot/bot";
 import { provider } from "./provider";
 import { config } from "./config";
 import templates from "./templates";
+import scheduledTasks from "./services/scheduledTasks";
 
 const PORT = process.env.PORT || config.PORT || 3000;
 
@@ -19,10 +20,16 @@ const main = async () => {
     console.log(`🚀 Server is running on port ${PORT}`);
     console.log('📱 WhatsApp Bot is ready');
 
+    // Iniciamos las tareas programadas
+    scheduledTasks.startAll();
+    console.log('⏰ Scheduled tasks started');
+
     // Manejadores para graceful shutdown
     const shutdown = async () => {
       console.log('Cerrando servidor...');
       try {
+        // Detenemos las tareas programadas
+        scheduledTasks.stopAll();
         await provider.stop();
         console.log('Bot cerrado exitosamente');
         process.exit(0);

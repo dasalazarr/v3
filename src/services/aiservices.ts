@@ -2,6 +2,8 @@ import { config } from "../config";
 import * as fs from 'fs';
 import * as path from 'path';
 import sheetsService from './sheetsServices';
+import budgetService from './budgetService';
+import alertService from './alertService';
 
 interface ExpenseCommand {
   type: 'expense';
@@ -167,36 +169,11 @@ class aiServices {
     try {
       console.log("Making API request to DeepSeek with model:", config.Model);
 
-      // Verificar si es un comando de gasto
-      const expenseCommand = this.parseExpenseCommand(prompt);
-      
-      if (expenseCommand) {
-        await sheetsService.addExpense(expenseCommand);
-        
-        // Obtener totales por categoría
-        const totals = await sheetsService.getTotalsByCategory();
-        
-        // Formatear respuesta
-        const response = [
-          `✅ Gasto registrado exitosamente:`,
-          `📝 Descripción: ${expenseCommand.description}`,
-          `💰 Monto: $${expenseCommand.amount}`,
-          `🏷️ Categoría: ${expenseCommand.category}`,
-          `\nResumen del mes:`,
-          ...Object.entries(totals).map(([cat, total]) => 
-            `${cat}: $${total.toFixed(2)}`
-          )
-        ].join('\n');
-
-        return response;
-      }
-
-      // Llamada a la API de DeepSeek
       const response = await fetch(`${this.baseURL}/chat/completions`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.apiKey}`
         },
         body: JSON.stringify({
           model: config.Model || "deepseek-chat",
@@ -253,6 +230,13 @@ class aiServices {
       if (expenseCommand) {
         await sheetsService.addExpense(expenseCommand);
         
+        // Verificar límites de presupuesto y generar alertas si es necesario
+        await alertService.checkBudgetLimitsForExpense(
+          phoneNumber, 
+          expenseCommand.category, 
+          expenseCommand.amount
+        );
+        
         // Obtener totales por categoría
         const totals = await sheetsService.getTotalsByCategory();
         
@@ -284,8 +268,10 @@ class aiServices {
       // Incluir el contexto en la solicitud a DeepSeek
       const systemMessage = {
         role: "system",
-        content: `Eres Khipu, un asistente financiero personal que ayuda a los usuarios a gestionar sus gastos. 
-                 Responde de manera amigable y concisa. Si el usuario quiere registrar un gasto, pídele los detalles necesarios.
+        content: `Eres Khipu, un asistente financiero personal que ayuda a los usuarios a gestionar sus gastos y presupuestos. 
+                 Responde de manera amigable y concisa. 
+                 Si el usuario quiere registrar un gasto, pídele los detalles necesarios.
+                 Si el usuario quiere configurar un presupuesto, indícale que puede usar comandos como "presupuesto", "ver presupuesto" o "eliminar presupuesto".
                  Recuerda que puedes registrar gastos con el formato "Gasté X en Y" o "X en Y".`
       };
 

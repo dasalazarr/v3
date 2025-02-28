@@ -93,6 +93,118 @@ Este documento proporciona detalles técnicos exhaustivos sobre el stack tecnol�
   - Autenticación:
     - Service Account con JSON Key (privateKey, clientEmail)
 
+## Patrones de Diseño y Arquitectura
+
+### Inyección de Dependencias
+El sistema utiliza el patrón de inyección de dependencias a través de la biblioteca `tsyringe`. Esto permite:
+
+- **Desacoplamiento**: Los servicios no están fuertemente acoplados entre sí
+- **Facilidad de testing**: Las dependencias pueden ser mockeadas para pruebas unitarias
+- **Gestión centralizada**: Control sobre las instancias de servicios
+
+Ejemplo de implementación:
+```typescript
+@injectable()
+export class BudgetService {
+  constructor(
+    @inject("SheetsService") private sheetManager: SheetsService,
+    @inject("ExpenseService") private expenseService: ExpenseService
+  ) {}
+}
+```
+
+### Singleton Pattern
+Los servicios principales se implementan como singletons para garantizar una única instancia:
+
+```typescript
+export default new BudgetService(sheetsServices, expenseService);
+```
+
+### Builder Pattern
+Los flujos conversacionales utilizan el patrón Builder a través del framework BuilderBot:
+
+```typescript
+const budgetFlow = addKeyword(['presupuesto', 'presupuestos'])
+  .addAnswer('...')
+  .addAction(async () => {...})
+  .addAnswer('...', { capture: true }, async () => {...});
+```
+
+## Optimización y Rendimiento
+
+### Manejo Asíncrono
+El sistema utiliza promesas y async/await para operaciones I/O, garantizando un rendimiento óptimo:
+
+```typescript
+async getExpensesByCategory(startDate?: Date, endDate?: Date): Promise<Record<string, number>> {
+  try {
+    // Operaciones asíncronas
+  } catch (error) {
+    // Manejo de errores
+  }
+}
+```
+
+### Patrones de Error
+El código implementa un manejo de errores robusto mediante clases de error personalizadas:
+
+```typescript
+class BudgetError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BudgetError';
+  }
+}
+```
+
+### Logging Estratégico
+Se implementa un sistema de logging para facilitar el diagnóstico de problemas:
+
+```typescript
+console.log("✅ Tareas programadas iniciadas");
+console.error("Error al calcular gastos mensuales:", error);
+```
+
+## Seguridad
+
+### Autenticación OAuth 2.0
+El acceso a las APIs de Google utiliza OAuth 2.0:
+
+- Autenticación mediante cuentas de servicio
+- Almacenamiento seguro de credenciales en variables de entorno
+- Permisos de ámbito limitado
+
+### Validación de Entrada
+Todos los inputs del usuario son validados antes de su procesamiento:
+
+```typescript
+if (!expense.date || !(expense.date instanceof Date)) {
+  throw new ExpenseError('La fecha es inválida');
+}
+```
+
+## Escalabilidad
+
+### Tareas Programadas
+El sistema implementa un gestor de tareas programadas para procesos en segundo plano:
+
+```typescript
+startAnomalyDetection(): void {
+  const INTERVAL = 24 * 60 * 60 * 1000; // Daily
+  this.anomalyCheckInterval = setInterval(() => {
+    this.checkAnomalies();
+  }, INTERVAL);
+}
+```
+
+### Manejo de Cierre
+Implementación de manejo de señales del sistema para cierre controlado:
+
+```typescript
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+```
+
 ## Herramientas de Desarrollo
 
 ### Compilación y Bundling
@@ -221,4 +333,3 @@ Para sistemas en producción, se recomienda utilizar Docker:
 
 ```
 docker-compose up -d
-```

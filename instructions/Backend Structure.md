@@ -100,6 +100,66 @@ CREATE INDEX conversations_user_id_idx ON conversations(user_id);
 CREATE INDEX conversations_timestamp_idx ON conversations(timestamp);
 ```
 
+## Servicios Clave
+
+### SheetsService
+1. **Gestión de Hojas de Cálculo**
+   - `createSheet(sheetName, headers)`: Crea una nueva hoja con encabezados opcionales
+   - `sheetExists(sheetName)`: Verifica si una hoja existe en el documento
+   - `createSpreadsheet(title)`: Crea un nuevo documento de Google Sheets
+   - `getSheetData(sheetName)`: Obtiene todos los datos de una hoja específica
+   - `appendRow(sheetName, values)`: Añade una nueva fila a una hoja existente
+   - `updateSheetRow(sheetName, rowIndex, values)`: Actualiza una fila específica en una hoja
+   - `updateCell(sheetName, row, column, value)`: Actualiza una celda específica
+   - `deleteRow(sheetName, rowIndex)`: Elimina una fila específica de una hoja
+
+2. **Gestión de Usuarios**
+   - `userExists(phoneNumber)`: Verifica si un usuario existe basado en su número de teléfono
+   - `addUser(phoneNumber, name, email)`: Registra un nuevo usuario
+   - `getUserData(phoneNumber)`: Obtiene información de un usuario específico
+
+3. **Gestión de Gastos**
+   - `createMonthlyExpenseSheet(month, year)`: Crea una hoja mensual para registro de gastos
+   - `getExpenseData(month, year)`: Obtiene datos de gastos de un mes específico
+
+4. **Gestión de Conversaciones**
+   - `addConversToUser(phoneNumber, messages)`: Registra conversaciones entre usuarios y el bot
+   - Crea automáticamente la hoja "Conversations" si no existe
+
+### ExpenseService
+1. **Registro y Análisis de Gastos**
+   - `addExpense(expense)`: Registra un nuevo gasto con validaciones
+   - `getExpensesByCategory(startDate, endDate)`: Obtiene gastos agrupados por categoría
+   - `getMonthlyExpenses()`: Calcula el total de gastos del mes actual
+
+2. **Utilidades de Fechas**
+   - `parseDate(dateStr)`: Convierte strings de fecha en objetos Date
+   - `isDateInRange(date, startDate, endDate)`: Verifica si una fecha está en un rango específico
+
+### BudgetService
+1. **Gestión de Presupuestos**
+   - `createBudget(budget)`: Crea un nuevo presupuesto para una categoría
+   - `getBudgets(phoneNumber)`: Obtiene todos los presupuestos de un usuario
+   - `updateBudget(budget)`: Actualiza un presupuesto existente
+   - `deleteBudget(phoneNumber, category)`: Elimina un presupuesto específico
+   - `initializeBudgetSheet()`: Crea la hoja de presupuestos si no existe
+
+2. **Monitoreo y Alertas**
+   - `checkBudgetStatus(phoneNumber)`: Verifica el estado de todos los presupuestos de un usuario
+   - `detectAnomalies(phoneNumber)`: Detecta gastos anómalos comparando con históricos
+   - `generateAlerts(phoneNumber)`: Genera alertas basadas en el estado de los presupuestos
+
+### AlertService
+1. **Gestión de Alertas**
+   - `initializeAlertSheet()`: Crea la hoja de alertas si no existe
+   - `saveAlert(alert)`: Guarda una alerta en la base de datos
+   - `getAlerts(phoneNumber)`: Obtiene todas las alertas de un usuario
+   - `markAlertAsRead(alertId)`: Marca una alerta como leída
+   - `sendAlert(phoneNumber, message)`: Envía una alerta al usuario a través de WhatsApp
+
+2. **Procesamiento de Anomalías**
+   - `processAnomalyData(anomalyData)`: Procesa datos de anomalías y genera alertas correspondientes
+
 ## Manejo de Contexto de Conversación
 
 El sistema implementa un manejo de contexto de conversación que permite mantener una interacción más natural y coherente con los usuarios. Los componentes clave de esta funcionalidad son:
