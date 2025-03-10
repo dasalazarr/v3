@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { JWT } from 'google-auth-library';
+import { singleton } from 'tsyringe';
 
 interface Appointment {
   startTime: Date;
@@ -9,6 +10,7 @@ interface Appointment {
   status: 'confirmed' | 'pending' | 'cancelled';
 }
 
+@singleton()
 export class AppointmentService {
   private calendar;
   private sheets;

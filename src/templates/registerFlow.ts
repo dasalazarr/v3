@@ -1,5 +1,9 @@
 import { addKeyword, EVENTS } from "@builderbot/bot";
-import sheetsServices from "~/services/sheetsServices";
+import container from "../di/container";
+import { SheetsService } from "../services/sheetsServices";
+
+// Obtenemos la instancia del servicio del contenedor
+const sheetsService = container.resolve<SheetsService>("SheetsService");
 
 const registerFlow = addKeyword(EVENTS.ACTION)
   .addAnswer("¿Quieres comenzar con el Registro?", { 
@@ -28,7 +32,7 @@ const registerFlow = addKeyword(EVENTS.ACTION)
     }
     
     const state = ctxFn.state.getMyState();
-    await sheetsServices.createUser(ctx.from, state.name, ctx.body);
+    await sheetsService.createUser(ctx.from, state.name, ctx.body);
     await ctxFn.flowDynamic("¡Excelente! Tus datos ya fueron cargados, ya puedes comenzar a utilizar nuestro chat.");
   });
 

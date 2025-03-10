@@ -1,11 +1,18 @@
-import sheetsServices from "./sheetsServices";
-import alertService from "./alertService";
+import { singleton, inject } from "tsyringe";
+import { SheetsService } from "./sheetsServices";
+import { AlertService } from "./alertService";
 
 /**
  * Class to handle scheduled tasks for the application
  */
-class ScheduledTasks {
+@singleton()
+export class ScheduledTasks {
   private anomalyCheckInterval: NodeJS.Timeout | null = null;
+  
+  constructor(
+    @inject("SheetsService") private sheetsService: SheetsService,
+    @inject("AlertService") private alertService: AlertService
+  ) {}
   
   /**
    * Start all scheduled tasks
@@ -53,7 +60,7 @@ class ScheduledTasks {
       console.log("🔍 Iniciando detección de anomalías...");
       
       // Get all users
-      const users = await sheetsServices.getAllUsers();
+      const users = await this.sheetsService.getAllUsers();
       
       // Process anomalies for each user
       for (const user of users) {
@@ -62,7 +69,7 @@ class ScheduledTasks {
         if (!phoneNumber) continue;
         
         console.log(`Procesando anomalías para usuario: ${phoneNumber}`);
-        await alertService.processAnomalyAlerts(phoneNumber);
+        await this.alertService.processAnomalyAlerts(phoneNumber);
       }
       
       console.log("✅ Detección de anomalías completada");
@@ -72,4 +79,5 @@ class ScheduledTasks {
   }
 }
 
-export default new ScheduledTasks();
+// Exportamos la clase, no una instancia
+export default ScheduledTasks;

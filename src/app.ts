@@ -4,12 +4,16 @@ import { MemoryDB as Database } from "@builderbot/bot";
 import { provider } from "./provider";
 import { config } from "./config";
 import templates from "./templates";
-import scheduledTasks from "./services/scheduledTasks";
+import container from "./di/container";
+import { ScheduledTasks } from "./services/scheduledTasks";
 
 const PORT = process.env.PORT || config.PORT || 3000;
 
 const main = async () => {
   try {
+    // Inicializar el contenedor de DI antes de crear el bot
+    const scheduledTasks = container.resolve<ScheduledTasks>('ScheduledTasks');
+    
     const { handleCtx, httpServer } = await createBot({
       flow: templates,
       provider: provider,

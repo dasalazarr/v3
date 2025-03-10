@@ -1,5 +1,5 @@
-import { injectable, inject } from "tsyringe";
-import sheetsServices, { SheetsService } from "./sheetsServices";
+import { singleton, inject } from "tsyringe";
+import { SheetsService } from "./sheetsServices";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -19,10 +19,10 @@ class ExpenseError extends Error {
   }
 }
 
-@injectable()
+@singleton()
 export class ExpenseService {
   constructor(
-    @inject("SheetsService") private sheetManager: SheetsService = sheetsServices
+    @inject("SheetsService") private sheetManager: SheetsService
   ) {}
 
   async addExpense(expense: Expense): Promise<void> {
@@ -137,4 +137,4 @@ export class ExpenseService {
   }
 }
 
-export default new ExpenseService();
+export default ExpenseService;

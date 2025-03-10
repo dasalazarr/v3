@@ -1,7 +1,9 @@
 import { addKeyword, EVENTS } from "@builderbot/bot";
+import container from "../di/container";
 import { AppointmentController } from '../services/appointments.controller';
 
-const appointmentController = new AppointmentController();
+// Obtenemos la instancia del controlador del contenedor
+const appointmentController = container.resolve<AppointmentController>("AppointmentController");
 
 // Estado temporal para almacenar los datos de la cita durante el flujo
 const appointmentData = new Map<string, any>();

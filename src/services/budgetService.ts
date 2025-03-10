@@ -1,6 +1,6 @@
-import { injectable, inject } from "tsyringe";
-import sheetsServices, { SheetsService } from "./sheetsServices";
-import expenseService, { ExpenseService } from "./expenseService";
+import { singleton, inject } from "tsyringe";
+import { SheetsService } from "./sheetsServices";
+import { ExpenseService } from "./expenseService";
 import { format } from "date-fns";
 
 export interface Budget {
@@ -46,10 +46,10 @@ class BudgetError extends Error {
   }
 }
 
-@injectable()
+@singleton()
 export class BudgetService {
   constructor(
-    @inject("SheetsService") private sheetManager: SheetsService = sheetsServices,
+    @inject("SheetsService") private sheetManager: SheetsService,
     @inject("ExpenseService") private expenseService: ExpenseService
   ) {}
 
@@ -438,4 +438,4 @@ export class BudgetService {
   }
 }
 
-export default new BudgetService(sheetsServices, expenseService);
+export default BudgetService;

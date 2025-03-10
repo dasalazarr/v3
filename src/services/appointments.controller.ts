@@ -1,11 +1,11 @@
 import { AppointmentService } from './appointments.service';
+import { singleton, inject } from 'tsyringe';
 
+@singleton()
 export class AppointmentController {
-  private appointmentService: AppointmentService;
-
-  constructor() {
-    this.appointmentService = new AppointmentService();
-  }
+  constructor(
+    @inject("AppointmentService") private appointmentService: AppointmentService
+  ) {}
 
   /**
    * Schedule a new appointment

@@ -1,7 +1,12 @@
 import { addKeyword, EVENTS } from "@builderbot/bot";
-import aiServices from "~/services/aiservices";
+import container from "../di/container";
 import { config } from "../config";
-import sheetsServices from "~/services/sheetsServices";
+import { SheetsService } from "../services/sheetsServices";
+import { AIService } from "../services/aiservices";
+
+// Obtenemos las instancias de los servicios del contenedor
+const sheetsService = container.resolve<SheetsService>("SheetsService");
+const aiServices = container.resolve<AIService>("AIService");
 
 export const faqFlow = addKeyword(EVENTS.ACTION)
   .addAction(async (ctx, { endFlow }) => {

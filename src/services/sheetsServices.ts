@@ -1,6 +1,6 @@
 import { google, sheets_v4 } from 'googleapis';
 import { config } from '../config';
-import { injectable } from 'tsyringe';
+import { singleton } from 'tsyringe';
 
 interface Expense {
   date: string;
@@ -11,7 +11,7 @@ interface Expense {
   notes?: string;
 }
 
-@injectable()
+@singleton()
 export class SheetsService {
   private sheets: sheets_v4.Sheets;
   private readonly CATEGORIES = [
@@ -872,4 +872,4 @@ export class SheetsService {
   }
 }
 
-export default new SheetsService();
+export default SheetsService;

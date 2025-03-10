@@ -1,6 +1,11 @@
 import { addKeyword } from "@builderbot/bot";
-import budgetService from "../services/budgetService";
-import alertService from "../services/alertService";
+import container from "../di/container";
+import { BudgetService } from "../services/budgetService";
+import { AlertService } from "../services/alertService";
+
+// Obtenemos las instancias de los servicios del contenedor
+const budgetService = container.resolve<BudgetService>("BudgetService");
+const alertService = container.resolve<AlertService>("AlertService");
 
 // Flow para configurar un nuevo presupuesto
 export const budgetFlow = addKeyword(['presupuesto', 'presupuestos', 'límite', 'limite', 'alerta'])

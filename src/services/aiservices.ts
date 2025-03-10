@@ -1,9 +1,10 @@
 import { config } from "../config";
 import * as fs from 'fs';
 import * as path from 'path';
-import sheetsService from './sheetsServices';
-import budgetService from './budgetService';
-import alertService from './alertService';
+import { singleton, inject } from 'tsyringe';
+import { SheetsService } from './sheetsServices';
+import { BudgetService } from './budgetService';
+import { AlertService } from './alertService';
 
 interface ExpenseCommand {
   type: 'expense';
@@ -15,7 +16,8 @@ interface ExpenseCommand {
   notes?: string;
 }
 
-class aiServices {
+@singleton()
+export class AIService {
   private systemPrompt: string;
   private baseURL: string;
   private apiKey: string;
@@ -23,7 +25,11 @@ class aiServices {
   // Almacenamiento de contexto de conversación por usuario
   private conversationContexts: Map<string, Array<{role: string, content: string}>> = new Map();
 
-  constructor() {
+  constructor(
+    @inject("SheetsService") private sheetsService: SheetsService,
+    @inject("BudgetService") private budgetService: BudgetService,
+    @inject("AlertService") private alertService: AlertService
+  ) {
     this.baseURL = config.baseURL || "https://api.deepseek.com/v1";
     this.apiKey = config.apiKey;
 
@@ -147,7 +153,7 @@ class aiServices {
       }
 
       // Obtener las últimas 5 conversaciones del usuario desde Sheets
-      const conversations = await sheetsService.getLastUserConversations(phoneNumber, 5);
+      const conversations = await this.sheetsService.getLastUserConversations(phoneNumber, 5);
       
       // Convertir las conversaciones al formato de contexto
       const context: Array<{role: string, content: string}> = [];
@@ -228,17 +234,17 @@ class aiServices {
       const expenseCommand = this.parseExpenseCommand(message);
       
       if (expenseCommand) {
-        await sheetsService.addExpense(expenseCommand);
+        await this.sheetsService.addExpense(expenseCommand);
         
         // Verificar límites de presupuesto y generar alertas si es necesario
-        await alertService.checkBudgetLimitsForExpense(
+        await this.alertService.checkBudgetLimitsForExpense(
           phoneNumber, 
           expenseCommand.category, 
           expenseCommand.amount
         );
         
         // Obtener totales por categoría
-        const totals = await sheetsService.getTotalsByCategory();
+        const totals = await this.sheetsService.getTotalsByCategory();
         
         // Formatear respuesta
         const response = [
@@ -256,7 +262,7 @@ class aiServices {
         this.updateUserContext(phoneNumber, message, response);
         
         // Guardar la conversación en Sheets
-        await sheetsService.addConverToUser(phoneNumber, [
+        await this.sheetsService.addConverToUser(phoneNumber, [
           { role: 'user', content: message },
           { role: 'assistant', content: response }
         ]);
@@ -288,7 +294,7 @@ class aiServices {
       this.updateUserContext(phoneNumber, message, aiResponse);
       
       // Guardar la conversación en Sheets
-      await sheetsService.addConverToUser(phoneNumber, [
+      await this.sheetsService.addConverToUser(phoneNumber, [
         { role: 'user', content: message },
         { role: 'assistant', content: aiResponse }
       ]);
@@ -301,4 +307,5 @@ class aiServices {
   }
 }
 
-export default new aiServices();
+// Exportamos la clase, no una instancia
+export default AIService;

@@ -1,6 +1,6 @@
-import { injectable, inject } from "tsyringe";
-import sheetsServices, { SheetsService } from "./sheetsServices";
-import budgetService, { BudgetAlert, AnomalyData } from "./budgetService";
+import { singleton, inject } from "tsyringe";
+import { SheetsService } from "./sheetsServices";
+import { BudgetService, BudgetAlert, AnomalyData } from "./budgetService";
 
 /**
  * Interface for alert records stored in the database
@@ -18,10 +18,11 @@ export interface AlertRecord {
 /**
  * Service for managing and sending alerts to users
  */
-@injectable()
-class AlertService {
+@singleton()
+export class AlertService {
   constructor(
-    @inject("SheetsService") private sheetManager: SheetsService = sheetsServices
+    @inject("SheetsService") private sheetManager: SheetsService,
+    @inject("BudgetService") private budgetService: BudgetService
   ) {}
 
   /**
@@ -170,12 +171,12 @@ class AlertService {
   async processAnomalyAlerts(phoneNumber: string): Promise<void> {
     try {
       // Detect anomalies
-      const anomalies = await budgetService.detectAnomalies(phoneNumber);
+      const anomalies = await this.budgetService.detectAnomalies(phoneNumber);
       
       // Process each anomaly
       for (const anomaly of anomalies) {
         // Generate message for the anomaly
-        const message = budgetService.generateAnomalyMessage(anomaly);
+        const message = this.budgetService.generateAnomalyMessage(anomaly);
         
         // Save the alert
         await this.saveAlert({
@@ -202,7 +203,7 @@ class AlertService {
   async checkBudgetLimitsForExpense(phoneNumber: string, category: string, amount: number): Promise<void> {
     try {
       // Check if the expense exceeds any budget limits
-      const alert = await budgetService.checkBudgetLimits(phoneNumber, category, amount);
+      const alert = await this.budgetService.checkBudgetLimits(phoneNumber, category, amount);
       
       // If an alert was generated, process it
       if (alert) {
@@ -210,7 +211,7 @@ class AlertService {
       }
       
     } catch (error) {
-      console.error("Error al verificar límites de presupuesto para gasto:", error);
+      console.error("Error al verificar límites de presupuesto:", error);
     }
   }
 
@@ -227,4 +228,5 @@ class AlertService {
   }
 }
 
-export default new AlertService();
+// Exportamos la clase, no una instancia
+export default AlertService;
