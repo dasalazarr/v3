@@ -47,20 +47,69 @@ export class AppointmentService {
 
   /**
    * Check if there are any conflicting appointments
+   * @param startTime Inicio de la cita a verificar
+   * @param endTime Fin de la cita a verificar
+   * @returns true si hay conflictos, false si está disponible
    */
   private async checkConflicts(startTime: Date, endTime: Date): Promise<boolean> {
     try {
+      console.log(`Checking conflicts for time slot: ${startTime.toISOString()} - ${endTime.toISOString()}`);
+      console.log(`Using calendar ID: ${this.calendarId}`);
+      
+      // Ajustamos el rango de búsqueda para incluir citas que se superpongan
+      // No solo las que están completamente dentro del rango
+      const timeMin = new Date(startTime.getTime() - (60 * 60 * 1000)); // 1 hora antes
+      const timeMax = new Date(endTime.getTime() + (60 * 60 * 1000));   // 1 hora después
+      
       const response = await this.calendar.events.list({
         calendarId: this.calendarId,
-        timeMin: startTime.toISOString(),
-        timeMax: endTime.toISOString(),
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
         singleEvents: true,
+        maxResults: 10,
       });
-
-      return (response.data.items || []).length > 0;
+      
+      // Si no hay eventos, no hay conflictos
+      if (!response.data.items || response.data.items.length === 0) {
+        console.log('No events found in this time range');
+        return false;
+      }
+      
+      // Verificar si alguno de los eventos se superpone con nuestro horario
+      const conflicts = response.data.items.filter(event => {
+        if (!event.start?.dateTime || !event.end?.dateTime) {
+          return false; // Ignorar eventos sin hora definida
+        }
+        
+        const eventStart = new Date(event.start.dateTime);
+        const eventEnd = new Date(event.end.dateTime);
+        
+        // Hay conflicto si:
+        // 1. El inicio del evento está dentro de nuestro rango, o
+        // 2. El fin del evento está dentro de nuestro rango, o
+        // 3. Nuestro rango está completamente dentro del evento
+        const conflict = 
+          (eventStart >= startTime && eventStart < endTime) || // Inicio del evento dentro de nuestro rango
+          (eventEnd > startTime && eventEnd <= endTime) ||     // Fin del evento dentro de nuestro rango
+          (eventStart <= startTime && eventEnd >= endTime);    // Nuestro rango dentro del evento
+        
+        if (conflict) {
+          console.log(`Conflict found with event: ${event.summary} (${eventStart.toISOString()} - ${eventEnd.toISOString()})`);
+        }
+        
+        return conflict;
+      });
+      
+      console.log(`Found ${conflicts.length} conflicting events`);
+      return conflicts.length > 0;
     } catch (error) {
       console.error('Error checking conflicts:', error);
-      throw new Error('Failed to check appointment conflicts');
+      // Proporcionar un mensaje de error más detallado
+      if (error instanceof Error) {
+        throw new Error(`Failed to check appointment conflicts: ${error.message}`);
+      } else {
+        throw new Error('Failed to check appointment conflicts: Unknown error');
+      }
     }
   }
 
@@ -96,6 +145,8 @@ export class AppointmentService {
 
   /**
    * Schedule a new appointment
+   * @param appointment Datos de la cita a agendar
+   * @returns ID del evento creado en Google Calendar
    */
   async scheduleAppointment(appointment: Appointment): Promise<string> {
     console.log('Starting appointment scheduling...');
@@ -105,29 +156,47 @@ export class AppointmentService {
       endTime: appointment.endTime
     });
 
-    // Validate dates
+    // Validar fechas
     if (appointment.startTime >= appointment.endTime) {
-      throw new Error('End time must be after start time');
+      throw new Error('La hora de fin debe ser posterior a la hora de inicio');
     }
 
-    if (appointment.startTime < new Date()) {
-      throw new Error('Cannot schedule appointments in the past');
+    const now = new Date();
+    if (appointment.startTime < now) {
+      const diffMs = now.getTime() - appointment.startTime.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      throw new Error(`No se pueden agendar citas en el pasado. La hora seleccionada es ${diffMins} minutos antes de la hora actual.`);
     }
 
-    // Check for conflicts
+    // Validar horario de atención (9:00 a 18:00)
+    const hours = appointment.startTime.getHours();
+    if (hours < 9 || hours >= 18) {
+      throw new Error(`La hora seleccionada (${hours}:${appointment.startTime.getMinutes()}) está fuera del horario de atención (9:00 a 18:00).`);
+    }
+
+    // Verificar conflictos
     console.log('Checking for conflicts...');
-    const hasConflicts = await this.checkConflicts(
-      appointment.startTime,
-      appointment.endTime
-    );
+    try {
+      const hasConflicts = await this.checkConflicts(
+        appointment.startTime,
+        appointment.endTime
+      );
 
-    if (hasConflicts) {
-      throw new Error('Time slot is already booked');
+      if (hasConflicts) {
+        throw new Error(`El horario seleccionado (${appointment.startTime.toLocaleTimeString('es-ES')} - ${appointment.endTime.toLocaleTimeString('es-ES')}) ya está reservado. Por favor, elige otro horario.`);
+      }
+    } catch (error) {
+      // Capturar errores específicos de la verificación de conflictos
+      if (error instanceof Error) {
+        throw error; // Reenviar el error con el mensaje detallado
+      } else {
+        throw new Error('No se pudo verificar la disponibilidad del horario');
+      }
     }
 
     try {
       console.log('Creating calendar event...');
-      // Create Calendar event
+      // Crear evento en Google Calendar
       const event = await this.calendar.events.insert({
         calendarId: this.calendarId,
         requestBody: {
@@ -135,22 +204,33 @@ export class AppointmentService {
           description: appointment.description,
           start: {
             dateTime: appointment.startTime.toISOString(),
-            timeZone: 'America/Lima'  // UTC-5
+            timeZone: 'America/Guayaquil'  // UTC-5 para Ecuador
           },
           end: {
             dateTime: appointment.endTime.toISOString(),
-            timeZone: 'America/Lima'  // UTC-5
+            timeZone: 'America/Guayaquil'  // UTC-5 para Ecuador
           },
+          // Añadir recordatorios por defecto
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: 'email', minutes: 24 * 60 }, // 1 día antes
+              { method: 'popup', minutes: 60 }        // 1 hora antes
+            ]
+          },
+          // Color del evento (opcional)
+          colorId: '1' // Azul
         },
       });
 
       if (!event.data.id) {
-        throw new Error('Failed to create calendar event: No event ID returned');
+        throw new Error('No se pudo crear el evento en el calendario: No se recibió ID del evento');
       }
 
       console.log('Calendar event created successfully:', event.data.id);
+      console.log('Event details:', event.data);
 
-      // Add to spreadsheet
+      // Agregar a Google Sheets
       console.log('Adding to spreadsheet...');
       await this.addToSheet(event.data.id, appointment);
       console.log('Added to spreadsheet successfully');
@@ -158,13 +238,15 @@ export class AppointmentService {
       return event.data.id;
     } catch (error) {
       console.error('Error scheduling appointment:', error);
+      // Proporcionar información detallada del error
       if (error.response) {
         console.error('Google API Error:', {
           status: error.response.status,
           data: error.response.data
         });
       }
-      throw new Error(`Failed to schedule appointment: ${error.message}`);
+      // Mensaje de error más amigable en español
+      throw new Error(`Error al agendar la cita: ${error.message}`);
     }
   }
 
