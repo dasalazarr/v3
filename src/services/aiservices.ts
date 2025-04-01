@@ -3,18 +3,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { singleton, inject } from 'tsyringe';
 import { SheetsService } from './sheetsServices';
-import { BudgetService } from './budgetService';
-import { AlertService } from './alertService';
-
-interface ExpenseCommand {
-  type: 'expense';
-  date: string;
-  description: string;
-  category: string;
-  amount: number;
-  paymentMethod: string;
-  notes?: string;
-}
 
 @singleton()
 export class AIService {
@@ -26,9 +14,7 @@ export class AIService {
   private conversationContexts: Map<string, Array<{role: string, content: string}>> = new Map();
 
   constructor(
-    @inject("SheetsService") private sheetsService: SheetsService,
-    @inject("BudgetService") private budgetService: BudgetService,
-    @inject("AlertService") private alertService: AlertService
+    @inject("SheetsService") private sheetsService: SheetsService
   ) {
     this.baseURL = config.baseURL || "https://api.deepseek.com/v1";
     this.apiKey = config.apiKey;
@@ -40,86 +26,11 @@ export class AIService {
       console.log("✅ Sistema prompt cargado correctamente");
     } catch (error) {
       console.error("❌ Error al cargar el prompt:", error);
-      this.systemPrompt = "Eres un asistente amable y profesional de Khipu.";
+      this.systemPrompt = "Eres un asistente amable y profesional de Ecotec.";
     }
   }
 
-  private parseExpenseCommand(text: string): ExpenseCommand | null {
-    // Patrones comunes de expresión de gastos
-    const patterns = [
-      // "Gasté 50 en comida"
-      /gast[eéó]\s+(\d+)\s+(?:en|por)\s+(.+)/i,
-      // "Pagué 30 por transporte"
-      /pag[uúü][eéó]\s+(\d+)\s+(?:en|por)\s+(.+)/i,
-      // "Compré comida por 25"
-      /compr[eéó]\s+(.+)\s+por\s+(\d+)/i,
-      // "50 en comida" or "50 pesos en comida"
-      /(\d+)(?:\s+(?:pesos|dolares|dólares|soles))?\s+(?:en|por)\s+(.+)/i,
-      // "Dos dolares en didi" (palabras numéricas)
-      /(uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(?:pesos|dolares|dólares|soles)?\s+(?:en|por)\s+(.+)/i
-    ];
 
-    // Mapeo de palabras numéricas a valores
-    const wordToNumber: Record<string, number> = {
-      'uno': 1, 'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5,
-      'seis': 6, 'siete': 7, 'ocho': 8, 'nueve': 9, 'diez': 10
-    };
-
-    for (const pattern of patterns) {
-      const match = text.match(pattern);
-      if (match) {
-        let amount: number;
-        let description: string;
-
-        if (pattern.toString().includes('compr[eéó]')) {
-          description = match[1];
-          amount = parseInt(match[2]);
-        } else if (pattern.toString().includes('uno|dos|tres')) {
-          // Patrón con palabras numéricas
-          amount = wordToNumber[match[1].toLowerCase()];
-          description = match[2];
-        } else {
-          amount = parseInt(match[1]);
-          description = match[2];
-        }
-
-        // Inferir categoría basada en palabras clave
-        const category = this.inferCategory(description.toLowerCase());
-
-        return {
-          type: 'expense',
-          date: new Date().toLocaleDateString('es-ES'),
-          description,
-          category,
-          amount,
-          paymentMethod: 'Efectivo', // Default
-          notes: ''
-        };
-      }
-    }
-
-    return null;
-  }
-
-  private inferCategory(description: string): string {
-    const categoryKeywords: Record<string, string[]> = {
-      'Alimentación': ['comida', 'almuerzo', 'cena', 'desayuno', 'restaurante', 'mercado'],
-      'Transporte': ['taxi', 'bus', 'metro', 'gasolina', 'uber', 'transporte'],
-      'Entretenimiento': ['cine', 'película', 'juego', 'concierto', 'evento'],
-      'Salud': ['medicina', 'doctor', 'farmacia', 'médico', 'hospital'],
-      'Educación': ['libro', 'curso', 'clase', 'escuela', 'universidad'],
-      'Hogar': ['casa', 'alquiler', 'servicios', 'luz', 'agua', 'gas'],
-      'Otros': []
-    };
-
-    for (const [category, keywords] of Object.entries(categoryKeywords)) {
-      if (keywords.some(keyword => description.includes(keyword))) {
-        return category;
-      }
-    }
-
-    return 'Otros';
-  }
 
   private getUserContext(phoneNumber: string): Array<{role: string, content: string}> {
     if (!this.conversationContexts.has(phoneNumber)) {
@@ -230,59 +141,8 @@ export class AIService {
       // Obtener el contexto actual
       const context = this.getUserContext(phoneNumber);
       
-      // Verificar si es un comando de gasto
-      const expenseCommand = this.parseExpenseCommand(message);
-      
-      if (expenseCommand) {
-        await this.sheetsService.addExpense(expenseCommand);
-        
-        // Verificar límites de presupuesto y generar alertas si es necesario
-        await this.alertService.checkBudgetLimitsForExpense(
-          phoneNumber, 
-          expenseCommand.category, 
-          expenseCommand.amount
-        );
-        
-        // Obtener totales por categoría
-        const totals = await this.sheetsService.getTotalsByCategory();
-        
-        // Formatear respuesta
-        const response = [
-          `✅ Gasto registrado exitosamente:`,
-          `📝 Descripción: ${expenseCommand.description}`,
-          `💰 Monto: $${expenseCommand.amount}`,
-          `🏷️ Categoría: ${expenseCommand.category}`,
-          `\nResumen del mes:`,
-          ...Object.entries(totals).map(([cat, total]) => 
-            `${cat}: $${total.toFixed(2)}`
-          )
-        ].join('\n');
-
-        // Actualizar el contexto de la conversación
-        this.updateUserContext(phoneNumber, message, response);
-        
-        // Guardar la conversación en Sheets
-        await this.sheetsService.addConverToUser(phoneNumber, [
-          { role: 'user', content: message },
-          { role: 'assistant', content: response }
-        ]);
-
-        return response;
-      }
-
-      // Si no es un comando de gasto, procesar con DeepSeek
-      // Incluir el contexto en la solicitud a DeepSeek
-      const systemMessage = {
-        role: "system",
-        content: `Eres Khipu, un asistente financiero personal que ayuda a los usuarios a gestionar sus gastos y presupuestos. 
-                 Responde de manera amigable y concisa. 
-                 Si el usuario quiere registrar un gasto, pídele los detalles necesarios.
-                 Si el usuario quiere configurar un presupuesto, indícale que puede usar comandos como "presupuesto", "ver presupuesto" o "eliminar presupuesto".
-                 Recuerda que puedes registrar gastos con el formato "Gasté X en Y" o "X en Y".`
-      };
-
+      // Procesar con DeepSeek
       const messages = [
-        systemMessage,
         ...context,
         { role: "user", content: message }
       ];
