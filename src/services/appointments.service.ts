@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { JWT } from 'google-auth-library';
 import { singleton } from 'tsyringe';
+import { config } from '../config';
 
 interface Appointment {
   startTime: Date;
@@ -21,22 +22,31 @@ export class AppointmentService {
     try {
       // Initialize Google OAuth2 client
       console.log('Initializing Google OAuth2 client...');
-      console.log('Client Email:', process.env.clientEmail);
-      console.log('Calendar ID:', process.env.GOOGLE_CALENDAR_ID);
+      // Validar que las credenciales de Google existan
+      if (!config.clientEmail || !config.privateKey) {
+        throw new Error('Credenciales de Google no configuradas correctamente. Verifica clientEmail y privateKey.');
+      }
       
+      console.log('Client Email:', config.clientEmail);
+      console.log('Calendar ID:', process.env.GOOGLE_CALENDAR_ID || 'primary');
+      
+      // Crear el cliente JWT con las credenciales
       const auth = new google.auth.JWT({
-        email: process.env.clientEmail,
-        key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        email: config.clientEmail,
+        key: config.privateKey.replace(/\\n/g, '\n'), // Asegurar que los saltos de línea estén correctamente formateados
         scopes: [
           'https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/spreadsheets'
         ]
       });
 
+      // Inicializar los servicios de Google
       this.calendar = google.calendar({ version: 'v3', auth });
       this.sheets = google.sheets({ version: 'v4', auth });
-      this.spreadsheetId = process.env.spreadsheetId || '';
-      this.calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+      
+      // Configurar IDs
+      this.spreadsheetId = config.spreadsheetId || '';
+      this.calendarId = config.calendarId || 'primary';
       
       console.log('Google services initialized successfully');
     } catch (error) {

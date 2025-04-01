@@ -33,7 +33,23 @@ const getMetaCredentials = () => {
   return { jwtToken, numberId, verifyToken };
 };
 
-export const config = {
+// Definición de tipos para el objeto config
+interface Config {
+  PORT: string | number;
+  jwtToken?: string;
+  numberId?: string;
+  verifyToken?: string;
+  Model: string;
+  baseURL: string;
+  apiKey?: string;
+  assistant_id?: string;
+  spreadsheetId?: string;
+  privateKey?: string;
+  clientEmail?: string;
+  calendarId?: string;
+}
+
+export const config: Config = {
   PORT: process.env.PORT ?? 3000,
   ...getMetaCredentials(),
   Model: process.env.Model || process.env.model || "deepseek-chat",
@@ -42,7 +58,8 @@ export const config = {
   assistant_id: process.env.ASSISTANT_ID || process.env.assistant_id,
   spreadsheetId: process.env.spreadsheetId,
   privateKey: process.env.privateKey,
-  clientEmail: process.env.clientEmail
+  clientEmail: process.env.clientEmail,
+  calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary'
 };
 
 // Verificación de variables críticas
@@ -54,6 +71,7 @@ const requiredVars = {
   'Spreadsheet ID': config.spreadsheetId,
   'Private Key': config.privateKey,
   'Client Email': config.clientEmail,
+  'Calendar ID': config.calendarId,
   'Base URL': config.baseURL,
   'Model': config.Model
 };
