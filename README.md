@@ -34,13 +34,33 @@ cp .env.example .env
 
 ## Configuración (`.env`)
 ```ini
-API_KEY=sk-tu-key-openai
-ASSISTANT_ID=asst_tu_id_asistente
-SPREADSHEET_ID=id_google_sheet
-PRIVATE_KEY="-----BEGIN PRIVATE KEY...\n"
-CLIENT_EMAIL=tu-service-account@project.iam.gserviceaccount.com
-JWT_TOKEN=token_whatsapp
-NUMBER_ID=id_numero_whatsapp
+# API Keys
+apiKey=sk-tu-key-openai
+assistant_id=asst_tu_id_asistente
+
+# Meta WhatsApp API
+jwtToken=token_whatsapp
+numberId=id_numero_whatsapp
+verifyToken=tu_verify_token
+
+# Google API (importante para el servicio de citas)
+clientEmail=tu-service-account@project.iam.gserviceaccount.com
+privateKey="-----BEGIN PRIVATE KEY...\n...\n-----END PRIVATE KEY-----"
+spreadsheetId=id_google_sheet
+GOOGLE_CALENDAR_ID=primary  # O el ID específico de tu calendario
+
+# Otros
+PORT=3000
+Model=deepseek-chat
+```
+
+### Nota importante sobre la clave privada de Google
+
+La clave privada (`privateKey`) debe incluir los saltos de línea correctamente escapados con `\n`. Si estás copiando la clave desde un archivo JSON, asegúrate de reemplazar los saltos de línea literales por `\n`.
+
+Ejemplo:
+```
+privateKey="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSj...\n...\n-----END PRIVATE KEY-----"
 ```
 
 ## Estructura del Proyecto
