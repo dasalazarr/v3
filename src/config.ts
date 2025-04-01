@@ -14,5 +14,6 @@ export const config = {
   numberId: process.env.numberId || '',
   PORT: process.env.PORT || 3000,
   verifyToken: process.env.verifyToken || '',
+  calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
   version: '1.0.0'
 };
