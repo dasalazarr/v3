@@ -14,7 +14,9 @@ export class AppointmentController {
     title: string,
     description: string,
     startTime: string,
-    endTime: string
+    endTime: string,
+    patientId?: string,
+    type?: 'Consulta' | 'Limpieza' | 'Extracción' | 'Ortodoncia' | 'Endodoncia' | 'Otro'
   ) {
     try {
       const appointment = {
@@ -22,7 +24,9 @@ export class AppointmentController {
         description,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
-        status: 'confirmed' as const
+        status: 'confirmed' as const,
+        patientId,
+        type: type || 'Consulta'
       };
 
       const eventId = await this.appointmentService.scheduleAppointment(appointment);
@@ -50,6 +54,8 @@ export class AppointmentController {
       startTime?: string;
       endTime?: string;
       status?: 'confirmed' | 'pending' | 'cancelled';
+      patientId?: string;
+      type?: 'Consulta' | 'Limpieza' | 'Extracción' | 'Ortodoncia' | 'Endodoncia' | 'Otro';
     }
   ) {
     try {
