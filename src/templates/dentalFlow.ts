@@ -232,13 +232,12 @@ export const dentalFlow = addKeyword(['cita dental', 'dentista', 'odontólogo', 
           type: data.type
         });
         
+        // Crear la cita con solo los 4 parámetros requeridos
         const result = await appointmentController.createAppointment(
           `Cita dental con ${ctx.pushName || data.name}`,
-          data.description,
+          `${data.description}\nPaciente ID: ${data.patientId}\nTipo: ${data.type}`,
           data.startTime.toISOString(),
-          data.endTime.toISOString(),
-          data.patientId,
-          data.type
+          data.endTime.toISOString()
         );
 
         if (result.success) {
