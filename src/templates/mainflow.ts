@@ -1,5 +1,6 @@
 import  { addKeyword, EVENTS } from "@builderbot/bot"
 import { faqFlow } from "./faqFlow"
+import { dentalFlow } from "./dentalFlow"
 import container from "../di/container";
 import { SheetsService } from "../services/sheetsServices"
 
