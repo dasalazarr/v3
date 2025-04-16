@@ -292,7 +292,7 @@ export class AppointmentService {
       // Find and update the row with matching eventId
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Citas Odontologicas!A:G',
+        range: 'Citas Odontologicas!A:I',
       });
 
       const rows = response.data.values || [];
@@ -305,10 +305,12 @@ export class AppointmentService {
         if (appointment.title) updatedRow[2] = appointment.title;
         if (appointment.description) updatedRow[3] = appointment.description;
         if (appointment.status) updatedRow[5] = appointment.status;
+        if (appointment.patientId) updatedRow[7] = appointment.patientId;
+        if (appointment.type) updatedRow[8] = appointment.type;
 
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `Citas Odontologicas!A${rowIndex + 1}:G${rowIndex + 1}`,
+          range: `Citas Odontologicas!A${rowIndex + 1}:I${rowIndex + 1}`,
           valueInputOption: 'USER_ENTERED',
           requestBody: {
             values: [updatedRow]
@@ -335,7 +337,7 @@ export class AppointmentService {
       // Update status in spreadsheet
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Citas Odontologicas!A:G',
+        range: 'Citas Odontologicas!A:I',
       });
 
       const rows = response.data.values || [];
