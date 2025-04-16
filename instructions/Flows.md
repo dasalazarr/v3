@@ -172,6 +172,101 @@ export const cancelAppointmentFlow = addKeyword(['cancelar cita'])
 6. Crea la cita en Google Calendar y registra en Google Sheets
 7. Proporciona al usuario la confirmación y el ID de su cita
 
+## Flujo MVP Odontológico
+
+Este flujo ha sido adaptado específicamente para una clínica dental, optimizando el proceso de gestión de pacientes y citas. Permite registrar pacientes, agendar citas dentales y enviar recordatorios automáticos.
+
+```typescript
+// Flujo para registro de pacientes dentales y agendamiento de citas
+export const dentalPatientFlow = addKeyword(['quiero una cita', 'agendar', 'odontólogo', 'dentista'])
+  .addAnswer(
+    'Bienvenido a nuestra Clínica Dental. Para agendar una cita, necesitamos registrarte primero. ¿Cuál es tu nombre completo?',
+    { capture: true },
+    async (ctx, { flowDynamic }) => {
+      // Almacenar nombre del paciente
+      const patientName = ctx.body;
+      // Guardar en estado temporal
+      patientData.set(ctx.from, { name: patientName });
+      await flowDynamic(`Gracias ${patientName}. Registrando tu información...`);
+    }
+  )
+  .addAnswer(
+    '¿Cuál es tu número de teléfono para contactarte?',
+    { capture: true },
+    async (ctx, { flowDynamic }) => {
+      // Almacenar teléfono del paciente
+      const phone = ctx.body;
+      const data = patientData.get(ctx.from) || {};
+      // Actualizar estado temporal
+      patientData.set(ctx.from, { ...data, phone });
+      
+      try {
+        // Registrar paciente en la base de datos
+        const patientsService = container.resolve('PatientsService');
+        const { patientId } = await patientsService.createPatient({
+          name: data.name,
+          phone: phone
+        });
+        
+        // Guardar ID del paciente
+        patientData.set(ctx.from, { ...data, phone, patientId });
+        await flowDynamic(`Perfecto, te hemos registrado con éxito.`);
+      } catch (error) {
+        console.error('Error registrando paciente:', error);
+        await flowDynamic('Lo siento, hubo un problema al registrar tus datos. Por favor, intenta nuevamente.');
+      }
+    }
+  )
+  .addAnswer(
+    '¿Qué tipo de servicio dental necesitas?\n\n1. Consulta/Revisión\n2. Limpieza dental\n3. Tratamiento de conducto\n4. Extracción\n5. Ortodoncia\n6. Otro',
+    { capture: true },
+    async (ctx, { flowDynamic }) => {
+      // Mapear tipos de cita
+      const appointmentTypes = {
+        '1': 'Consulta',
+        '2': 'Limpieza',
+        '3': 'Endodoncia',
+        '4': 'Extracción',
+        '5': 'Ortodoncia',
+        '6': 'Otro'
+      };
+      
+      const typeInput = ctx.body;
+      const type = appointmentTypes[typeInput] || 'Consulta';
+      
+      const data = patientData.get(ctx.from) || {};
+      patientData.set(ctx.from, { ...data, type });
+      
+      await flowDynamic(`Has seleccionado: ${type}`);
+    }
+  )
+  // Continuar con el flujo normal de agendamiento de citas
+  .addAnswer(
+    '¿Para qué fecha deseas tu cita dental?',
+    // Resto del flujo de citas...
+  );
+```
+
+**Flujo para el MVP Odontológico**:
+
+1. **Registro de Paciente**
+   - Se captura el nombre completo del paciente
+   - Se solicita número de teléfono de contacto
+   - La información se almacena en Google Sheets usando `PatientsService`
+
+2. **Tipo de Servicio Dental**
+   - El paciente selecciona el tipo de procedimiento dental
+   - Opciones predefinidas: Consulta, Limpieza, Endodoncia, Extracción, Ortodoncia
+
+3. **Agendamiento**
+   - Se sigue el flujo estándar de citas, solicitando fecha y hora
+   - La cita se crea con referencia al ID del paciente
+   - Se categoriza según el tipo de servicio dental
+
+4. **Confirmación y Recordatorio**
+   - Confirmación inmediata por WhatsApp
+   - Recordatorio automático 24 horas antes de la cita
+
 **Consideraciones**:
 - Utiliza la biblioteca chrono-node para procesar fechas en lenguaje natural
 - Implementa validaciones para garantizar fechas futuras y dentro del horario

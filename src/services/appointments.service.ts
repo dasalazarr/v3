@@ -9,6 +9,8 @@ interface Appointment {
   title: string;
   description: string;
   status: 'confirmed' | 'pending' | 'cancelled';
+  patientId?: string;
+  type?: 'Consulta' | 'Limpieza' | 'Extracción' | 'Ortodoncia' | 'Endodoncia' | 'Otro';
 }
 
 @singleton()
@@ -133,7 +135,7 @@ export class AppointmentService {
     try {
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: 'Citas!A:G',
+        range: 'Citas Odontologicas!A:I',
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [[
@@ -143,7 +145,9 @@ export class AppointmentService {
             appointment.description,
             eventId,
             appointment.status,
-            new Date().toISOString() // Created at
+            new Date().toISOString(), // Created at
+            appointment.patientId || '',
+            appointment.type || 'Consulta'
           ]]
         }
       });
@@ -210,8 +214,8 @@ export class AppointmentService {
       const event = await this.calendar.events.insert({
         calendarId: this.calendarId,
         requestBody: {
-          summary: appointment.title,
-          description: appointment.description,
+          summary: `[${appointment.type || 'Consulta'}] ${appointment.title}`,
+          description: `${appointment.description}\n\nPaciente ID: ${appointment.patientId || 'No especificado'}`,
           start: {
             dateTime: appointment.startTime.toISOString(),
             timeZone: 'America/Guayaquil'  // UTC-5 para Ecuador
@@ -288,7 +292,7 @@ export class AppointmentService {
       // Find and update the row with matching eventId
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Citas!A:G',
+        range: 'Citas Odontologicas!A:G',
       });
 
       const rows = response.data.values || [];
@@ -304,7 +308,7 @@ export class AppointmentService {
 
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `Citas!A${rowIndex + 1}:G${rowIndex + 1}`,
+          range: `Citas Odontologicas!A${rowIndex + 1}:G${rowIndex + 1}`,
           valueInputOption: 'USER_ENTERED',
           requestBody: {
             values: [updatedRow]
@@ -331,7 +335,7 @@ export class AppointmentService {
       // Update status in spreadsheet
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Citas!A:G',
+        range: 'Citas Odontologicas!A:G',
       });
 
       const rows = response.data.values || [];
@@ -340,7 +344,7 @@ export class AppointmentService {
       if (rowIndex !== -1) {
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `Citas!F${rowIndex + 1}`,
+          range: `Citas Odontologicas!F${rowIndex + 1}`,
           valueInputOption: 'USER_ENTERED',
           requestBody: {
             values: [['cancelled']]

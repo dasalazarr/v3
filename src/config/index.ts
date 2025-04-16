@@ -54,6 +54,7 @@ export interface Config {
   privateKey?: string;
   clientEmail?: string;
   calendarId?: string;
+  PATIENTS_SPREADSHEET_ID?: string;
 }
 
 export const config: Config = {
@@ -66,7 +67,8 @@ export const config: Config = {
   spreadsheetId: process.env.spreadsheetId,
   privateKey: process.env.privateKey,
   clientEmail: process.env.clientEmail,
-  calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary'
+  calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+  PATIENTS_SPREADSHEET_ID: process.env.PATIENTS_SPREADSHEET_ID
 };
 
 // Verificación de variables críticas
@@ -80,7 +82,8 @@ const requiredVars = {
   'Client Email': config.clientEmail,
   'Calendar ID': config.calendarId,
   'Base URL': config.baseURL,
-  'Model': config.Model
+  'Model': config.Model,
+  'Patients Spreadsheet ID': config.PATIENTS_SPREADSHEET_ID
 };
 
 // Verificar variables críticas
