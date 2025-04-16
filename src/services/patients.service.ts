@@ -8,7 +8,7 @@ interface PatientData { name: string; phone: string; email?: string; notes?: str
 @singleton()
 export class PatientsService {
   private sheets;
-  private sheetId = config.PATIENTS_SPREADSHEET_ID;
+  private sheetId = config.PATIENTS_SPREADSHEET_ID || config.spreadsheetId; // Usar la misma hoja que citas si no hay una específica
 
   constructor() {
     try {
