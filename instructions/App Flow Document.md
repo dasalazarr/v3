@@ -4,13 +4,11 @@
 
 Este documento describe el recorrido completo del usuario desde el primer contacto con Khipu hasta las diversas interacciones y funcionalidades disponibles a través de la plataforma de mensajería WhatsApp. El flujo está diseñado para ser intuitivo, conversacional y eficiente, adaptándose al contexto natural de una aplicación de mensajería instantánea.
 
-## Primer Contacto y Registro
+## Primer Contacto
 
-El usuario inicia la conversación enviando cualquier mensaje al número de WhatsApp asociado a Khipu. El sistema verifica automáticamente si el número de teléfono ya está registrado en la base de datos. Si es un usuario nuevo, se activa el flujo de registro.
+El usuario inicia la conversación enviando cualquier mensaje al número de WhatsApp asociado a Khipu. El sistema no requiere registro previo para comenzar a interactuar con el asistente. Todos los usuarios son inmediatamente dirigidos al flujo FAQ.
 
-En el flujo de registro, Khipu se presenta como un asistente financiero y explica brevemente su propósito. Luego solicita al usuario su nombre completo con un mensaje amigable. El usuario responde con su nombre y Khipu lo saluda personalmente.
-
-A continuación, solicita un correo electrónico válido para completar el registro. El sistema verifica el formato del correo utilizando expresiones regulares. Si el formato es incorrecto, solicita nuevamente la información. Una vez validado, el sistema registra al usuario en Google Sheets y confirma que el registro se ha completado exitosamente.
+Cuando un usuario contacta por primera vez a Khipu, recibe un mensaje de bienvenida que explica brevemente el propósito del asistente financiero y los principales comandos disponibles.
 
 ## Registro de Conversaciones
 
@@ -150,6 +148,60 @@ Khipu procesa estas consultas, accede a la información almacenada en Google She
 
 Para consultas por categoría, el sistema filtra los gastos según la categoría mencionada y el período de tiempo especificado o implícito. Luego suma los montos y presenta el total junto con un desglose de los gastos más significativos si es relevante.
 
+## Gestión de Citas
+
+### Flujo de Programación de Citas
+
+Este flujo permite a los usuarios programar, modificar y cancelar citas a través de la conversación de WhatsApp.
+
+#### Programación de Citas
+
+1. **Activación**: El usuario puede iniciar el flujo mencionando palabras clave como "cita", "agendar", "programar" o "reservar"
+2. **Selección de Fecha**: El sistema solicita la fecha deseada para la cita
+   - Procesa fechas en lenguaje natural mediante la biblioteca chrono-node
+   - Verifica que la fecha sea válida y futura
+3. **Selección de Hora**: El usuario especifica la hora deseada
+   - Valida que esté dentro del horario de atención (9:00 a 18:00)
+   - Verifica disponibilidad y conflictos con otras citas
+4. **Motivo de la Cita**: El usuario proporciona una breve descripción del motivo
+5. **Confirmación**: El sistema confirma los detalles y crea la cita en Google Calendar
+
+Ejemplo de interacción:
+```
+Usuario: "Quiero agendar una cita"
+Bot: "¡Claro! Te ayudo a agendar una cita. ¿Para qué fecha te gustaría?"
+Usuario: "Para el próximo martes"
+Bot: "Perfecto. ¿A qué hora te gustaría programar tu cita para el martes 8 de abril?"
+Usuario: "A las 10 de la mañana"
+Bot: "Muy bien. ¿Podrías indicarme el motivo de tu cita?"
+Usuario: "Consulta financiera"
+Bot: "¡Excelente! He programado tu cita para el martes 8 de abril a las 10:00 AM. Motivo: Consulta financiera. Tu cita ha sido registrada con éxito. Recibirás un recordatorio un día antes."
+```
+
+#### Modificación de Citas
+
+1. **Consulta de Citas**: El usuario puede preguntar por sus citas programadas
+2. **Selección para Modificar**: El sistema muestra las citas activas y solicita al usuario que seleccione
+3. **Cambios**: El usuario especifica qué desea modificar (fecha, hora o motivo)
+4. **Confirmación**: El sistema actualiza la cita en Google Calendar y confirma los cambios
+
+#### Cancelación de Citas
+
+1. **Solicitud de Cancelación**: El usuario indica que desea cancelar una cita
+2. **Selección**: Si tiene múltiples citas, el sistema solicita especificar cuál desea cancelar
+3. **Confirmación**: El sistema solicita confirmación antes de cancelar definitivamente
+4. **Registro**: La cita es cancelada en Google Calendar y marcada como cancelada en la hoja de datos
+
+### Gestión Técnica de Citas
+
+- **Integración con Google Calendar**: Las citas se programan como eventos en Google Calendar
+- **Validaciones Automáticas**:
+  - Verifica que la fecha sea posterior a la actual
+  - Comprueba que la hora esté dentro del horario de atención
+  - Previene conflictos de horario con otras citas
+- **Recordatorios**: Configura automáticamente recordatorios por email y notificaciones
+- **Registro en Google Sheets**: Mantiene un registro de todas las citas en una hoja dedicada
+
 ## Flujos de Presupuesto y Alertas
 
 ### Flujo de Creación de Presupuesto
@@ -218,6 +270,15 @@ Khipu procesa la solicitud, actualiza la información en Google Sheets y confirm
 ## Flujo de Cierre de Sesión
 
 Aunque no existe un proceso formal de cierre de sesión debido a la naturaleza de WhatsApp, el usuario puede indicar que ha terminado su interacción actual con mensajes como "Gracias, eso es todo por ahora" o "Hasta luego".
+
+---
+
+## Notas sobre configuración y variables de entorno
+
+Toda la lógica y validación de variables de entorno del sistema está centralizada en el archivo [`src/config/index.ts`].
+
+- Si necesitas agregar o modificar variables, hazlo únicamente en ese archivo y actualiza también `.env.example` y el README.
+- El resto del código debe importar la configuración desde `src/config.ts` o directamente desde `src/config/index.ts` para evitar inconsistencias y errores de sincronización.
 
 El sistema responde con un mensaje de despedida amable que incluye un recordatorio sutil sobre la importancia del registro regular de gastos: "¡Hasta pronto! Recuerda registrar tus gastos diariamente para mantener un control efectivo de tus finanzas. Estaré aquí cuando me necesites."
 

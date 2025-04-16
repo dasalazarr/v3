@@ -54,6 +54,19 @@ PORT=3000
 Model=deepseek-chat
 ```
 
+---
+
+## Flujo de configuración y variables de entorno
+
+La configuración de todas las variables de entorno y parámetros críticos del sistema está centralizada en el archivo [`src/config/index.ts`].
+
+- **Fuente de la verdad**: Aquí se definen, validan y documentan todas las variables necesarias para el funcionamiento del sistema.
+- **Consumo en el proyecto**: El resto del código debe importar el objeto `config` y el tipo `Config` desde `src/config.ts` o directamente desde `src/config/index.ts`.
+- **Actualización de variables**: Si necesitas agregar o modificar una variable, hazlo únicamente en `src/config/index.ts` y refleja el cambio en `.env.example` y en este README.
+- **Validación**: El sistema realiza validaciones y muestra advertencias si falta alguna variable crítica al iniciar.
+
+> **Recomendación:** Mantén sincronizados los archivos de ejemplo y documentación para evitar errores de configuración en despliegues futuros.
+
 ### Nota importante sobre la clave privada de Google
 
 La clave privada (`privateKey`) debe incluir los saltos de línea correctamente escapados con `\n`. Si estás copiando la clave desde un archivo JSON, asegúrate de reemplazar los saltos de línea literales por `\n`.

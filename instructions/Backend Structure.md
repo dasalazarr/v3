@@ -2,7 +2,7 @@
 
 ## Introducción a la Arquitectura Backend
 
-Este documento detalla la estructura del backend de Khipu, enfocándose en la organización de datos, autenticación, y almacenamiento. Aunque el sistema actual utiliza Google Sheets como principal almacenamiento de datos, este documento proporciona una estructura alternativa basada en Supabase para casos de escalabilidad futura.
+Este documento detalla la estructura del backend de Khipu, enfocándose en la organización de datos, autenticación, y almacenamiento. El sistema utiliza Google Sheets como principal almacenamiento de datos y Google Calendar para la gestión de citas. A continuación se describe la estructura actual y se proporciona una alternativa basada en Supabase para casos de escalabilidad futura.
 
 ## Estructura de Bases de Datos
 
@@ -23,6 +23,10 @@ Actualmente, Khipu utiliza Google Sheets con las siguientes hojas:
 
 4. **Conversations**: Historial de conversaciones con usuarios
    - Columnas: PhoneNumber, Timestamp, UserMessage, BotResponse
+
+5. **Citas**: Registro de citas programadas
+   - Columnas: StartTime, EndTime, Title, Description, EventId, Status, CreatedAt
+   - Integración con Google Calendar para sincronización de eventos
 
 ### Modelo de Datos Propuesto (Supabase)
 
@@ -105,7 +109,7 @@ CREATE INDEX conversations_timestamp_idx ON conversations(timestamp);
 ### SheetsService
 1. **Gestión de Hojas de Cálculo**
    - `createSheet(sheetName, headers)`: Crea una nueva hoja con encabezados opcionales
-   - `sheetExists(sheetName)`: Verifica si una hoja existe en el documento
+   - `sheetExists(sheetName)`: Verifica si una hoja existe en el documento (con caché)
    - `createSpreadsheet(title)`: Crea un nuevo documento de Google Sheets
    - `getSheetData(sheetName)`: Obtiene todos los datos de una hoja específica
    - `appendRow(sheetName, values)`: Añade una nueva fila a una hoja existente
@@ -126,30 +130,63 @@ CREATE INDEX conversations_timestamp_idx ON conversations(timestamp);
    - `addConverToUser(phoneNumber, messages)`: Registra conversaciones entre usuarios y el bot
    - Crea automáticamente la hoja "Conversations" si no existe
 
+### AppointmentService
+1. **Gestión de Citas**
+   - `scheduleAppointment(appointment)`: Programa una nueva cita en Google Calendar
+   - `updateAppointment(eventId, appointment)`: Actualiza una cita existente
+   - `cancelAppointment(eventId)`: Cancela una cita existente
+   - `checkConflicts(startTime, endTime)`: Verifica si hay conflictos de horario
+   - `addToSheet(eventId, appointment)`: Registra la cita en Google Sheets
+
+2. **Validaciones de Citas**
+   - Verifica que la fecha sea posterior a la actual
+   - Valida que la cita esté dentro del horario de atención (9:00 a 18:00)
+   - Previene conflictos de horario con otras citas existentes
+   - Añade automáticamente recordatorios por email y notificaciones
+
 ### SheetsService
 
-The `SheetsService` class is responsible for all interactions with Google Sheets. It provides methods for creating, reading, updating, and deleting data in Google Sheets.
+La clase `SheetsService` es responsable de todas las interacciones con Google Sheets. Proporciona métodos para crear, leer, actualizar y eliminar datos en Google Sheets.
 
-#### Key Methods
+#### Métodos Clave
 
-- `initializeSheets()`: Creates all required sheets if they don't exist
-- `createSheet(sheetName, headers)`: Creates a new sheet with optional headers
-- `sheetExists(sheetName)`: Checks if a sheet exists (with caching)
-- `appendToSheet(sheetName, rowData)`: Appends a row of data to a sheet
-- `updateSheetRow(sheetName, rowIndex, values)`: Updates a specific row in a sheet
-- `updateCell(sheetName, row, column, value)`: Updates a specific cell in a sheet
-- `getSheetData(sheetName, range)`: Gets data from a specific range in a sheet (with caching)
-- `getAllUsers()`: Retrieves all users from the Users sheet
-- `userExists(phoneNumber)`: Checks if a user exists
-- `createUser(phoneNumber, name, email)`: Creates a new user
-- `getLastUserConversations(phoneNumber, limit)`: Gets recent conversations for a user
+- `initializeSheets()`: Crea todas las hojas requeridas si no existen
+- `createSheet(sheetName, headers)`: Crea una nueva hoja con encabezados opcionales
+- `sheetExists(sheetName)`: Verifica si una hoja existe (con caché)
+- `appendToSheet(sheetName, rowData)`: Añade una fila de datos a una hoja
+- `updateSheetRow(sheetName, rowIndex, values)`: Actualiza una fila específica
+- `updateCell(sheetName, row, column, value)`: Actualiza una celda específica
+- `getSheetData(sheetName, range)`: Obtiene datos de un rango específico (con caché)
+- `getAllUsers()`: Recupera todos los usuarios de la hoja Users
+- `userExists(phoneNumber)`: Verifica si un usuario existe
+- `createUser(phoneNumber, name, email)`: Crea un nuevo usuario
+- `getLastUserConversations(phoneNumber, limit)`: Obtiene conversaciones recientes
 
-#### Optimization Features
+#### Características de Optimización
 
-- **Caching**: Implements in-memory caching for sheet existence and data retrieval
-- **TTL**: Time-To-Live mechanism for cache invalidation
-- **Error Handling**: Comprehensive error handling with detailed logging
-- **Data Validation**: Validates input data and handles edge cases
+- **Caché**: Implementa caché en memoria para existencia de hojas y recuperación de datos
+- **TTL**: Mecanismo de tiempo de vida para invalidación de caché
+- **Manejo de Errores**: Manejo integral de errores con registro detallado
+- **Validación de Datos**: Valida datos de entrada y maneja casos de borde
+
+### AppointmentService
+
+La clase `AppointmentService` gestiona la programación y administración de citas en Google Calendar.
+
+#### Métodos Clave
+
+- `scheduleAppointment(appointment)`: Programa una nueva cita
+- `updateAppointment(eventId, appointment)`: Actualiza una cita existente
+- `cancelAppointment(eventId)`: Cancela una cita existente
+- `checkConflicts(startTime, endTime)`: Verifica conflictos de horario
+
+#### Características
+
+- **Integración con Google Calendar**: Crea, actualiza y elimina eventos
+- **Verificación de Disponibilidad**: Evita conflictos de programación
+- **Validaciones**: Garantiza fechas futuras y dentro del horario de atención
+- **Registro en Sheets**: Mantiene un registro de todas las citas
+- **Recordatorios**: Configura automáticamente notificaciones para citas
 
 ### ExpenseService
 1. **Registro y Análisis de Gastos**
@@ -174,6 +211,18 @@ The `SheetsService` class is responsible for all interactions with Google Sheets
    - `detectAnomalies(phoneNumber)`: Detecta gastos anómalos comparando con históricos
    - `generateAlerts(phoneNumber)`: Genera alertas basadas en el estado de los presupuestos
 
+### AIService
+1. **Procesamiento de Mensajes**
+   - `processMessage(message, phoneNumber)`: Procesa un mensaje de usuario con IA
+   - `chat(prompt, messages)`: Realiza la llamada a la API de DeepSeek
+   - `loadConversationHistory(phoneNumber)`: Carga el historial de conversaciones previas
+   - `updateUserContext(phoneNumber, userMessage, botResponse)`: Actualiza el contexto de conversación
+
+2. **Gestión de Contexto**
+   - Mantiene un mapa de contextos de conversación por usuario
+   - Implementa límites para mantener solo las últimas interacciones relevantes
+   - Integra el historial de conversaciones de Google Sheets
+
 ### AlertService
 1. **Gestión de Alertas**
    - `initializeAlertSheet()`: Crea la hoja de alertas si no existe
@@ -194,6 +243,7 @@ El sistema implementa un manejo de contexto de conversación que permite mantene
 - **Memoria en Tiempo de Ejecución**: Se utiliza un `Map<string, Array<{role: string, content: string}>>` para almacenar el contexto de conversación de cada usuario, indexado por número de teléfono.
 - **Persistencia**: Las conversaciones se guardan en la hoja "Conversations" de Google Sheets para mantener un registro histórico.
 - **Límite de Contexto**: Se mantienen las últimas 5 interacciones (10 mensajes en total: 5 del usuario y 5 del asistente) para balancear la relevancia del contexto y el rendimiento.
+- **Carga Automática**: Al recibir un mensaje, el sistema carga automáticamente el historial de conversaciones previas desde Google Sheets.
 
 ### Flujo de Procesamiento con Contexto
 
@@ -379,6 +429,22 @@ src/
    - Registro detallado de errores para depuración
 
 ## Recomendaciones de Implementación
+
+---
+
+## Centralización y flujo de configuración
+
+Toda la configuración y manejo de variables de entorno del backend está centralizada en el archivo [`src/config/index.ts`].
+
+- Aquí se definen, validan y documentan todas las variables necesarias para el sistema.
+- Si necesitas agregar o modificar variables, hazlo únicamente en este archivo y refleja el cambio en `.env.example` y en la documentación.
+- El resto del backend debe importar la configuración así:
+
+```typescript
+import { config } from '../config'; // o desde 'src/config/index'
+```
+
+Esto asegura consistencia, validación y facilidad de mantenimiento para todo el backend.
 
 1. **Implementar gradualmente**: Comenzar migrando solo los datos de categorías y configuraciones mientras se mantiene el sistema actual en producción.
 

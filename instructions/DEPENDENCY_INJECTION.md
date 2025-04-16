@@ -17,11 +17,17 @@ import { container } from 'tsyringe';
 import SheetsService from '../services/sheetsServices';
 import ExpenseService from '../services/expenseService';
 // ... otros imports
+import AIService from '../services/aiServices';
+import AppointmentService from '../services/appointments.service';
+import AppointmentController from '../controllers/appointment.controller';
 
 // Registro de servicios
 container.registerSingleton('SheetsService', SheetsService);
 container.registerSingleton('ExpenseService', ExpenseService);
 // ... otros registros
+container.registerSingleton('AIService', AIService);
+container.registerSingleton('AppointmentService', AppointmentService);
+container.registerSingleton('AppointmentController', AppointmentController);
 
 export default container;
 ```
@@ -44,6 +50,28 @@ export class BudgetService {
     @inject('AlertService') private alertService: AlertService
   ) {}
 }
+
+// Servicio de citas
+@singleton()
+export class AppointmentService {
+  constructor(
+    @inject('SheetsService') private sheetsService: SheetsService,
+    private logger = new Logger('AppointmentService')
+  ) {}
+
+  // Métodos de servicio
+}
+
+// Controlador de citas
+@singleton()
+export class AppointmentController {
+  constructor(
+    @inject('AppointmentService') private appointmentService: AppointmentService,
+    private logger = new Logger('AppointmentController')
+  ) {}
+
+  // Métodos del controlador
+}
 ```
 
 ### Uso en Flujos y Componentes
@@ -55,6 +83,13 @@ import { SheetsService } from "../services/sheetsServices";
 
 // Obtener instancia del servicio
 const sheetsService = container.resolve<SheetsService>("SheetsService");
+
+// En appointmentFlow.ts
+import container from "../di/container";
+import { AppointmentController } from "../controllers/appointment.controller";
+
+// Obtener instancia del controlador
+const appointmentController = container.resolve<AppointmentController>("AppointmentController");
 ```
 
 ### Inicialización en app.ts

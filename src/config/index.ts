@@ -34,7 +34,14 @@ const getMetaCredentials = () => {
 };
 
 // Definición de tipos para el objeto config
-interface Config {
+/**
+ * Archivo fuente de la verdad para configuración de variables de entorno.
+ *
+ * Aquí se centraliza toda la lógica, validación y tipado de las variables de entorno.
+ * Si necesitas agregar o modificar variables, hazlo aquí.
+ */
+
+export interface Config {
   PORT: string | number;
   jwtToken?: string;
   numberId?: string;

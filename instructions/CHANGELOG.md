@@ -1,5 +1,63 @@
 # Bitácora de Cambios - Khipu WhatsApp Financial Assistant
 
+## Implementación del Sistema de Citas (02/04/2025)
+
+### Cambios Realizados
+
+#### Nuevos Servicios
+- **AppointmentService**: 
+  - Implementación de servicio para gestión de citas
+  - Integración con Google Calendar API
+  - Validación de fechas, horarios y disponibilidad
+  - Registro de citas en Google Sheets
+
+- **AppointmentController**:
+  - Creación de controlador para centralizar operaciones de citas
+  - Interfaz entre el flujo conversacional y el servicio de citas
+  - Manejo de errores específicos para citas
+
+#### Flujos Actualizados
+- **mainFlow**:
+  - Eliminación de verificación de registro de usuario
+  - Redirección directa al flujo FAQ para todos los usuarios
+
+- **registerFlow**:
+  - Eliminado completamente del sistema ya que no es necesario
+
+- **appointmentFlow**:
+  - Nuevo flujo para la gestión de citas mediante WhatsApp
+  - Procesamiento de fechas y horas en lenguaje natural con chrono-node
+  - Implementación de subdiálogos para programar, modificar y cancelar citas
+
+#### Actualizaciones en Configuración
+- **config.ts** y **config/index.ts**:
+  - Adición de variables para Google Calendar
+  - Actualización de los tipos TypeScript para incluir calendarId
+  - Validación de variables de entorno relacionadas con citas
+
+### Documentación
+- **Flows.md**:
+  - Actualizado para reflejar la eliminación del flujo de registro
+  - Documentación detallada del nuevo flujo de citas
+
+- **Backend Structure.md**:
+  - Actualizado para incluir el servicio de citas y sus métodos
+  - Documentación de la integración con Google Calendar
+
+### Dependencias Añadidas
+- **chrono-node**:
+  - Biblioteca para análisis de expresiones de fecha y hora en lenguaje natural
+  - Utilizada para interpretar fechas en el flujo de citas
+
+- **googleapis**:
+  - Actualización para incluir funcionalidades de Google Calendar
+
+### Próximos Pasos
+1. Realizar pruebas exhaustivas del flujo de citas con diferentes formatos de fecha y hora
+2. Implementar recordatorios automáticos para citas próximas
+3. Mejorar las validaciones de disponibilidad y conflictos
+4. Considerar la implementación de un mecanismo de reconfirmación de citas
+
 ## Implementación de Inyección de Dependencias (09/03/2025)
 
 ### Cambios Realizados

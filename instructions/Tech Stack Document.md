@@ -48,6 +48,17 @@ Este documento proporciona detalles técnicos exhaustivos sobre el stack tecnol�
     - `format`: Para formateo consistente de fechas
     - `es` locale: Para presentación de fechas en español
 
+### Gestión de Fechas y Tiempo Natural
+
+- **chrono-node 2.5.0**
+  - Biblioteca para análisis de expresiones de fecha y hora en lenguaje natural
+  - GitHub: [https://github.com/wanasit/chrono](https://github.com/wanasit/chrono)
+  - Capacidades utilizadas:
+    - Reconocimiento de fechas en múltiples formatos
+    - Resolución de fechas relativas ("mañana", "próximo lunes")
+    - Reconocimiento de horas en formato natural
+    - Soporte para idioma español
+
 ### Variables de Entorno
 
 - **dotenv 16.0.3**
@@ -80,6 +91,21 @@ Este documento proporciona detalles técnicos exhaustivos sobre el stack tecnol�
     - `temperature`: Control de creatividad (default: 0.7)
     - `max_tokens`: Límite de tokens en respuesta (default: 1000)
 
+### Google Calendar API
+
+- **Google Calendar API v3**
+  - API para interacción con el calendario de Google
+  - Documentación: [https://developers.google.com/calendar/api](https://developers.google.com/calendar/api)
+  - Métodos utilizados:
+    - `calendar.events.insert`: Para crear nuevas citas
+    - `calendar.events.update`: Para modificar citas existentes
+    - `calendar.events.delete`: Para cancelar citas
+    - `calendar.events.list`: Para consultar disponibilidad
+  - Autenticación:
+    - Service Account con JSON Key (mismas credenciales que Google Sheets)
+  - Variables de entorno requeridas:
+    - `GOOGLE_CALENDAR_ID`: ID del calendario a utilizar
+
 ### Google Sheets API
 
 - **Google Sheets API v4**
@@ -94,6 +120,34 @@ Este documento proporciona detalles técnicos exhaustivos sobre el stack tecnol�
     - Service Account con JSON Key (privateKey, clientEmail)
 
 ## Patrones de Diseño y Arquitectura
+
+### Modelo de Servicios
+
+El sistema implementa un modelo basado en servicios especializados:
+
+- **AppointmentService**: Gestiona las operaciones relacionadas con citas
+  - Responsable de la interacción con Google Calendar
+  - Implementa validaciones de negocio para citas
+  - Maneja conflictos y disponibilidad
+
+- **AppointmentController**: Abstracción entre el flujo conversacional y el servicio
+  - Formatea mensajes para el usuario
+  - Maneja errores específicos del dominio de citas
+  - Procesa y valida la entrada del usuario
+
+### Patrón Controlador-Servicio
+
+El sistema distingue entre controladores y servicios:
+
+- **Controladores**:
+  - Interactúan directamente con los flujos conversacionales
+  - Implementan la lógica de presentación
+  - Traducen las solicitudes del usuario a métodos del servicio
+
+- **Servicios**:
+  - Encapsulan la lógica de negocio
+  - Manejan las interacciones con APIs externas
+  - Implementan validaciones y reglas del dominio
 
 ### Inyección de Dependencias
 El sistema utiliza el patrón de inyección de dependencias a través de la biblioteca `tsyringe`. Esto permite:
@@ -333,6 +387,7 @@ A continuación se presenta una lista detallada de todas las dependencias con ve
   "dependencies": {
     "@builderbot/bot": "^1.0.0",
     "@builderbot/provider-meta": "^1.0.0",
+    "chrono-node": "^2.5.0",
     "date-fns": "^2.29.3",
     "dotenv": "^16.0.3",
     "tsyringe": "^4.7.0"
@@ -386,6 +441,9 @@ Model=deepseek-chat
 spreadsheetId=your_spreadsheet_id_here
 privateKey=your_private_key_here
 clientEmail=your_client_email_here
+
+# Google Calendar API
+GOOGLE_CALENDAR_ID=your_calendar_id_here
 
 # Server Configuration
 PORT=3000

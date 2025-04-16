@@ -8,15 +8,17 @@ El nombre "Khipu" se inspira en el sistema de registro contable utilizado por lo
 
 ## 2. User Flow
 
-1. **Registro Inicial**: El usuario contacta al bot por primera vez a través de WhatsApp, donde se le solicita información básica (nombre y correo electrónico).
+1. **Primer Contacto**: El usuario contacta al bot por primera vez a través de WhatsApp y es directamente dirigido al flujo FAQ sin necesidad de registro.
 
-2. **Interacción Diaria**: Una vez registrado, el usuario puede enviar mensajes en lenguaje natural describiendo sus gastos (ej. "Gasté $45 en comida ayer").
+2. **Interacción Diaria**: El usuario puede enviar mensajes en lenguaje natural describiendo sus gastos (ej. "Gasté $45 en comida ayer").
 
 3. **Procesamiento Automático**: El sistema detecta patrones de gasto, extrae la información relevante y clasifica el gasto en categorías predefinidas.
 
-4. **Confirmación y Feedback**: El sistema confirma el registro del gasto y ofrece opciones para corregir información si es necesario.
+4. **Gestión de Citas**: El usuario puede programar, modificar o cancelar citas a través de la conversación, utilizando frases como "quiero agendar una cita".
 
-5. **Consultas y Reportes**: El usuario puede solicitar información sobre sus gastos (ej. "¿Cuánto gasté este mes en comida?") y recibir resúmenes personalizados.
+5. **Confirmación y Feedback**: El sistema confirma el registro del gasto o la programación de citas y ofrece opciones para corregir información si es necesario.
+
+6. **Consultas y Reportes**: El usuario puede solicitar información sobre sus gastos (ej. "¿Cuánto gasté este mes en comida?") y recibir resúmenes personalizados.
 
 ## 3. Tech Stack & APIs
 
@@ -32,13 +34,14 @@ El nombre "Khipu" se inspira en el sistema de registro contable utilizado por lo
 - **Meta WhatsApp Business API**: Para la mensajería
 - **DeepSeek API**: Para procesamiento de lenguaje natural y clasificación
 - **Google Sheets API**: Para almacenamiento y gestión de datos
+- **Google Calendar API**: Para gestión de citas
 
 ### Base de Datos
 - **Google Sheets**: Como sistema de almacenamiento principal
 
 ## 4. Core Features
 
-1. **Registro de Usuarios**: Sistema de onboarding para nuevos usuarios con verificación de información.
+1. **Procesamiento de Lenguaje Natural**: Capacidad para comprender e interpretar mensajes en lenguaje natural del usuario.
 
 2. **Detección Inteligente de Gastos**: Capacidad para identificar información financiera en lenguaje natural.
 
@@ -46,11 +49,13 @@ El nombre "Khipu" se inspira en el sistema de registro contable utilizado por lo
 
 4. **Seguimiento de Gastos**: Creación automática de hojas mensuales con formato adecuado.
 
-5. **Consultas en Lenguaje Natural**: Capacidad para responder a preguntas sobre gastos históricos.
+5. **Gestión de Citas**: Sistema completo para programar, modificar y cancelar citas con integración a Google Calendar.
 
-6. **Reportes Periódicos**: Generación automática de resúmenes (diarios, semanales, mensuales).
+6. **Consultas en Lenguaje Natural**: Capacidad para responder a preguntas sobre gastos históricos.
 
-7. **Alertas Personalizadas**: Notificaciones sobre gastos que exceden límites predefinidos.
+7. **Reportes Periódicos**: Generación automática de resúmenes (diarios, semanales, mensuales).
+
+8. **Alertas Personalizadas**: Notificaciones sobre gastos que exceden límites predefinidos.
 
 ## 5. In-Scope vs. Out-of-Scope
 
@@ -61,6 +66,8 @@ El nombre "Khipu" se inspira en el sistema de registro contable utilizado por lo
 - Reportes básicos por categoría y período
 - Integración con Google Sheets para almacenamiento
 - Recordatorios para registro de gastos
+- Programación y gestión de citas a través de WhatsApp
+- Integración con Google Calendar para gestión de citas
 
 ### Out-of-Scope
 - Integración directa con cuentas bancarias
@@ -106,6 +113,8 @@ El nombre "Khipu" se inspira en el sistema de registro contable utilizado por lo
 - Los usuarios prefieren interacción por chat sobre interfaces gráficas
 - La mayoría de los gastos pueden ser categorizados automáticamente
 - Los usuarios proporcionarán feedback para mejorar la categorización
+- Las fechas y horas para citas pueden ser interpretadas correctamente desde lenguaje natural
+- Los usuarios prefieren gestionar sus citas a través de WhatsApp sin necesidad de otros sistemas
 
 ## 8. Known Issues & Potential Pitfalls
 

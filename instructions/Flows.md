@@ -19,23 +19,22 @@ Los flujos en Khipu están construidos sobre el framework BuilderBot, que propor
 
 ### 1. Main Flow (`mainFlow.ts`)
 
-**Propósito**: Punto de entrada principal para todas las interacciones. Determina si el usuario está registrado y lo dirige al flujo correspondiente.
+**Propósito**: Punto de entrada principal para todas las interacciones.
 
 **Estructura**:
 ```typescript
 import { addKeyword, EVENTS } from "@builderbot/bot"
 import { faqFlow } from "./faqFlow"
-import sheetsServices from "../services/sheetsServices"
-import { registerFlow } from "./registerFlow";
+import container from "../di/container";
+import { SheetsService } from "../services/sheetsServices"
+
+// Obtenemos la instancia del servicio del contenedor
+const sheetsService = container.resolve<SheetsService>("SheetsService");
 
 const mainFlow = addKeyword(EVENTS.WELCOME)
   .addAction(async (ctx, ctxFn) => {
-    const isUser = await sheetsServices.userExists(ctx.from);
-    if (!isUser) {
-        return ctxFn.gotoFlow(registerFlow);
-    } else {
-        ctxFn.gotoFlow(faqFlow)
-    } 
+    // Ya no verificamos si el usuario existe, todos van al faqFlow
+    ctxFn.gotoFlow(faqFlow);
   });
 
 export { mainFlow };
@@ -43,94 +42,142 @@ export { mainFlow };
 
 **Funcionamiento**:
 - Se activa con el evento `WELCOME` cuando un usuario inicia la conversación
-- Verifica si el número de teléfono del usuario existe en la base de datos
-- Si el usuario no existe, lo redirige al flujo de registro
-- Si el usuario ya existe, lo redirige al flujo de FAQ
+- Redirige directamente al usuario al flujo de FAQ sin verificación previa
+- Utiliza el patrón de inyección de dependencias para obtener servicios
 
 **Consideraciones**:
-- Es un flujo de decisión, no contiene interacciones directas con el usuario
-- Debe manejar excepciones en caso de que la verificación de usuario falle
-- Es el primer flujo que se ejecuta en cualquier interacción nueva
+- A diferencia de versiones anteriores, ya no verifica si el usuario está registrado
+- No requiere un flujo de registro previo
+- Es un flujo de simple redirección, sin interacciones directas con el usuario
 
-### 2. Register Flow (`registerFlow.ts`)
+### 2. FAQ Flow (`faqFlow.ts`)
 
-**Propósito**: Gestionar el proceso de registro de nuevos usuarios, capturando su nombre y correo electrónico.
+**Propósito**: Procesar mensajes generales de usuarios, utilizando IA para generar respuestas adecuadas.
 
 **Estructura**:
 ```typescript
 import { addKeyword, EVENTS } from "@builderbot/bot";
-import sheetsServices from "~/services/sheetsServices";
-
-const registerFlow = addKeyword(EVENTS.ACTION)
-  .addAnswer("¿Quieres comenzar con el Registro?", { 
-    capture: true, 
-    buttons: [{ body: "Sí, quiero!" }, { body: "No, gracias!" }] 
-  },
-  async (ctx, ctxFn) => {
-    // Lógica de respuesta
-  })
-  .addAnswer("Primero, ¿cuál es tu nombre?", { capture: true }, 
-  async (ctx, ctxFn) => {
-    // Captura del nombre
-  })
-  .addAnswer("Ahora, ¿cuál es tu mail?", { capture: true }, 
-  async (ctx, ctxFn) => {
-    // Validación del correo y registro del usuario
-  });
-```
-
-**Funcionamiento**:
-1. Solicita confirmación del usuario para iniciar el registro
-2. Si el usuario confirma, solicita su nombre
-3. Almacena el nombre en el estado de la conversación
-4. Solicita el correo electrónico
-5. Valida el formato del correo utilizando una expresión regular
-6. Si el correo es válido, registra al usuario en la base de datos
-7. Confirma el registro exitoso al usuario
-
-**Consideraciones**:
-- Implementa validación para el formato del correo electrónico
-- Utiliza el estado de la conversación para almacenar información temporal
-- Proporciona retroalimentación clara en cada paso del proceso
-- Ofrece una salida temprana si el usuario decide no registrarse
-
-### 3. FAQ Flow (`faqFlow.ts`)
-
-**Propósito**: Procesar mensajes generales de usuarios registrados, utilizando IA para generar respuestas adecuadas y registrar gastos cuando se detectan.
-
-**Estructura**:
-```typescript
-import { addKeyword, EVENTS } from "@builderbot/bot";
-import aiServices from "~/services/aiservices";
+import container from "../di/container";
 import { config } from "../config";
-import sheetsServices from "~/services/sheetsServices";
+import { SheetsService } from "../services/sheetsServices";
+import { AIService } from "../services/aiservices";
+
+// Obtenemos las instancias de los servicios del contenedor
+const sheetsService = container.resolve<SheetsService>("SheetsService");
+const aiServices = container.resolve<AIService>("AIService");
 
 export const faqFlow = addKeyword(EVENTS.ACTION)
   .addAction(async (ctx, { endFlow }) => {
     try {
+      console.log("📱 Mensaje recibido de:", ctx.from);
+      console.log("🔑 API Key:", config.apiKey ? "Configurada" : "No configurada");
+      
+      if (!ctx.body) {
+        console.log("❌ Mensaje vacío");
+        return endFlow("Por favor, envía un mensaje con contenido.");
+      }
+
       // Procesamiento del mensaje con IA
-      // Registro de la conversación
-      // Respuesta al usuario
+      console.log("💬 Enviando mensaje al asistente");
+      const response = await aiServices.processMessage(ctx.body, ctx.from);
+
+      if (!response) {
+        console.error("❌ No se recibió respuesta del asistente");
+        return endFlow("No pude procesar tu mensaje. Por favor, intenta de nuevo.");
+      }
+
+      console.log("✅ Respuesta enviada");
+      return endFlow(response);
     } catch (error) {
-      // Manejo de errores
+      console.error("❌ Error en el flujo FAQ:", error);
+      return endFlow("Lo siento, ocurrió un error. Por favor, intenta de nuevo.");
     }
   });
 ```
 
 **Funcionamiento**:
 1. Recibe el mensaje del usuario
-2. Inicializa el servicio de IA con la API key configurada
-3. Envía el mensaje al asistente de IA para procesamiento
+2. Comprueba que el mensaje no esté vacío
+3. Envía el mensaje al servicio de IA para procesamiento
 4. Recibe la respuesta generada por la IA
-5. Guarda la conversación en la hoja de cálculo
-6. Responde al usuario con el contenido generado
-7. Finaliza el flujo permitiendo una nueva interacción
+5. Responde al usuario con el contenido generado
+6. Finaliza el flujo permitiendo una nueva interacción
 
 **Consideraciones**:
 - Maneja los errores de manera robusta para evitar interrupciones
-- Registra cada interacción para análisis y mejora continua
-- Delega el procesamiento complejo al servicio de IA
-- Finaliza adecuadamente el flujo para permitir nuevas interacciones
+- Utiliza inyección de dependencias para los servicios
+- El registro de conversaciones se maneja dentro del servicio de IA
+- Proporciona mensajes de error informativos al usuario
+
+### 3. Appointment Flow (`appointmentFlow.ts`)
+
+**Propósito**: Permitir a los usuarios agendar, modificar y cancelar citas a través del asistente.
+
+**Estructura**:
+```typescript
+import { addKeyword, EVENTS } from "@builderbot/bot";
+import container from "../di/container";
+import { AppointmentController } from '../services/appointments.controller';
+import * as chrono from 'chrono-node';
+
+// Obtenemos la instancia del controlador del contenedor
+const appointmentController = container.resolve<AppointmentController>("AppointmentController");
+
+// Estado temporal para almacenar los datos de la cita durante el flujo
+const appointmentData = new Map<string, any>();
+
+export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'reservar'], {
+  sensitive: true
+})
+  .addAnswer(
+    '¡Claro! Te ayudo a agendar una cita. ¿Para qué fecha te gustaría?',
+    { capture: true },
+    async (ctx, { fallBack, flowDynamic }) => {
+      // Procesamiento de la fecha...
+    }
+  )
+  .addAnswer(
+    '¿A qué hora te gustaría la cita?',
+    { capture: true },
+    async (ctx, { fallBack, flowDynamic }) => {
+      // Procesamiento de la hora...
+    }
+  )
+  .addAnswer(
+    '¿Cuál es el motivo de tu cita?',
+    { capture: true },
+    async (ctx, { flowDynamic }) => {
+      // Captura del motivo...
+    }
+  )
+  .addAnswer(
+    'Perfecto, déjame verificar la disponibilidad y agendar tu cita...',
+    null,
+    async (ctx, { flowDynamic }) => {
+      // Creación de la cita...
+    }
+  );
+
+// Flujo para cancelar citas
+export const cancelAppointmentFlow = addKeyword(['cancelar cita'])
+  // Implementación del flujo de cancelación...
+```
+
+**Funcionamiento**:
+1. Se activa cuando el usuario menciona palabras clave relacionadas con citas
+2. Solicita la fecha deseada y la valida usando procesamiento de lenguaje natural
+3. Solicita la hora deseada y verifica que esté dentro del horario de atención
+4. Captura el motivo de la cita
+5. Verifica la disponibilidad para evitar conflictos
+6. Crea la cita en Google Calendar y registra en Google Sheets
+7. Proporciona al usuario la confirmación y el ID de su cita
+
+**Consideraciones**:
+- Utiliza la biblioteca chrono-node para procesar fechas en lenguaje natural
+- Implementa validaciones para garantizar fechas futuras y dentro del horario
+- Maneja el estado de la conversación a través de un Map para persistencia temporal
+- Incluye manejo de errores detallado y mensajes de usuario claros
+- Proporciona funcionalidad para cancelar citas existentes
 
 ## Lógica y Procesamiento
 
