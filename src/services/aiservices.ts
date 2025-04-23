@@ -2,6 +2,7 @@ import { config } from "../config";
 import { singleton, inject } from 'tsyringe';
 import { SheetsService } from './sheetsServices';
 import { PromptCore, Domain } from '../core/promptCore';
+import { detectDomain, detectIntent } from '../router';
 
 @singleton()
 export class AIService {
@@ -155,6 +156,19 @@ export class AIService {
       // Cargar el historial de conversaciones
       await this.loadConversationHistory(phoneNumber);
       
+      // Detectar el dominio del mensaje
+      const detectedDomain = detectDomain(message);
+      
+      // Si el dominio detectado es diferente al actual, actualizarlo
+      if (detectedDomain !== this.currentDomain) {
+        console.log(`Cambiando dominio de ${this.currentDomain} a ${detectedDomain} basado en el mensaje: "${message.substring(0, 50)}..."`);
+        this.setDomain(detectedDomain);
+      }
+      
+      // Detectar la intención dentro del dominio
+      const { intent, params } = detectIntent(message, this.currentDomain);
+      console.log(`Intención detectada: ${intent}`, params);
+      
       // Obtener el contexto actual
       const context = this.getUserContext(phoneNumber);
       
@@ -170,7 +184,7 @@ export class AIService {
       // Actualizar el contexto de la conversación
       this.updateUserContext(phoneNumber, message, aiResponse);
       
-      // Guardar la conversación en Sheets
+      // Guardar la conversación en Sheets con metadatos adicionales
       await this.sheetsService.addConverToUser(phoneNumber, [
         { role: 'user', content: message },
         { role: 'assistant', content: aiResponse }
