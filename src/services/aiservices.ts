@@ -1,36 +1,50 @@
 import { config } from "../config";
-import * as fs from 'fs';
-import * as path from 'path';
 import { singleton, inject } from 'tsyringe';
 import { SheetsService } from './sheetsServices';
+import { PromptCore, Domain } from '../core/promptCore';
 
 @singleton()
 export class AIService {
-  private systemPrompt: string;
   private baseURL: string;
   private apiKey: string;
+  private currentDomain: Domain = 'dental'; // Dominio por defecto
 
   // Almacenamiento de contexto de conversación por usuario
   private conversationContexts: Map<string, Array<{role: string, content: string}>> = new Map();
 
   constructor(
-    @inject("SheetsService") private sheetsService: SheetsService
+    @inject("SheetsService") private sheetsService: SheetsService,
+    @inject(PromptCore) private promptCore: PromptCore
   ) {
     this.baseURL = config.baseURL || "https://api.deepseek.com/v1";
     this.apiKey = config.apiKey;
-
-    // Load system prompt
-    try {
-      const promptPath = path.join(process.cwd(), 'assets', 'prompts', 'prompt_DeepSeek.txt');
-      this.systemPrompt = fs.readFileSync(promptPath, 'utf8');
-      console.log("✅ Sistema prompt cargado correctamente");
-    } catch (error) {
-      console.error("❌ Error al cargar el prompt:", error);
-      this.systemPrompt = "Eres un asistente amable y profesional de Ecotec.";
-    }
+    
+    // Configurar el PromptCore con valores por defecto
+    this.promptCore.setConfig({
+      organizationName: 'Clínica Sonrisa Perfecta',
+      assistantName: 'Sofi',
+      maxEmojisPerMessage: 2
+    });
+    
+    console.log("✅ PromptCore configurado correctamente");
   }
 
 
+
+  /**
+   * Establece el dominio actual para el asistente
+   */
+  setDomain(domain: Domain): void {
+    this.currentDomain = domain;
+    console.log(`Dominio cambiado a: ${domain}`);
+  }
+
+  /**
+   * Obtiene el dominio actual del asistente
+   */
+  getDomain(): Domain {
+    return this.currentDomain;
+  }
 
   private getUserContext(phoneNumber: string): Array<{role: string, content: string}> {
     if (!this.conversationContexts.has(phoneNumber)) {
@@ -85,6 +99,9 @@ export class AIService {
   async chat(prompt: string, messages: any[]): Promise<string> {
     try {
       console.log("Making API request to DeepSeek with model:", config.Model);
+      
+      // Obtener el prompt del sistema desde PromptCore
+      const systemPrompt = await this.promptCore.getFullPrompt(this.currentDomain);
 
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: "POST",
@@ -97,7 +114,7 @@ export class AIService {
           messages: [
             {
               role: "system",
-              content: this.systemPrompt
+              content: systemPrompt
             },
             ...messages,
             {

@@ -8,7 +8,8 @@
     "start": "node ./dist/app.js",
     "lint": "eslint . --no-ignore",
     "dev": "npm run lint && nodemon ./src/app.ts",
-    "build": "npx rollup -c"
+    "build": "npx rollup -c",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "keywords": [],
   "dependencies": {
@@ -25,14 +26,17 @@
     "tsyringe": "^4.8.0"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.11.30",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.4.0",
     "eslint": "^8.52.0",
     "eslint-plugin-builderbot": "latest",
+    "jest": "^29.7.0",
     "nodemon": "^3.1.0",
     "rollup": "^4.10.0",
     "rollup-plugin-typescript2": "^0.36.0",
+    "ts-jest": "^29.3.2",
     "tsx": "^4.7.1",
     "typescript": "^5.4.3"
   },
