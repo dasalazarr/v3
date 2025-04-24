@@ -6,6 +6,7 @@
  */
 
 import Handlebars from 'handlebars';
+import { TemplateDelegate as HandlebarsTemplateDelegate } from 'handlebars';
 import fs from 'fs';
 import path from 'path';
 import { singleton } from 'tsyringe';
