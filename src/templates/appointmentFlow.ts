@@ -2,9 +2,11 @@ import { addKeyword, EVENTS } from "@builderbot/bot";
 import container from "../di/container";
 import { AppointmentController } from '../services/appointments.controller';
 import * as chrono from 'chrono-node';
+import { TemplateEngine } from '../core/templateEngine';
 
-// Obtenemos la instancia del controlador del contenedor
+// Obtenemos las instancias de los servicios del contenedor
 const appointmentController = container.resolve<AppointmentController>("AppointmentController");
+const templateEngine = container.resolve<TemplateEngine>(TemplateEngine);
 
 // Estado temporal para almacenar los datos de la cita durante el flujo
 const appointmentData = new Map<string, any>();
@@ -40,7 +42,14 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
   sensitive: true
 })
   .addAnswer(
-    '¡Claro! Te ayudo a agendar una cita. ¿Para qué fecha te gustaría? Puedes decirlo en lenguaje natural, por ejemplo: "mañana", "el próximo lunes", "15 de mayo", etc.',
+    null,
+    null,
+    async (ctx, { flowDynamic }) => {
+      const message = templateEngine.render('appointment_request');
+      await flowDynamic([{ body: message }]);
+    }
+  )
+  .addAnswer(
     { capture: true },
     async (ctx, { fallBack, flowDynamic }) => {
       const dateText = ctx.body;
@@ -60,18 +69,21 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
       appointmentData.set(ctx.from, { date: parsedDate });
       
       // Confirmar la fecha entendida
-      await flowDynamic([{
-        body: `Entendido, tu cita será para el ${parsedDate.toLocaleDateString('es-ES', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        })}.`
-      }]);
+      const confirmMessage = templateEngine.render('appointment_date_confirm', {
+        date: parsedDate
+      });
+      await flowDynamic([{ body: confirmMessage }]);
     }
   )
   .addAnswer(
-    '¿A qué hora te gustaría la cita? Puedes decirlo naturalmente, por ejemplo: "10 de la mañana", "3:30 pm", "15:45", etc.',
+    null,
+    null,
+    async (ctx, { flowDynamic }) => {
+      const message = templateEngine.render('appointment_time_request');
+      await flowDynamic([{ body: message }]);
+    }
+  )
+  .addAnswer(
     { capture: true },
     async (ctx, { fallBack, flowDynamic }) => {
       const timeText = ctx.body;
@@ -110,17 +122,21 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
       });
       
       // Confirmar la hora entendida
-      await flowDynamic([{
-        body: `Entendido, tu cita será a las ${startTime.toLocaleTimeString('es-ES', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        })}.`
-      }]);
+      const confirmMessage = templateEngine.render('appointment_time_confirm', {
+        time: startTime
+      });
+      await flowDynamic([{ body: confirmMessage }]);
     }
   )
   .addAnswer(
-    '¿Cuál es el motivo de tu cita?',
+    null,
+    null,
+    async (ctx, { flowDynamic }) => {
+      const message = templateEngine.render('appointment_reason_request');
+      await flowDynamic([{ body: message }]);
+    }
+  )
+  .addAnswer(
     { capture: true },
     async (ctx, { flowDynamic }) => {
       const data = appointmentData.get(ctx.from);
@@ -134,13 +150,23 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
       appointmentData.set(ctx.from, { ...data, description: ctx.body });
       
       // Mostrar resumen de la cita antes de confirmar
-      await flowDynamic([{
-        body: `📝 Resumen de tu cita:\n\n📅 Fecha: ${data.startTime.toLocaleDateString('es-ES')}\n⏰ Hora: ${data.startTime.toLocaleTimeString('es-ES')}\n📋 Motivo: ${ctx.body}\n\n¿Es correcta esta información?`
-      }]);
+      const summaryMessage = templateEngine.render('appointment_summary', {
+        date: data.startTime,
+        time: data.startTime,
+        reason: ctx.body
+      });
+      await flowDynamic([{ body: summaryMessage }]);
     }
   )
   .addAnswer(
-    'Perfecto, déjame verificar la disponibilidad y agendar tu cita...',
+    null,
+    null,
+    async (ctx, { flowDynamic }) => {
+      const message = templateEngine.render('appointment_processing');
+      await flowDynamic([{ body: message }]);
+    }
+  )
+  .addAnswer(
     null,
     async (ctx, { flowDynamic }) => {
       const data = appointmentData.get(ctx.from);
@@ -167,21 +193,22 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
         );
 
         if (result.success) {
-          await flowDynamic([
-            {
-              body: `✅ ¡Tu cita ha sido agendada exitosamente!\n\n📅 Fecha: ${data.startTime.toLocaleDateString('es-ES')}\n⏰ Hora: ${data.startTime.toLocaleTimeString('es-ES')}\n📝 Motivo: ${data.description}\n\nID de tu cita: ${result.eventId}`
-            }
-          ]);
+          const successMessage = templateEngine.render('appointment_success', {
+            date: data.startTime,
+            time: data.startTime,
+            reason: data.description,
+            eventId: result.eventId
+          });
+          await flowDynamic([{ body: successMessage }]);
         } else {
           throw new Error(result.message);
         }
       } catch (error) {
         console.error('Error scheduling appointment:', error);
-        await flowDynamic([
-          {
-            body: `❌ Lo siento, no pude agendar tu cita: ${error.message}\nPor favor, intenta con otra fecha u hora.`
-          }
-        ]);
+        const errorMessage = templateEngine.render('appointment_error', {
+          error: error.message
+        });
+        await flowDynamic([{ body: errorMessage }]);
       } finally {
         // Limpiar datos temporales
         appointmentData.delete(ctx.from);
@@ -192,26 +219,31 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
 // Flujo para cancelar citas
 export const cancelAppointmentFlow = addKeyword(['cancelar cita'])
   .addAnswer(
-    'Por favor, proporciona el ID de la cita que deseas cancelar:',
+    null,
+    null,
+    async (ctx, { flowDynamic }) => {
+      const message = templateEngine.render('cancel_appointment_request');
+      await flowDynamic([{ body: message }]);
+    }
+  )
+  .addAnswer(
     { capture: true },
     async (ctx, { flowDynamic }) => {
       try {
         const result = await appointmentController.cancelAppointment(ctx.body.trim());
         if (result.success) {
-          await flowDynamic([
-            {
-              body: '✅ Tu cita ha sido cancelada exitosamente.'
-            }
-          ]);
+          const successMessage = templateEngine.render('cancel_appointment_success', {
+            eventId: ctx.body.trim()
+          });
+          await flowDynamic([{ body: successMessage }]);
         } else {
           throw new Error(result.message);
         }
       } catch (error) {
-        await flowDynamic([
-          {
-            body: `❌ No pude cancelar la cita: ${error.message}`
-          }
-        ]);
+        const errorMessage = templateEngine.render('cancel_appointment_error', {
+          error: error.message
+        });
+        await flowDynamic([{ body: errorMessage }]);
       }
     }
   );

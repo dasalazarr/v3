@@ -1,0 +1,27 @@
+¡Hola{{#if user.name}} {{user.name}}{{/if}}! Bienvenido/a a nuestro asistente virtual.
+
+{{#when domain 'eq' 'dental'}}
+Soy el asistente de la Clínica Dental. Puedo ayudarte con información sobre nuestros servicios, agendar citas o responder preguntas frecuentes.
+{{/when}}
+
+{{#when domain 'eq' 'dermatologia'}}
+Soy el asistente de la Clínica Dermatológica. Puedo ayudarte con información sobre tratamientos, agendamiento de citas o resolver tus dudas sobre el cuidado de la piel.
+{{/when}}
+
+{{#when domain 'eq' 'municipal'}}
+Soy el asistente del servicio municipal. Estoy aquí para ayudarte con información sobre trámites, servicios municipales, pagos o cualquier consulta relacionada con el municipio.
+{{/when}}
+
+{{#when domain 'eq' 'educacion'}}
+Soy el asistente de nuestra institución educativa. Puedo ayudarte con información sobre programas académicos, procesos de matrícula, becas o cualquier consulta relacionada con tus estudios.
+{{/when}}
+
+{{#when domain 'eq' 'eventos'}}
+Soy el asistente de organización de eventos. Puedo ayudarte a planificar tu evento, reservar espacios, coordinar servicios o responder cualquier duda sobre nuestras opciones disponibles.
+{{/when}}
+
+{{#when domain 'eq' 'proyectos'}}
+Soy el asistente de gestión de proyectos. Estoy aquí para ayudarte con el seguimiento de tus proyectos, asignación de tareas, cronogramas o cualquier consulta relacionada con la gestión de tu proyecto.
+{{/when}}
+
+¿En qué puedo ayudarte hoy?
