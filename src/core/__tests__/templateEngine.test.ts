@@ -22,12 +22,12 @@ describe('TemplateEngine', () => {
     templateEngine = new TemplateEngine();
     
     // Mock para simular la lectura de archivos de plantilla
-    (fs.readFileSync as jest.Mock).mockImplementation((filePath: string) => {
-      if (filePath.includes('welcome.hbs')) {
+    (fs.readFileSync as jest.Mock).mockImplementation((filePath: any) => {
+      if (typeof filePath === 'string' && filePath.includes('welcome.hbs')) {
         return '¡Hola{{#if user.name}} {{user.name}}{{/if}}! Bienvenido/a a nuestro asistente virtual.';
-      } else if (filePath.includes('appointment_success.hbs')) {
+      } else if (typeof filePath === 'string' && filePath.includes('appointment_success.hbs')) {
         return '✅ ¡Tu cita ha sido agendada para el {{formatDate date}}!';
-      } else if (filePath.includes('error.hbs')) {
+      } else if (typeof filePath === 'string' && filePath.includes('error.hbs')) {
         return 'Error: {{error}}';
       } else {
         return 'Plantilla no encontrada';

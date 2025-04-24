@@ -42,14 +42,15 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
   sensitive: true
 })
   .addAnswer(
-    null,
-    null,
+    "", // Mensaje vacío ya que usamos flowDynamic
+    {}, // Opciones vacías
     async (ctx, { flowDynamic }) => {
       const message = templateEngine.render('appointment_request');
       await flowDynamic([{ body: message }]);
     }
   )
   .addAnswer(
+    "", // Mensaje vacío ya que usamos flowDynamic
     { capture: true },
     async (ctx, { fallBack, flowDynamic }) => {
       const dateText = ctx.body;
@@ -70,20 +71,21 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
       
       // Confirmar la fecha entendida
       const confirmMessage = templateEngine.render('appointment_date_confirm', {
-        date: parsedDate
+        date: parsedDate.toISOString() // Convertir a string
       });
       await flowDynamic([{ body: confirmMessage }]);
     }
   )
   .addAnswer(
-    null,
-    null,
+    "", // Mensaje vacío ya que usamos flowDynamic
+    {}, // Opciones vacías
     async (ctx, { flowDynamic }) => {
       const message = templateEngine.render('appointment_time_request');
       await flowDynamic([{ body: message }]);
     }
   )
   .addAnswer(
+    "", // Mensaje vacío ya que usamos flowDynamic
     { capture: true },
     async (ctx, { fallBack, flowDynamic }) => {
       const timeText = ctx.body;
@@ -123,20 +125,21 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
       
       // Confirmar la hora entendida
       const confirmMessage = templateEngine.render('appointment_time_confirm', {
-        time: startTime
+        time: startTime.toISOString() // Convertir a string
       });
       await flowDynamic([{ body: confirmMessage }]);
     }
   )
   .addAnswer(
-    null,
-    null,
+    "", // Mensaje vacío ya que usamos flowDynamic
+    {}, // Opciones vacías
     async (ctx, { flowDynamic }) => {
       const message = templateEngine.render('appointment_reason_request');
       await flowDynamic([{ body: message }]);
     }
   )
   .addAnswer(
+    "", // Mensaje vacío ya que usamos flowDynamic
     { capture: true },
     async (ctx, { flowDynamic }) => {
       const data = appointmentData.get(ctx.from);
@@ -151,23 +154,24 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
       
       // Mostrar resumen de la cita antes de confirmar
       const summaryMessage = templateEngine.render('appointment_summary', {
-        date: data.startTime,
-        time: data.startTime,
+        date: data.startTime.toISOString(), // Convertir a string
+        time: data.startTime.toISOString(), // Convertir a string
         reason: ctx.body
       });
       await flowDynamic([{ body: summaryMessage }]);
     }
   )
   .addAnswer(
-    null,
-    null,
+    "", // Mensaje vacío ya que usamos flowDynamic
+    {}, // Opciones vacías
     async (ctx, { flowDynamic }) => {
       const message = templateEngine.render('appointment_processing');
       await flowDynamic([{ body: message }]);
     }
   )
   .addAnswer(
-    null,
+    "", // Mensaje vacío ya que usamos flowDynamic
+    {}, // Opciones vacías
     async (ctx, { flowDynamic }) => {
       const data = appointmentData.get(ctx.from);
       if (!data) {
@@ -194,8 +198,8 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
 
         if (result.success) {
           const successMessage = templateEngine.render('appointment_success', {
-            date: data.startTime,
-            time: data.startTime,
+            date: data.startTime.toISOString(), // Convertir a string
+            time: data.startTime.toISOString(), // Convertir a string
             reason: data.description,
             eventId: result.eventId
           });
@@ -219,14 +223,15 @@ export const appointmentFlow = addKeyword(['cita', 'agendar', 'programar', 'rese
 // Flujo para cancelar citas
 export const cancelAppointmentFlow = addKeyword(['cancelar cita'])
   .addAnswer(
-    null,
-    null,
+    "", // Mensaje vacío ya que usamos flowDynamic
+    {}, // Opciones vacías
     async (ctx, { flowDynamic }) => {
       const message = templateEngine.render('cancel_appointment_request');
       await flowDynamic([{ body: message }]);
     }
   )
   .addAnswer(
+    "", // Mensaje vacío ya que usamos flowDynamic
     { capture: true },
     async (ctx, { flowDynamic }) => {
       try {
