@@ -9,11 +9,17 @@ import Handlebars from 'handlebars';
 import { TemplateDelegate as HandlebarsTemplateDelegate } from 'handlebars';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Obtener el equivalente a __dirname en módulos ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { singleton } from 'tsyringe';
 import { Domain } from './promptCore';
 
 // Directorio base de plantillas
-const TEMPLATES_DIR = path.resolve(__dirname, '../templates/flows');
+// Subimos dos niveles desde /dist/core/ hasta la raíz del proyecto
+const TEMPLATES_DIR = path.resolve(__dirname, '../../src/templates/flows');
 
 // Interfaz para variables de plantilla
 export interface TemplateVars {
