@@ -19,7 +19,7 @@ import { Domain } from './promptCore';
 
 // Directorio base de plantillas
 // Subimos dos niveles desde /dist/core/ hasta la raíz del proyecto
-const TEMPLATES_DIR = path.resolve(__dirname, '../../src/templates/flows');
+const TEMPLATES_DIR = path.resolve(process.cwd(), 'src', 'templates', 'flows');
 
 // Interfaz para variables de plantilla
 export interface TemplateVars {
