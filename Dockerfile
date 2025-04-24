@@ -35,6 +35,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/assets ./assets
+COPY --from=builder /app/src/templates ./src/templates
 
 # Instalar solo dependencias de producción
 RUN pnpm install --prod
