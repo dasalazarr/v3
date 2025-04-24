@@ -18,8 +18,18 @@ import { singleton } from 'tsyringe';
 import { Domain } from './promptCore';
 
 // Directorio base de plantillas
-// Subimos dos niveles desde /dist/core/ hasta la raíz del proyecto
-const TEMPLATES_DIR = path.resolve(process.cwd(), 'src', 'templates', 'flows');
+// Determinar si estamos en un entorno Docker (producción) o desarrollo
+let TEMPLATES_DIR: string;
+
+// En Docker, los archivos compilados están en /app/dist y las plantillas en /app/src
+if (process.env.NODE_ENV === 'production' || fs.existsSync('/app')) {
+  TEMPLATES_DIR = path.resolve('/app', 'src', 'templates', 'flows');
+} else {
+  // Entorno de desarrollo
+  TEMPLATES_DIR = path.resolve(process.cwd(), 'src', 'templates', 'flows');
+}
+
+console.log(`Templates directory: ${TEMPLATES_DIR}`);
 
 // Interfaz para variables de plantilla
 export interface TemplateVars {
