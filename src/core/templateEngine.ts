@@ -1,10 +1,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import * as Handlebars from 'handlebars';
 
 interface TemplateCache {
   [key: string]: Handlebars.TemplateDelegate;
 }
+
+// Obtenemos la ruta del directorio actual para ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 class TemplateEngine {
   private templates: TemplateCache = {};

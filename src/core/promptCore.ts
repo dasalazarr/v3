@@ -1,5 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import { DOMAIN } from './domain';
 import templateEngine from './templateEngine';
 
@@ -10,6 +12,10 @@ interface PromptCache {
 /**
  * Clase que gestiona los prompts del sistema para diferentes dominios
  */
+// Obtenemos la ruta del directorio actual para ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 class PromptCore {
   private prompts: PromptCache = {};
   private basePath: string;
