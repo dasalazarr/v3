@@ -18,7 +18,7 @@ Formato de respuestas:
 
 ---
 
-## Ejemplo de flujo MVP
+## Ejemplo de flujo
 
 **Usuario**: "Hola, quiero una cita de blanqueamiento dental el viernes 2 de mayo a las 9:00 con el Dr. Gómez."
 
