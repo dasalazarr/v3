@@ -102,17 +102,20 @@ export class SheetsService {
   }
 
   public async saveTrainingLog(phoneNumber: string, trainingDescription: string): Promise<void> {
+    console.log(`[SheetsService] Iniciando guardado de entrenamiento para ${phoneNumber}.`);
     if (!config.trainingSpreadsheetId) {
-      console.error('❌ TRAINING_SPREADSHEET_ID is not configured. Cannot save training log.');
+      console.error('❌ [SheetsService] TRAINING_SPREADSHEET_ID no está configurado. No se puede guardar el log.');
       throw new Error('Training log functionality is not configured.');
     }
 
     try {
+      console.log(`[SheetsService] Verificando existencia de la hoja '${this.TRAINING_LOGS_SHEET_NAME}'...`);
       await this.ensureSheetExists(
         config.trainingSpreadsheetId,
         this.TRAINING_LOGS_SHEET_NAME,
         this.TRAINING_LOGS_HEADERS
       );
+      console.log(`[SheetsService] Verificación de hoja completada.`);
 
       const timestamp = new Date().toISOString();
       const row = [
@@ -121,6 +124,7 @@ export class SheetsService {
         trainingDescription
       ];
 
+      console.log(`[SheetsService] Añadiendo fila a la hoja...`);
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: config.trainingSpreadsheetId,
         range: `${this.TRAINING_LOGS_SHEET_NAME}!A:C`,
@@ -130,10 +134,10 @@ export class SheetsService {
         },
       });
 
-      console.log(`✅ Training log for ${phoneNumber} saved successfully.`);
+      console.log(`✅ [SheetsService] Log de entrenamiento para ${phoneNumber} guardado exitosamente.`);
 
     } catch (error) {
-      console.error(`Error saving training log for ${phoneNumber}:`, error);
+      console.error(`❌ [SheetsService] Error al guardar el log de entrenamiento para ${phoneNumber}:`, error);
       throw error;
     }
   }

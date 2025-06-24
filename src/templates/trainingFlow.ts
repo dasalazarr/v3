@@ -13,27 +13,29 @@ const aiService = container.resolve<AIService>("AIService");
  */
 const trainingFlow = addKeyword(['entrenar', 'corrí', 'entrenamiento', 'entreno'])
   .addAction(async (ctx, { flowDynamic, endFlow }) => {
+    console.log('[TrainingFlow] Flujo de entrenamiento activado.');
     const trainingDescription = ctx.body;
 
     if (!trainingDescription || trainingDescription.length < 10) {
+        console.log('[TrainingFlow] Descripción de entrenamiento muy corta. Finalizando flujo.');
         await flowDynamic('Por favor, describe tu entrenamiento con un poco más de detalle para que pueda ayudarte.');
         return endFlow();
     }
 
     try {
-        // 1. Guardar el entrenamiento en Google Sheets de forma estructurada
-        // (La implementación de este método se hará en el siguiente paso)
+        console.log(`[TrainingFlow] Intentando guardar log para ${ctx.from}...`);
         await sheetsService.saveTrainingLog(ctx.from, trainingDescription);
+        console.log(`[TrainingFlow] Log guardado exitosamente para ${ctx.from}.`);
 
-        // 2. Enviar la descripción a la IA para obtener feedback
+        console.log('[TrainingFlow] Solicitando feedback de la IA...');
         await flowDynamic('¡Recibido! Analizando tu entrenamiento... 🏃‍♂️💨');
         const aiFeedback = await aiService.processMessage(trainingDescription, ctx.from);
+        console.log('[TrainingFlow] Feedback de la IA recibido.');
 
-        // 3. Enviar el feedback al usuario
         await flowDynamic(aiFeedback);
 
     } catch (error) {
-        console.error('Error en trainingFlow:', error);
+        console.error('❌ Error en trainingFlow:', error);
         await flowDynamic('Lo siento, ocurrió un error al registrar tu entrenamiento. Por favor, inténtalo de nuevo más tarde.');
     }
   });
