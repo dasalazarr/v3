@@ -23,11 +23,19 @@ const trainingFlow = addKeyword(['entrenar', 'corrí', 'entrenamiento', 'entreno
     }
 
     try {
-        console.log(`[TrainingFlow] Intentando guardar log para ${ctx.from}...`);
-        await sheetsService.saveTrainingLog(ctx.from, trainingDescription);
-        console.log(`[TrainingFlow] Log guardado exitosamente para ${ctx.from}.`);
+        console.log(`[TrainingFlow] Extrayendo datos estructurados del texto...`);
+        const extractedData = await aiService.extractTrainingData(trainingDescription);
 
-        console.log('[TrainingFlow] Solicitando feedback de la IA...');
+        if (extractedData) {
+            console.log(`[TrainingFlow] Datos extraídos correctamente. Guardando en Sheets...`);
+            await sheetsService.saveTrainingLog(ctx.from, trainingDescription, extractedData);
+            console.log(`[TrainingFlow] Log estructurado guardado exitosamente para ${ctx.from}.`);
+        } else {
+            console.warn(`[TrainingFlow] No se pudieron extraer datos estructurados. El log no se guardará en formato estructurado. Revisa el prompt de extracción.`);
+            // En el futuro, podríamos implementar un guardado del texto plano como fallback aquí.
+        }
+
+        console.log('[TrainingFlow] Solicitando feedback conversacional de la IA...');
         await flowDynamic('¡Recibido! Analizando tu entrenamiento... 🏃‍♂️💨');
         const aiFeedback = await aiService.processMessage(trainingDescription, ctx.from);
         console.log('[TrainingFlow] Feedback de la IA recibido.');
@@ -36,7 +44,7 @@ const trainingFlow = addKeyword(['entrenar', 'corrí', 'entrenamiento', 'entreno
 
     } catch (error) {
         console.error('❌ Error en trainingFlow:', error);
-        await flowDynamic('Lo siento, ocurrió un error al registrar tu entrenamiento. Por favor, inténtalo de nuevo más tarde.');
+        await flowDynamic('Lo siento, ocurrió un error al procesar tu entrenamiento. Por favor, inténtalo de nuevo más tarde.');
     }
   });
 

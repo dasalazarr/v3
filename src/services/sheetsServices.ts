@@ -1,6 +1,7 @@
 import { google, sheets_v4 } from 'googleapis';
 import { config } from '../config';
 import { singleton } from 'tsyringe';
+import { TrainingData } from './aiservices';
 
 interface Expense {
   date: string;
@@ -38,9 +39,17 @@ export class SheetsService {
 
   private readonly TRAINING_LOGS_SHEET_NAME = 'Training Logs';
   private readonly TRAINING_LOGS_HEADERS = [
-    'Timestamp',
-    'PhoneNumber',
-    'TrainingDescription',
+    'Timestamp', 
+    'PhoneNumber', 
+    'OriginalDescription',
+    'Distance',
+    'DistanceUnit',
+    'Time',
+    'TimeUnit',
+    'Pace',
+    'PaceUnit',
+    'Perception',
+    'Notes'
   ];
 
   constructor() {
@@ -101,44 +110,52 @@ export class SheetsService {
     }
   }
 
-  public async saveTrainingLog(phoneNumber: string, trainingDescription: string): Promise<void> {
-    console.log(`[SheetsService] Iniciando guardado de entrenamiento para ${phoneNumber}.`);
+  public async saveTrainingLog(phoneNumber: string, originalDescription: string, trainingData: TrainingData): Promise<void> {
+    console.log(`[SheetsService] Iniciando guardado de entrenamiento estructurado para ${phoneNumber}.`);
     if (!config.trainingSpreadsheetId) {
-      console.error('❌ [SheetsService] TRAINING_SPREADSHEET_ID no está configurado. No se puede guardar el log.');
-      throw new Error('Training log functionality is not configured.');
+        console.error('❌ [SheetsService] TRAINING_SPREADSHEET_ID no está configurado.');
+        throw new Error('Training log functionality is not configured.');
     }
 
     try {
-      console.log(`[SheetsService] Verificando existencia de la hoja '${this.TRAINING_LOGS_SHEET_NAME}'...`);
-      await this.ensureSheetExists(
-        config.trainingSpreadsheetId,
-        this.TRAINING_LOGS_SHEET_NAME,
-        this.TRAINING_LOGS_HEADERS
-      );
-      console.log(`[SheetsService] Verificación de hoja completada.`);
+        console.log(`[SheetsService] Verificando/creando la hoja '${this.TRAINING_LOGS_SHEET_NAME}'...`);
+        await this.ensureSheetExists(
+            config.trainingSpreadsheetId,
+            this.TRAINING_LOGS_SHEET_NAME,
+            this.TRAINING_LOGS_HEADERS
+        );
+        console.log(`[SheetsService] Hoja lista.`);
 
-      const timestamp = new Date().toISOString();
-      const row = [
-        timestamp,
-        phoneNumber,
-        trainingDescription
-      ];
+        const timestamp = new Date().toISOString();
+        const row = [
+            timestamp,
+            phoneNumber,
+            originalDescription,
+            trainingData.distance.value,
+            trainingData.distance.unit,
+            trainingData.time.value,
+            trainingData.time.unit,
+            trainingData.pace.value,
+            trainingData.pace.unit,
+            trainingData.perception,
+            trainingData.notes,
+        ];
 
-      console.log(`[SheetsService] Añadiendo fila a la hoja...`);
-      await this.sheets.spreadsheets.values.append({
-        spreadsheetId: config.trainingSpreadsheetId,
-        range: `${this.TRAINING_LOGS_SHEET_NAME}!A:C`,
-        valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values: [row],
-        },
-      });
+        console.log(`[SheetsService] Añadiendo fila estructurada...`);
+        await this.sheets.spreadsheets.values.append({
+            spreadsheetId: config.trainingSpreadsheetId,
+            range: `${this.TRAINING_LOGS_SHEET_NAME}!A:K`, // Updated range to include all new columns
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+                values: [row],
+            },
+        });
 
-      console.log(`✅ [SheetsService] Log de entrenamiento para ${phoneNumber} guardado exitosamente.`);
+        console.log(`✅ [SheetsService] Log de entrenamiento estructurado para ${phoneNumber} guardado exitosamente.`);
 
     } catch (error) {
-      console.error(`❌ [SheetsService] Error al guardar el log de entrenamiento para ${phoneNumber}:`, error);
-      throw error;
+        console.error(`❌ [SheetsService] Error al guardar el log de entrenamiento estructurado para ${phoneNumber}:`, error);
+        throw error;
     }
   }
 
