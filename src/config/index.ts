@@ -51,6 +51,7 @@ export interface Config {
   apiKey?: string;
   assistant_id?: string;
   spreadsheetId?: string;
+  trainingSpreadsheetId?: string; // ID de la hoja para registrar entrenamientos
   privateKey?: string;
   clientEmail?: string;
   calendarId?: string;
@@ -64,6 +65,7 @@ export const config: Config = {
   apiKey: getApiKey(),
   assistant_id: process.env.ASSISTANT_ID || process.env.assistant_id,
   spreadsheetId: process.env.spreadsheetId,
+  trainingSpreadsheetId: process.env.TRAINING_SPREADSHEET_ID,
   privateKey: process.env.privateKey,
   clientEmail: process.env.clientEmail,
   calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary'
@@ -76,6 +78,7 @@ const requiredVars = {
   'Number ID': config.numberId,
   'Verify Token': config.verifyToken,
   'Spreadsheet ID': config.spreadsheetId,
+  'Training Spreadsheet ID': config.trainingSpreadsheetId,
   'Private Key': config.privateKey,
   'Client Email': config.clientEmail,
   'Calendar ID': config.calendarId,

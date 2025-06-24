@@ -36,6 +36,13 @@ export class SheetsService {
   private cacheTTL: number = 5 * 60 * 1000; // 5 minutes TTL for cache
   private cacheTimestamps: Map<string, number> = new Map(); // Timestamps for cache invalidation
 
+  private readonly TRAINING_LOGS_SHEET_NAME = 'Training Logs';
+  private readonly TRAINING_LOGS_HEADERS = [
+    'Timestamp',
+    'PhoneNumber',
+    'TrainingDescription',
+  ];
+
   constructor() {
     try {
       const auth = new google.auth.JWT({
@@ -48,6 +55,86 @@ export class SheetsService {
     } catch (error) {
       console.error('Error initializing SheetsService:', error);
       throw new Error('Failed to initialize Google Sheets API client');
+    }
+  }
+
+  private async ensureSheetExists(spreadsheetId: string, sheetName: string, headers: string[]): Promise<void> {
+    const cacheKey = `${spreadsheetId}-${sheetName}`;
+    if (this.sheetCache.has(cacheKey) && this.isCacheValid(cacheKey)) {
+      return;
+    }
+
+    try {
+      const spreadsheet = await this.sheets.spreadsheets.get({ spreadsheetId });
+      const sheetExists = spreadsheet.data.sheets?.some(
+        s => s.properties?.title === sheetName
+      );
+
+      if (!sheetExists) {
+        await this.sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          requestBody: {
+            requests: [{ addSheet: { properties: { title: sheetName } } }],
+          },
+        });
+
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${sheetName}!A1`,
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: [headers],
+          },
+        });
+        console.log(`✅ Sheet '${sheetName}' created with headers.`);
+      }
+
+      this.sheetCache.set(cacheKey, true);
+      this.cacheTimestamps.set(cacheKey, Date.now());
+
+    } catch (error) {
+      console.error(`Error ensuring sheet '${sheetName}' exists:`, error);
+      if (error.code === 403) {
+          console.error(`Permission denied. Make sure the service account has editor access to spreadsheet ID: ${spreadsheetId}`);
+      }
+      throw error;
+    }
+  }
+
+  public async saveTrainingLog(phoneNumber: string, trainingDescription: string): Promise<void> {
+    if (!config.trainingSpreadsheetId) {
+      console.error('❌ TRAINING_SPREADSHEET_ID is not configured. Cannot save training log.');
+      throw new Error('Training log functionality is not configured.');
+    }
+
+    try {
+      await this.ensureSheetExists(
+        config.trainingSpreadsheetId,
+        this.TRAINING_LOGS_SHEET_NAME,
+        this.TRAINING_LOGS_HEADERS
+      );
+
+      const timestamp = new Date().toISOString();
+      const row = [
+        timestamp,
+        phoneNumber,
+        trainingDescription
+      ];
+
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId: config.trainingSpreadsheetId,
+        range: `${this.TRAINING_LOGS_SHEET_NAME}!A:C`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [row],
+        },
+      });
+
+      console.log(`✅ Training log for ${phoneNumber} saved successfully.`);
+
+    } catch (error) {
+      console.error(`Error saving training log for ${phoneNumber}:`, error);
+      throw error;
     }
   }
 
