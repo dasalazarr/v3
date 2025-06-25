@@ -5,6 +5,60 @@ import { TrainingData } from './aiservices';
 
 @singleton()
 export class SheetsService {
+  /**
+   * Appends a row to the specified sheet
+   * @param sheetName Name of the sheet to append to
+   * @param row Array of values to append
+   */
+  public async appendToSheet(sheetName: string, row: any[]): Promise<void> {
+    if (!config.spreadsheetId) {
+      throw new Error('SPREADSHEET_ID is not configured');
+    }
+
+    try {
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId: config.spreadsheetId,
+        range: `${sheetName}!A:Z`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [row]
+        }
+      });
+      console.log(`✅ Appended row to sheet '${sheetName}'`);
+    } catch (error) {
+      console.error(`❌ Error appending to sheet '${sheetName}':`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets all data from the specified sheet
+   * @param sheetName Name of the sheet to get data from
+   * @returns 2D array of sheet data (rows x columns)
+   */
+  public async getSheetData(sheetName: string): Promise<any[][]> {
+    if (!config.spreadsheetId) {
+      throw new Error('SPREADSHEET_ID is not configured');
+    }
+
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.spreadsheetId,
+        range: `${sheetName}!A:Z`,
+      });
+      
+      // Return the data or empty array if no data
+      return response.data.values || [];
+    } catch (error) {
+      console.error(`❌ Error getting data from sheet '${sheetName}':`, error);
+      // Return empty array if sheet doesn't exist or is empty
+      if (error.code === 400 || error.code === 404) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
   private sheets: sheets_v4.Sheets;
   private sheetCache: Map<string, boolean> = new Map();
   private cacheTimestamps: Map<string, number> = new Map();
@@ -26,6 +80,10 @@ export class SheetsService {
   ];
 
   constructor() {
+    if (!config.spreadsheetId) {
+      console.warn('⚠️ SPREADSHEET_ID is not configured. Some features may not work.');
+    }
+    
     try {
       const auth = new google.auth.JWT({
         email: config.clientEmail,
