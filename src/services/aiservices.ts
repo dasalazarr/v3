@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { singleton, inject } from 'tsyringe';
 import { SheetsService } from './sheetsServices';
+import { TranslationService } from './translationService';
 
 export interface StructuredFeedback {
   reaction: string;
@@ -29,7 +30,8 @@ export class AIService {
   private conversationContexts: Map<string, Array<{role: string, content: string}>> = new Map();
 
   constructor(
-    @inject("SheetsService") private sheetsService: SheetsService
+    @inject("SheetsService") private sheetsService: SheetsService,
+    @inject("TranslationService") private translationService: TranslationService
   ) {
     this.baseURL = config.baseURL || "https://api.deepseek.com/v1";
     this.apiKey = config.apiKey;
@@ -134,11 +136,13 @@ export class AIService {
   }
 
   public async processMessage(message: string, phoneNumber: string, userName: string): Promise<StructuredFeedback | null> {
-    const { userExists, userData } = await this.sheetsService.registerOrUpdateUser(phoneNumber, userName);
+    const lang = this.translationService.detectLanguage(message);
+    const { userExists, userData } = await this.sheetsService.registerOrUpdateUser(phoneNumber, userName, lang);
     const effectiveUserName = userData?.[1] || userName || 'atleta';
+    const userLang = (userData?.[3] || lang) as 'en' | 'es';
 
     if (!this.systemPrompt) {
-        console.error('❌ [AIService] El prompt principal no está cargado.');
+        console.error(this.translationService.t(userLang, 'error_message'));
         return null;
     }
 
@@ -181,10 +185,12 @@ export class AIService {
   }
 
   public async getGeneralResponse(message: string, phoneNumber: string, userName: string): Promise<string | null> {
-    const { userExists, userData } = await this.sheetsService.registerOrUpdateUser(phoneNumber, userName);
+    const lang = this.translationService.detectLanguage(message);
+    const { userExists, userData } = await this.sheetsService.registerOrUpdateUser(phoneNumber, userName, lang);
     const effectiveUserName = userData?.[1] || userName || 'atleta';
+    const userLang = (userData?.[3] || lang) as 'en' | 'es';
 
-    const faqSystemPrompt = 'Eres Andes, un amigable y experto coach de running. Responde las preguntas de los usuarios de forma clara, directa y motivadora. Sé breve.';
+    const faqSystemPrompt = this.translationService.t(userLang, 'welcome_message');
     console.log(`[AIService] Procesando pregunta general para ${phoneNumber} (${effectiveUserName}). Usuario existente: ${userExists}`);
 
     await this.loadConversationHistory(phoneNumber);
@@ -206,10 +212,10 @@ export class AIService {
             ]);
             return response;
         }
-        return 'No se recibió respuesta de la IA.';
+        return this.translationService.t(userLang, 'error_message');
     } catch (error) {
         console.error('❌ [AIService] Error al procesar la pregunta general:', error);
-        return 'Hubo un error al contactar a la IA.';
+        return this.translationService.t(userLang, 'error_message');
     }
   }
 

@@ -1,0 +1,6 @@
+{
+  "welcome_message": "Hello! I'm Andes, your AI running coach. I'm here to help you track your workouts and reach your goals. How can I help you today?",
+  "workout_logged": "Great job! I've logged your workout: {{distance}} in {{time}}. Keep up the great work!",
+  "ask_for_feedback": "How did that run feel? (e.g., easy, moderate, hard)",
+  "error_message": "I'm sorry, I didn't understand that. Could you please rephrase?"
+}

@@ -17,6 +17,7 @@
     "chrono-node": "^2.7.9",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
+    "franc": "^6.2.0",
     "google-auth-library": "^9.4.1",
     "googleapis": "^144.0.0",
     "openai": "^4.77.0",

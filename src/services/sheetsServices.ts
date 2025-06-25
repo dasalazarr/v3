@@ -210,6 +210,9 @@ export class SheetsService {
     }
   }
 
+  private readonly USERS_SHEET_NAME = 'Users';
+  private readonly USERS_HEADERS = ['PhoneNumber', 'UserName', 'LastActiveDate', 'Language'];
+
   public async addConverToUser(phoneNumber: string, messages: Array<{role: string, content: string}>) {
     if (!config.spreadsheetId) {
       console.error('❌ SPREADSHEET_ID is not configured for conversations.');
@@ -220,7 +223,6 @@ export class SheetsService {
       const sheetName = 'Conversations';
       await this.ensureSheetExists(config.spreadsheetId, sheetName, ['PhoneNumber', 'Timestamp', 'UserMessage', 'BotResponse']);
 
-      // We call registerOrUpdateUser first to ensure the user exists before logging the conversation.
       await this.registerOrUpdateUser(phoneNumber);
 
       const userMessage = messages.find(msg => msg.role === 'user')?.content || '';
@@ -243,37 +245,38 @@ export class SheetsService {
     }
   }
 
-  public async registerOrUpdateUser(phoneNumber: string, userName?: string): Promise<{ userExists: boolean; userData?: any[] }> {
+  public async registerOrUpdateUser(phoneNumber: string, userName?: string, language?: 'en' | 'es'): Promise<{ userExists: boolean; userData?: any[] }> {
     if (!config.spreadsheetId) {
       console.error('❌ SPREADSHEET_ID is not configured for user management.');
       throw new Error('SPREADSHEET_ID not configured.');
     }
 
-    const sheetName = 'Users';
-    const headers = ['PhoneNumber', 'UserName', 'JoinDate', 'LastActive'];
-    await this.ensureSheetExists(config.spreadsheetId, sheetName, headers);
-
     try {
-      const response = await this.sheets.spreadsheets.values.get({ spreadsheetId: config.spreadsheetId, range: `${sheetName}!A:D` });
+      await this.ensureSheetExists(config.spreadsheetId, this.USERS_SHEET_NAME, this.USERS_HEADERS);
+
+      const response = await this.sheets.spreadsheets.values.get({ spreadsheetId: config.spreadsheetId, range: `${this.USERS_SHEET_NAME}!A:D` });
       const rows = response.data.values || [];
       const userRowIndex = rows.findIndex(row => row[0] === phoneNumber);
-      const currentDate = new Date().toISOString();
 
       if (userRowIndex !== -1) {
-        const rowNumber = userRowIndex + 1;
+        const userRow = rows[userRowIndex];
+        userRow[2] = new Date().toISOString();
+        // Si el idioma no está definido para un usuario existente, lo establecemos.
+        if (!userRow[3] && language) {
+          userRow[3] = language;
+        }
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: config.spreadsheetId,
-          range: `${sheetName}!D${rowNumber}`,
+          range: `${this.USERS_SHEET_NAME}!A${userRowIndex + 1}:D${userRowIndex + 1}`,
           valueInputOption: 'USER_ENTERED',
-          requestBody: { values: [[currentDate]] },
+          requestBody: { values: [userRow] },
         });
-        console.log(`[Sheets] User ${phoneNumber} updated.`);
-        return { userExists: true, userData: rows[userRowIndex] };
+        return { userExists: true, userData: userRow };
       } else {
-        const newUserRow = [phoneNumber, userName || 'N/A', currentDate, currentDate];
+        const newUserRow = [phoneNumber, userName || '', new Date().toISOString(), language || 'es'];
         await this.sheets.spreadsheets.values.append({
           spreadsheetId: config.spreadsheetId,
-          range: sheetName,
+          range: this.USERS_SHEET_NAME,
           valueInputOption: 'USER_ENTERED',
           requestBody: { values: [newUserRow] },
         });
@@ -297,7 +300,6 @@ export class SheetsService {
       });
 
       const data = (response.data.values as any[][]) || [];
-      // Skip header row by slicing from index 1
       const userConversations = data
         .slice(1)
         .filter(row => row[0] === phoneNumber)
@@ -309,7 +311,6 @@ export class SheetsService {
 
     } catch (error: any) {
       if (error.message.includes('Unable to parse range')) {
-        // This can happen if the 'Conversations' sheet doesn't exist yet.
         console.log(`[Sheets] 'Conversations' sheet not found for ${phoneNumber}. Returning empty history.`);
         return [];
       }
