@@ -158,6 +158,14 @@ export class SheetsService {
 
         console.log(`✅ [SheetsService] Log de entrenamiento estructurado para ${phoneNumber} guardado exitosamente.`);
 
+        // Auditoría opcional: verificar que la fila se guardó correctamente
+        try {
+            const auditOk = await this.auditLastTrainingLog(phoneNumber, timestamp);
+            console.log(auditOk ? '🔎 [SheetsService] Auditoría OK: fila confirmada en Sheets.' : '⚠️ [SheetsService] Auditoría FALLÓ: la fila no se encontró tras la inserción.');
+        } catch (auditErr) {
+            console.error('⚠️ [SheetsService] Error durante la auditoría de guardado:', auditErr);
+        }
+
     } catch (error) {
         console.error(`❌ [SheetsService] Error al guardar el log de entrenamiento estructurado para ${phoneNumber}:`, error);
         throw error;
@@ -185,6 +193,29 @@ export class SheetsService {
     
     const now = Date.now();
     return (now - timestamp) < this.cacheTTL;
+  }
+
+  /**
+   * Verifica si la fila recién insertada realmente existe en la hoja.
+   * Se busca por timestamp y phoneNumber.
+   * @param phoneNumber número de teléfono del usuario
+   * @param timestamp ISO timestamp usado al insertar la fila
+   * @returns true si la fila existe, false en cualquier otro caso
+   */
+  private async auditLastTrainingLog(phoneNumber: string, timestamp: string): Promise<boolean> {
+    if (!config.trainingSpreadsheetId) return false;
+    try {
+      const res = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.trainingSpreadsheetId,
+        range: `${this.TRAINING_LOGS_SHEET_NAME}!A:K`,
+      });
+      const rows = res.data.values as string[][] | undefined;
+      if (!rows) return false;
+      return rows.some(r => r[0] === timestamp && r[1] === phoneNumber);
+    } catch (error) {
+      console.error('[SheetsService] Error en auditLastTrainingLog:', error);
+      return false;
+    }
   }
 
   private getMonthSheetName(): string {
