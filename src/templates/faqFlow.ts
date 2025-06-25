@@ -22,10 +22,11 @@ export const faqFlow = addKeyword(EVENTS.ACTION)
 
     try {
       const aiService = container.resolve(AIService);
-      console.log(`[FaqFlow] Procesando pregunta general: \"${ctx.body}\"`);
+      const userName = ctx.pushName || 'atleta'; // Fallback por si no viene el nombre
+      console.log(`[FaqFlow] Procesando pregunta general de ${userName} (${ctx.from}): \"${ctx.body}\"`);
       
-      // Llama al método de IA para respuestas generales
-      const aiResponse = await aiService.getGeneralResponse(ctx.body, ctx.from);
+      // Llama al método de IA para respuestas generales, pasando el nombre del usuario
+      const aiResponse = await aiService.getGeneralResponse(ctx.body, ctx.from, userName);
 
       if (aiResponse) {
         // Guarda la respuesta en el estado para posible referencia futura

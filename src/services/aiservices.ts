@@ -134,56 +134,59 @@ export class AIService {
   }
 
   public async processMessage(message: string, phoneNumber: string, userName: string): Promise<StructuredFeedback | null> {
+    const { userExists, userData } = await this.sheetsService.registerOrUpdateUser(phoneNumber, userName);
+    const effectiveUserName = userData?.[1] || userName || 'atleta';
+
     if (!this.systemPrompt) {
-      console.error('❌ [AIService] El prompt principal no está cargado.');
-      return null;
+        console.error('❌ [AIService] El prompt principal no está cargado.');
+        return null;
     }
 
-    console.log(`[AIService] Procesando mensaje para ${phoneNumber} (${userName}).`);
-    const conversationHistory = await this.loadConversationHistory(phoneNumber);
-    
-    // Usa un nombre genérico si no se proporciona uno, para evitar errores.
-    const personalizedPrompt = this.systemPrompt.replace('{userName}', userName || 'atleta');
+    console.log(`[AIService] Procesando mensaje para ${phoneNumber} (${effectiveUserName}). Usuario existente: ${userExists}`);
+    await this.loadConversationHistory(phoneNumber);
+
+    const personalizedPrompt = this.systemPrompt.replace('{userName}', effectiveUserName);
 
     const messages: any[] = [
-      { role: 'system', content: personalizedPrompt },
-      ...this.getUserContext(phoneNumber),
-      { role: 'user', content: message },
+        { role: 'system', content: personalizedPrompt },
+        ...this.getUserContext(phoneNumber),
+        { role: 'user', content: message },
     ];
 
     try {
-      console.log('[AIService] Solicitando feedback estructurado a la IA...');
-      // Forzar modo JSON en la respuesta
-      const response = await this._executeChatCompletion(messages, 0.7, 1000, true);
+        console.log('[AIService] Solicitando feedback estructurado a la IA...');
+        const response = await this._executeChatCompletion(messages, 0.7, 1000, true);
 
-      if (response) {
-        console.log('[AIService] Respuesta de IA recibida, intentando parsear JSON...');
-        // Limpiar el string de la respuesta por si viene con formato markdown
-        const cleanedResponse = response.replace(/```json\n|```/g, '').trim();
-        const structuredResponse: StructuredFeedback = JSON.parse(cleanedResponse);
-        console.log('✅ [AIService] JSON parseado exitosamente.');
-        
-        // Guardar el contexto de la conversación
-        this.updateUserContext(phoneNumber, message, JSON.stringify(structuredResponse, null, 2));
+        if (response) {
+            console.log('[AIService] Respuesta de IA recibida, intentando parsear JSON...');
+            const cleanedResponse = response.replace(/```json\n|```/g, '').trim();
+            const structuredResponse: StructuredFeedback = JSON.parse(cleanedResponse);
+            console.log('✅ [AIService] JSON parseado exitosamente.');
 
-        await this.sheetsService.addConverToUser(phoneNumber, [
-          { role: 'user', content: message },
-          { role: 'assistant', content: JSON.stringify(structuredResponse, null, 2) }
-        ]);
-        
-        return structuredResponse;
-      }
-      return null;
+            this.updateUserContext(phoneNumber, message, JSON.stringify(structuredResponse, null, 2));
+
+            await this.sheetsService.addConverToUser(phoneNumber, [
+                { role: 'user', content: message },
+                { role: 'assistant', content: JSON.stringify(structuredResponse, null, 2) }
+            ]);
+
+            return structuredResponse;
+        }
+        return null;
     } catch (error) {
-      console.error('❌ [AIService] Error al procesar el mensaje o parsear la respuesta JSON:', error);
-      return null;
+        console.error('❌ [AIService] Error al procesar el mensaje o parsear la respuesta JSON:', error);
+        // Fallback a respuesta general si el parseo JSON falla
+        return null;
     }
   }
 
-  public async getGeneralResponse(message: string, phoneNumber: string): Promise<string | null> {
+  public async getGeneralResponse(message: string, phoneNumber: string, userName: string): Promise<string | null> {
+    const { userExists, userData } = await this.sheetsService.registerOrUpdateUser(phoneNumber, userName);
+    const effectiveUserName = userData?.[1] || userName || 'atleta';
+
     const faqSystemPrompt = 'Eres Andes, un amigable y experto coach de running. Responde las preguntas de los usuarios de forma clara, directa y motivadora. Sé breve.';
-    console.log(`[AIService] Procesando pregunta general para ${phoneNumber}.`);
-    
+    console.log(`[AIService] Procesando pregunta general para ${phoneNumber} (${effectiveUserName}). Usuario existente: ${userExists}`);
+
     await this.loadConversationHistory(phoneNumber);
     const context = this.getUserContext(phoneNumber);
 
