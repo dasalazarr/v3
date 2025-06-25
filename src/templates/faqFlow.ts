@@ -1,38 +1,46 @@
 import { addKeyword, EVENTS } from "@builderbot/bot";
 import container from "../di/container";
-import { config } from "../config";
-import { SheetsService } from "../services/sheetsServices";
 import { AIService } from "../services/aiservices";
 
-// Obtenemos las instancias de los servicios del contenedor
-const sheetsService = container.resolve<SheetsService>("SheetsService");
-const aiServices = container.resolve<AIService>("AIService");
-
+/**
+ * Flujo para manejar preguntas frecuentes (FAQ) y conversaciones generales.
+ * Se activa con cualquier mensaje que no coincida con otros flujos de palabras clave.
+ */
 export const faqFlow = addKeyword(EVENTS.ACTION)
-  .addAction(async (ctx, { endFlow }) => {
-    try {
-      console.log("📱 Mensaje recibido de:", ctx.from);
-      console.log("🔑 API Key:", config.apiKey ? "Configurada" : "No configurada");
-      
-      if (!ctx.body) {
-        console.log("❌ Mensaje vacío");
-        return endFlow("Por favor, envía un mensaje con contenido.");
-      }
-
-      // Use aiServices directly without 'new' since it's already instantiated
-      console.log("💬 Enviando mensaje al asistente");
-      const response = await aiServices.processMessage(ctx.body, ctx.from);
-
-      if (!response) {
-        console.error("❌ No se recibió respuesta del asistente");
-        return endFlow("No pude procesar tu mensaje. Por favor, intenta de nuevo.");
-      }
-
-      // Ya no es necesario guardar la conversación aquí, ya que se hace dentro de processMessage
-      console.log("✅ Respuesta enviada");
-      return endFlow(response);
-    } catch (error) {
-      console.error("❌ Error en el flujo FAQ:", error);
-      return endFlow("Lo siento, ocurrió un error. Por favor, intenta de nuevo.");
+  .addAction(async (ctx, { flowDynamic, state, endFlow }) => {
+    
+    // Ignora mensajes vacíos para evitar procesamientos innecesarios
+    if (!ctx.body || ctx.body.trim().length === 0) {
+      console.log("[FaqFlow] Mensaje vacío ignorado.");
+      return; // No finaliza el flujo, solo ignora este evento
     }
+
+    // Permite al usuario salir del flujo de preguntas
+    if (ctx.body.toLowerCase().includes('terminar')) {
+      return endFlow('¡Claro! Si tienes más preguntas, no dudes en consultarme. ¡A seguir corriendo! 🏃‍♂️💨');
+    }
+
+    try {
+      const aiService = container.resolve(AIService);
+      console.log(`[FaqFlow] Procesando pregunta general: \"${ctx.body}\"`);
+      
+      // Llama al método de IA para respuestas generales
+      const aiResponse = await aiService.getGeneralResponse(ctx.body, ctx.from);
+
+      if (aiResponse) {
+        // Guarda la respuesta en el estado para posible referencia futura
+        await state.update({ lastFaqAnswer: aiResponse });
+        // Envía la respuesta al usuario
+        await flowDynamic(aiResponse);
+      } else {
+        // Maneja el caso en que la IA no devuelva una respuesta
+        await flowDynamic('Lo siento, no pude procesar tu pregunta en este momento. Inténtalo de nuevo más tarde.');
+      }
+    } catch (error) {
+      console.error('❌ Error crítico en faqFlow:', error);
+      // Informa al usuario del error de una manera amigable
+      await flowDynamic('Uhm, algo no salió como esperaba. Mi equipo técnico ya fue notificado del problema.');
+    }
+    // El flujo no termina con endFlow() para permitir que la conversación continúe si el usuario responde.
+    // El bot simplemente esperará el siguiente mensaje.
   });

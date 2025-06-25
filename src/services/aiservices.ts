@@ -4,6 +4,13 @@ import * as path from 'path';
 import { singleton, inject } from 'tsyringe';
 import { SheetsService } from './sheetsServices';
 
+export interface StructuredFeedback {
+  reaction: string;
+  analysis: string;
+  tips: string;
+  question: string;
+}
+
 export interface TrainingData {
   distance: { value: number | null; unit: string | null };
   time: { value: number | null; unit: string | null };
@@ -126,37 +133,87 @@ export class AIService {
     }
   }
 
-  async processMessage(message: string, phoneNumber: string): Promise<string> {
+  public async processMessage(message: string, phoneNumber: string, userName: string): Promise<StructuredFeedback | null> {
+    if (!this.systemPrompt) {
+      console.error('❌ [AIService] El prompt principal no está cargado.');
+      return null;
+    }
+
+    console.log(`[AIService] Procesando mensaje para ${phoneNumber} (${userName}).`);
+    const conversationHistory = await this.loadConversationHistory(phoneNumber);
+    
+    // Usa un nombre genérico si no se proporciona uno, para evitar errores.
+    const personalizedPrompt = this.systemPrompt.replace('{userName}', userName || 'atleta');
+
+    const messages: any[] = [
+      { role: 'system', content: personalizedPrompt },
+      ...this.getUserContext(phoneNumber),
+      { role: 'user', content: message },
+    ];
+
     try {
-      await this.loadConversationHistory(phoneNumber);
-      const context = this.getUserContext(phoneNumber);
-      
-      const messagesForAPI = [
-        { role: "system", content: this.systemPrompt },
-        ...context,
-        { role: "user", content: message }
-      ];
+      console.log('[AIService] Solicitando feedback estructurado a la IA...');
+      // Forzar modo JSON en la respuesta
+      const response = await this._executeChatCompletion(messages, 0.7, 1000, true);
 
-      const aiResponse = await this._executeChatCompletion(messagesForAPI);
+      if (response) {
+        console.log('[AIService] Respuesta de IA recibida, intentando parsear JSON...');
+        // Limpiar el string de la respuesta por si viene con formato markdown
+        const cleanedResponse = response.replace(/```json\n|```/g, '').trim();
+        const structuredResponse: StructuredFeedback = JSON.parse(cleanedResponse);
+        console.log('✅ [AIService] JSON parseado exitosamente.');
+        
+        // Guardar el contexto de la conversación
+        this.updateUserContext(phoneNumber, message, JSON.stringify(structuredResponse, null, 2));
 
-      this.updateUserContext(phoneNumber, message, aiResponse);
-      
-      await this.sheetsService.addConverToUser(phoneNumber, [
-        { role: 'user', content: message },
-        { role: 'assistant', content: aiResponse }
-      ]);
-
-      return aiResponse;
+        await this.sheetsService.addConverToUser(phoneNumber, [
+          { role: 'user', content: message },
+          { role: 'assistant', content: JSON.stringify(structuredResponse, null, 2) }
+        ]);
+        
+        return structuredResponse;
+      }
+      return null;
     } catch (error) {
-      console.error('❌ Error al procesar mensaje:', error);
-      return "Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta nuevamente.";
+      console.error('❌ [AIService] Error al procesar el mensaje o parsear la respuesta JSON:', error);
+      return null;
+    }
+  }
+
+  public async getGeneralResponse(message: string, phoneNumber: string): Promise<string | null> {
+    const faqSystemPrompt = 'Eres Andes, un amigable y experto coach de running. Responde las preguntas de los usuarios de forma clara, directa y motivadora. Sé breve.';
+    console.log(`[AIService] Procesando pregunta general para ${phoneNumber}.`);
+    
+    await this.loadConversationHistory(phoneNumber);
+    const context = this.getUserContext(phoneNumber);
+
+    const messages: any[] = [
+        { role: 'system', content: faqSystemPrompt },
+        ...context,
+        { role: 'user', content: message },
+    ];
+
+    try {
+        const response = await this._executeChatCompletion(messages, 0.7, 1000, false);
+        if (response) {
+            this.updateUserContext(phoneNumber, message, response);
+            await this.sheetsService.addConverToUser(phoneNumber, [
+                { role: 'user', content: message },
+                { role: 'assistant', content: response }
+            ]);
+            return response;
+        }
+        return 'No se recibió respuesta de la IA.';
+    } catch (error) {
+        console.error('❌ [AIService] Error al procesar la pregunta general:', error);
+        return 'Hubo un error al contactar a la IA.';
     }
   }
 
   public async extractTrainingData(userMessage: string): Promise<TrainingData | null> {
     if (!this.extractionPrompt) {
-        console.error("❌ El prompt de extracción no está cargado. No se puede extraer data.");
-        return null;
+      console.error("❌ El prompt de extracción no está cargado. No se puede extraer data.");
+      return null;
     }
 
     const messages = [

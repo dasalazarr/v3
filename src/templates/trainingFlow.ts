@@ -26,21 +26,27 @@ const trainingFlow = addKeyword(['entrenar', 'corrí', 'entrenamiento', 'entreno
         console.log(`[TrainingFlow] Extrayendo datos estructurados del texto...`);
         const extractedData = await aiService.extractTrainingData(trainingDescription);
 
-        if (extractedData) {
-            console.log(`[TrainingFlow] Datos extraídos correctamente. Guardando en Sheets...`);
-            await sheetsService.saveTrainingLog(ctx.from, trainingDescription, extractedData);
-            console.log(`[TrainingFlow] Log estructurado guardado exitosamente para ${ctx.from}.`);
-        } else {
-            console.warn(`[TrainingFlow] No se pudieron extraer datos estructurados. El log no se guardará en formato estructurado. Revisa el prompt de extracción.`);
-            // En el futuro, podríamos implementar un guardado del texto plano como fallback aquí.
-        }
+        console.log(`[TrainingFlow] Guardando log de entrenamiento...`);
+        await sheetsService.saveTrainingLog(ctx.from, trainingDescription, extractedData);
+        console.log(`[TrainingFlow] Log guardado exitosamente para ${ctx.from}.`);
 
         console.log('[TrainingFlow] Solicitando feedback conversacional de la IA...');
         await flowDynamic('¡Recibido! Analizando tu entrenamiento... 🏃‍♂️💨');
-        const aiFeedback = await aiService.processMessage(trainingDescription, ctx.from);
-        console.log('[TrainingFlow] Feedback de la IA recibido.');
-
-        await flowDynamic(aiFeedback);
+        
+        const userName = ctx.pushName || 'campeón'; // Fallback por si no se obtiene el nombre
+        const aiFeedback = await aiService.processMessage(trainingDescription, ctx.from, userName);
+        
+        if (aiFeedback) {
+            console.log('[TrainingFlow] Enviando feedback estructurado...');
+            await flowDynamic([{ body: aiFeedback.reaction, delay: 500 }]);
+            await flowDynamic([{ body: aiFeedback.analysis, delay: 1200 }]);
+            await flowDynamic([{ body: aiFeedback.tips, delay: 1500 }]);
+            await flowDynamic([{ body: aiFeedback.question, delay: 1000 }]);
+            console.log('✅ [TrainingFlow] Feedback enviado.');
+        } else {
+            console.error('[TrainingFlow] No se recibió feedback estructurado de la IA.');
+            await flowDynamic('No pude generar un análisis detallado esta vez, pero ¡sigue así! Tu esfuerzo ha sido registrado.');
+        }
 
     } catch (error) {
         console.error('❌ Error en trainingFlow:', error);

@@ -110,7 +110,7 @@ export class SheetsService {
     }
   }
 
-  public async saveTrainingLog(phoneNumber: string, originalDescription: string, trainingData: TrainingData): Promise<void> {
+    public async saveTrainingLog(phoneNumber: string, originalDescription: string, trainingData: TrainingData | null): Promise<void> {
     console.log(`[SheetsService] Iniciando guardado de entrenamiento estructurado para ${phoneNumber}.`);
     if (!config.trainingSpreadsheetId) {
         console.error('❌ [SheetsService] TRAINING_SPREADSHEET_ID no está configurado.');
@@ -127,7 +127,7 @@ export class SheetsService {
         console.log(`[SheetsService] Hoja lista.`);
 
         const timestamp = new Date().toISOString();
-        const row = [
+        const row = trainingData ? [
             timestamp,
             phoneNumber,
             originalDescription,
@@ -139,6 +139,11 @@ export class SheetsService {
             trainingData.pace.unit,
             trainingData.perception,
             trainingData.notes,
+        ] : [
+            timestamp,
+            phoneNumber,
+            originalDescription,
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
         ];
 
         console.log(`[SheetsService] Añadiendo fila estructurada...`);
