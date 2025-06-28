@@ -18,7 +18,7 @@ const getBaseUrl = () => {
   const url =
     process.env.baseURL ||
     process.env.DEEPSEEK_BASE_URL ||
-    "https://api.deepseek.com/v1";
+    "https://api.deepseek.com/v1"
   console.log("🔗 Using API URL:", url);
   return url;
 };
