@@ -6,7 +6,7 @@ console.log(" Variables de entorno cargadas");
 
 // Validate and get API key
 const getApiKey = () => {
-  const key = process.env.apiKey || process.env.API_KEY;
+  const key = process.env.apiKey || process.env.API_KEY || process.env.DEEPSEEK_API_KEY;
   if (!key) {
     console.error("⚠️ API Key no configurada");
   }
@@ -15,7 +15,10 @@ const getApiKey = () => {
 
 // Validate and get base URL
 const getBaseUrl = () => {
-  const url = process.env.baseURL || "https://api.deepseek.com/v1";
+  const url =
+    process.env.baseURL ||
+    process.env.DEEPSEEK_BASE_URL ||
+    "https://api.deepseek.com/v1"
   console.log("🔗 Using API URL:", url);
   return url;
 };
@@ -60,7 +63,7 @@ export interface Config {
 export const config: Config = {
   PORT: process.env.PORT ?? 3000,
   ...getMetaCredentials(),
-  Model: process.env.Model || process.env.model || "deepseek-chat",
+  Model: process.env.Model || process.env.model || process.env.DEEPSEEK_MODEL || "deepseek-chat",
   baseURL: getBaseUrl(),
   apiKey: getApiKey(),
   assistant_id: process.env.ASSISTANT_ID || process.env.assistant_id,
