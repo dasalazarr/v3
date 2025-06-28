@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema.js';
 
@@ -14,7 +14,7 @@ export interface DatabaseConfig {
 export class Database {
   private static instance: Database;
   private client: postgres.Sql;
-  private db: ReturnType<typeof drizzle>;
+  private db: PostgresJsDatabase<typeof schema>;
 
   private constructor(config: DatabaseConfig) {
     this.client = postgres({
@@ -42,7 +42,7 @@ export class Database {
     return Database.instance;
   }
 
-  public get query() {
+  public get query(): PostgresJsDatabase<typeof schema> {
     return this.db;
   }
 

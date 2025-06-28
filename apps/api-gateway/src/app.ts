@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { createBot, createFlow, createProvider } from '@builderbot/bot';
+import { createBot, createFlow, createProvider, MemoryDB } from '@builderbot/bot';
 import { MetaProvider } from '@builderbot/provider-meta';
 import express from 'express';
 import dotenv from 'dotenv';
@@ -189,7 +189,7 @@ async function initializeBot(config: Config, services: any) {
   const bot = createBot({
     provider,
     flow,
-    database: null // We handle our own database
+    database: new MemoryDB() // We handle our own database
   });
 
   console.log('✅ WhatsApp bot initialized');
@@ -250,7 +250,7 @@ function setupHealthEndpoints(app: express.Application, services: any) {
       res.status(503).json({
         status: 'error',
         timestamp: new Date().toISOString(),
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -323,12 +323,12 @@ async function main() {
 }
 
 // Handle uncaught errors
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', (error: Error) => {
   console.error('💥 Uncaught Exception:', error);
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });

@@ -13,9 +13,15 @@
     "migrate": "pnpm --filter database migrate",
     "type-check": "pnpm -r type-check"
   },
-  "keywords": ["running", "ai", "coaching", "whatsapp", "fitness"],
+  "keywords": [
+    "running",
+    "ai",
+    "coaching",
+    "whatsapp",
+    "fitness"
+  ],
   "devDependencies": {
-    "@types/node": "^20.11.30",
+    "@types/node": "^20.19.2",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.4.0",
     "eslint": "^8.52.0",
@@ -25,5 +31,10 @@
     "vitest": "^1.0.0"
   },
   "author": "Running Coach Team",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@types/dotenv": "^8.2.3",
+    "api-gateway": "^1.0.0",
+    "drizzle-orm": "^0.31.4"
+  }
 }

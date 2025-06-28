@@ -12,11 +12,14 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^3.22.4",
-    "uuid": "^9.0.1"
+    "@types/uuid": "^10.0.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "typescript": "^5.4.3",
-    "eslint": "^8.52.0"
+    "@types/node": "^24.0.7",
+    "dotenv": "^16.6.1",
+    "eslint": "^8.52.0",
+    "typescript": "^5.4.3"
   }
 }

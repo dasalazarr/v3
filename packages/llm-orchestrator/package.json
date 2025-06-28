@@ -13,17 +13,18 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@running-coach/database": "workspace:*",
     "@running-coach/shared": "workspace:*",
     "@running-coach/vector-memory": "workspace:*",
-    "@running-coach/database": "workspace:*",
+    "franc": "^6.2.0",
     "openai": "^4.77.0",
-    "zod": "^3.22.4",
-    "franc": "^6.2.0"
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
-    "typescript": "^5.4.3",
+    "dotenv": "^17.0.0",
     "eslint": "^8.52.0",
+    "typescript": "^5.4.3",
     "vitest": "^1.0.0"
   }
 }

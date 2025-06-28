@@ -79,7 +79,7 @@ export class AIAgent {
       // Prepare messages for OpenAI
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
         { role: 'system', content: systemPrompt },
-        ...conversationHistory.map(msg => ({
+        ...conversationHistory.map((msg: { role: string; content: string }) => ({
           role: msg.role as 'user' | 'assistant' | 'system',
           content: msg.content
         })),
@@ -134,7 +134,7 @@ export class AIAgent {
             toolCalls.push({
               name: toolCall.function.name,
               parameters: JSON.parse(toolCall.function.arguments),
-              result: { error: error.message },
+              result: { error: error instanceof Error ? error.message : 'Unknown error' },
             });
           }
         }
@@ -177,7 +177,7 @@ export class AIAgent {
   ): Promise<string> {
     try {
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        ...(context || []).map(msg => ({
+        ...(context || []).map((msg: { role:string; content: string }) => ({
           role: msg.role as 'user' | 'assistant' | 'system',
           content: msg.content
         })),
@@ -306,7 +306,7 @@ Siempre usa las herramientas cuando el usuario proporcione datos o solicite acci
     }
 
     if (userProfile.goalRace) {
-      const raceNames = {
+      const raceNames: Record<string, string> = {
         '5k': '5K',
         '10k': '10K',
         'half_marathon': language === 'es' ? 'Media Maratón' : 'Half Marathon',
@@ -320,7 +320,7 @@ Siempre usa las herramientas cuando el usuario proporcione datos o solicite acci
     }
 
     if (userProfile.experienceLevel) {
-      const levels = {
+      const levels: Record<string, string> = {
         'beginner': language === 'es' ? 'Principiante' : 'Beginner',
         'intermediate': language === 'es' ? 'Intermedio' : 'Intermediate',
         'advanced': language === 'es' ? 'Avanzado' : 'Advanced'
@@ -339,11 +339,11 @@ Siempre usa las herramientas cuando el usuario proporcione datos o solicite acci
     }
 
     if (userProfile.injuryHistory && userProfile.injuryHistory.length > 0) {
-      const activeInjuries = userProfile.injuryHistory.filter(injury => !injury.recovered);
+      const activeInjuries = userProfile.injuryHistory.filter((injury: { recovered: boolean; type: string }) => !injury.recovered);
       if (activeInjuries.length > 0) {
         context.push(language === 'es'
-          ? `Lesiones activas: ${activeInjuries.map(i => i.type).join(', ')}`
-          : `Active injuries: ${activeInjuries.map(i => i.type).join(', ')}`
+          ? `Lesiones activas: ${activeInjuries.map((i: { type: string }) => i.type).join(', ')}`
+          : `Active injuries: ${activeInjuries.map((i: { type: string }) => i.type).join(', ')}`
         );
       }
     }

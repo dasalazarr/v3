@@ -18,7 +18,6 @@ export class ChatBuffer {
       port: config.port,
       password: config.password,
       db: config.db || 0,
-      retryDelayOnFailover: 100,
       enableReadyCheck: false,
       lazyConnect: true,
     });
@@ -64,8 +63,8 @@ export class ChatBuffer {
     try {
       await this.redis
         .multi()
-        .lPush(key, JSON.stringify(message))
-        .lTrim(key, 0, CHAT_BUFFER_SIZE - 1) // Keep only last N messages
+        .lpush(key, JSON.stringify(message))
+        .ltrim(key, 0, CHAT_BUFFER_SIZE - 1) // Keep only last N messages
         .expire(key, CHAT_BUFFER_TTL)
         .exec();
 
@@ -84,8 +83,8 @@ export class ChatBuffer {
     const actualLimit = limit || CHAT_BUFFER_SIZE;
 
     try {
-      const messages = await this.redis.lRange(key, 0, actualLimit - 1);
-      return messages.map(msg => JSON.parse(msg) as ChatMessage);
+      const messages = await this.redis.lrange(key, 0, actualLimit - 1);
+      return messages.map((msg: string) => JSON.parse(msg) as ChatMessage);
     } catch (error) {
       console.error(`❌ Error getting messages for ${userId}:`, error);
       return [];
@@ -175,7 +174,7 @@ export class ChatBuffer {
   public async setUserState(userId: string, state: Record<string, any>, ttl?: number): Promise<void> {
     const key = this.getUserStateKey(userId);
     try {
-      await this.redis.hMSet(key, state);
+      await this.redis.hmset(key, state);
       if (ttl) {
         await this.redis.expire(key, ttl);
       }
@@ -191,7 +190,7 @@ export class ChatBuffer {
   public async getUserState(userId: string): Promise<Record<string, string>> {
     const key = this.getUserStateKey(userId);
     try {
-      return await this.redis.hGetAll(key);
+      return await this.redis.hgetall(key);
     } catch (error) {
       console.error(`❌ Error getting user state for ${userId}:`, error);
       return {};

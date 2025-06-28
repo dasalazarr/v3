@@ -1,10 +1,15 @@
 import { z } from 'zod';
 import { Database } from '@running-coach/database';
 import { trainingPlans, workouts } from '@running-coach/database';
+import { VDOTPaces as Paces } from '@running-coach/plan-generator';
 import { VectorMemory } from '@running-coach/vector-memory';
 import { ToolFunction } from '@running-coach/llm-orchestrator';
 import { PlanBuilder, VDOTCalculator } from '@running-coach/plan-generator';
 import { eq, and } from 'drizzle-orm';
+
+// Define a type for the plan object returned from the database
+type Plan = typeof trainingPlans.$inferSelect;
+type Workout = typeof workouts.$inferSelect;
 
 const UpdatePlanSchema = z.object({
   action: z.enum(['create', 'update_vdot', 'adjust_frequency', 'modify_goal']),
@@ -26,7 +31,7 @@ export function createPlanUpdaterTool(
     name: 'update_training_plan',
     description: 'Create or update a user\'s training plan based on their goals and current fitness',
     parameters: UpdatePlanSchema,
-    execute: async (params) => {
+    execute: async (params: z.infer<typeof UpdatePlanSchema> & { userId?: string }) => {
       const { action, targetRace, weeklyFrequency, currentVDOT, targetDate, adjustments } = params;
       
       // Get user ID from context
@@ -59,7 +64,7 @@ export function createPlanUpdaterTool(
         return {
           success: false,
           error: 'Failed to update training plan',
-          details: error.message
+          details: error instanceof Error ? error.message : 'Unknown error'
         };
       }
     }
@@ -94,7 +99,7 @@ async function createNewPlan(
   // Create new plan
   const newPlan = await db.query.insert(trainingPlans).values({
     userId,
-    vdot: currentVDOT,
+    vdot: currentVDOT.toString(),
     weeklyFrequency,
     targetRace: targetRace as any,
     targetDate,
@@ -123,7 +128,12 @@ async function createNewPlan(
     await db.query.insert(workouts).values(
       workoutsToCreate.map(workout => ({
         ...workout,
-        planId: plan.id
+        planId: plan.id,
+        distance: workout.distance?.toString(),
+        duration: workout.duration,
+        targetPace: workout.targetPace,
+        completed: false, // Ensure this is set
+        description: workout.description || '' // Ensure description is not null
       }))
     );
   }
@@ -153,7 +163,7 @@ async function createNewPlan(
         tempo: formatPace(paces.threshold),
         interval: formatPace(paces.interval)
       },
-      nextWorkouts: workoutsToCreate.slice(0, 3).map(w => ({
+      nextWorkouts: workoutsToCreate.slice(0, 3).map((w: any) => ({
         date: w.scheduledDate?.toDateString(),
         type: w.type,
         description: w.description
@@ -187,7 +197,7 @@ async function updatePlanVDOT(
   // Update plan
   await db.query.update(trainingPlans)
     .set({
-      vdot: newVDOT,
+      vdot: newVDOT.toString(),
       paces: newPaces,
       updatedAt: new Date()
     })
@@ -344,7 +354,7 @@ function calculatePlanDuration(targetRace: string, targetDate?: Date): number {
 async function updateFutureWorkoutPaces(
   db: Database,
   planId: string,
-  newPaces: any
+  newPaces: Paces
 ): Promise<void> {
   // Get incomplete workouts
   const futureWorkouts = await db.query.select()
@@ -352,7 +362,7 @@ async function updateFutureWorkoutPaces(
     .where(and(eq(workouts.planId, planId), eq(workouts.completed, false)));
   
   // Update pace for each workout based on its type
-  for (const workout of futureWorkouts) {
+  for (const workout of futureWorkouts as Workout[]) {
     let newTargetPace: number;
     
     switch (workout.type) {
@@ -379,7 +389,7 @@ async function updateFutureWorkoutPaces(
 
 async function regenerateUpcomingWorkouts(
   db: Database,
-  plan: any,
+  plan: Plan,
   newFrequency: number
 ): Promise<void> {
   // Delete future incomplete workouts
@@ -394,7 +404,7 @@ async function regenerateUpcomingWorkouts(
     userId: plan.userId,
     currentVDOT: parseFloat(plan.vdot.toString()),
     targetRace: plan.targetRace,
-    targetDate: plan.targetDate,
+    targetDate: plan.targetDate || undefined,
     weeklyFrequency: newFrequency,
     experienceLevel: 'intermediate'
   });
@@ -402,9 +412,13 @@ async function regenerateUpcomingWorkouts(
   // Insert new workouts
   if (newWorkouts.length > 0) {
     await db.query.insert(workouts).values(
-      newWorkouts.map(workout => ({
+      newWorkouts.map((workout: any) => ({
         ...workout,
-        planId: plan.id
+        planId: plan.id,
+        userId: plan.userId,
+        distance: workout.distance?.toString(),
+        completed: false,
+        description: workout.description || ''
       }))
     );
   }

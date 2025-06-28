@@ -85,7 +85,7 @@ export class EnhancedMainFlow {
       // Store welcome event in vector memory
       await this.vectorMemory.storeConversation(
         newUser[0].id,
-        'system',
+        'assistant',
         `New user joined the running coach assistant`
       );
 

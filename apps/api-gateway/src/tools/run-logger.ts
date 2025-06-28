@@ -26,7 +26,7 @@ export function createRunLoggerTool(
     name: 'log_run',
     description: 'Log a completed run with distance, time, effort, and other details',
     parameters: LogRunSchema,
-    execute: async (params) => {
+    execute: async (params: z.infer<typeof LogRunSchema> & { userId?: string }) => {
       const { distance, duration, perceivedEffort, mood, notes, aches, date } = params;
       
       // Get user ID from context (this would be passed in during execution)
@@ -68,7 +68,24 @@ export function createRunLoggerTool(
 
         // Calculate current VDOT estimate
         const recentRuns = await getRecentRuns(db, userId);
-        const vdotEstimate = VDOTCalculator.calculateFromRecentRuns(recentRuns);
+        const vdotEstimate = VDOTCalculator.calculateFromRecentRuns(
+          recentRuns
+            .map(run => ({
+              ...run,
+              id: run.id!,
+              date: run.date!,
+              userId: run.userId!,
+              distance: run.distance ? parseFloat(run.distance) : 0,
+              duration: run.duration || 0,
+              perceivedEffort: run.perceivedEffort || 0,
+              mood: run.mood || undefined,
+              aches: run.aches ? (Array.isArray(run.aches) ? run.aches : []) : undefined,
+              notes: run.notes || undefined,
+              weather: run.weather || undefined,
+              route: run.route || undefined,
+            }))
+            .filter(run => run.duration > 0 && run.distance > 0)
+        );
 
         const response = {
           success: true,
@@ -94,7 +111,7 @@ export function createRunLoggerTool(
         return {
           success: false,
           error: 'Failed to log run. Please try again.',
-          details: error.message
+          details: error instanceof Error ? error.message : 'Unknown error'
         };
       }
     }
@@ -173,7 +190,9 @@ function generateMotivationalMessage(
   return messages.length > 0 ? messages[Math.floor(Math.random() * messages.length)] : null;
 }
 
-async function getRecentRuns(db: Database, userId: string): Promise<any[]> {
+type Run = typeof runs.$inferSelect;
+
+async function getRecentRuns(db: Database, userId: string): Promise<Partial<Run>[]> {
   try {
     const recentRuns = await db.query.select()
       .from(runs)
@@ -181,11 +200,11 @@ async function getRecentRuns(db: Database, userId: string): Promise<any[]> {
       .orderBy(desc(runs.date))
       .limit(10);
     
-    return recentRuns.map(run => ({
+    return recentRuns.map((run: Run) => ({
       id: run.id,
       userId: run.userId,
       date: run.date,
-      distance: parseFloat(run.distance),
+      distance: run.distance,
       duration: run.duration,
       perceivedEffort: run.perceivedEffort,
       mood: run.mood,

@@ -13,15 +13,16 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@running-coach/shared": "workspace:*",
     "@qdrant/js-client-rest": "^1.8.0",
+    "@running-coach/shared": "workspace:*",
     "ioredis": "^5.3.2",
     "openai": "^4.77.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
-    "typescript": "^5.4.3",
+    "dotenv": "^17.0.0",
     "eslint": "^8.52.0",
+    "typescript": "^5.4.3",
     "vitest": "^1.0.0"
   }
 }

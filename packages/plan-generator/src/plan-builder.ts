@@ -475,7 +475,6 @@ export class PlanBuilder {
       targetPace,
       description: this.generateWorkoutDescription(template, distance, targetPace),
       completed: false,
-      createdAt: new Date()
     };
   }
 
