@@ -3,7 +3,6 @@ import { runs, users, progressSummaries } from '@running-coach/database';
 import { VDOTCalculator } from '@running-coach/plan-generator';
 import { eq, gte, lte, and, desc } from 'drizzle-orm';
 import { addDays, startOfWeek, endOfWeek, format } from 'date-fns';
-import { createCanvas, CanvasRenderingContext2D } from 'canvas';
 import { singleton } from 'tsyringe';
 
 export interface ProgressInsight {
@@ -94,41 +93,24 @@ export class AnalyticsService {
   }
 
   /**
-   * Generate visual progress card
+   * Generate progress summary data
    */
-  public async generateProgressCard(userId: string, stats: WeeklyStats): Promise<Buffer> {
-    const canvas = createCanvas(800, 600);
-    const ctx = canvas.getContext('2d');
-
-    // Set background
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, 800, 600);
-
-    // Title
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 32px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Weekly Progress Summary', 400, 50);
-
-    // Date range
-    ctx.font = '18px Arial';
-    ctx.fillStyle = '#cccccc';
+  public async generateProgressCard(userId: string, stats: WeeklyStats): Promise<Record<string, any>> {
+    // Create a structured JSON response instead of a canvas image
     const dateRange = this.formatDateRange(startOfWeek(new Date()));
-    ctx.fillText(dateRange, 400, 80);
-
-    // Main stats
-    this.drawStatBox(ctx, 50, 120, 180, 120, 'Total Distance', `${stats.totalDistance.toFixed(1)} mi`);
-    this.drawStatBox(ctx, 250, 120, 180, 120, 'Total Runs', stats.totalRuns.toString());
-    this.drawStatBox(ctx, 450, 120, 180, 120, 'Avg Pace', this.formatPace(stats.averagePace));
-    this.drawStatBox(ctx, 650, 120, 100, 120, 'VDOT', stats.vdotEstimate.toString());
-
-    // Effort gauge
-    this.drawEffortGauge(ctx, 100, 280, stats.averageEffort);
-
-    // Insights
-    this.drawInsights(ctx, 350, 280, stats.insights.slice(0, 3));
-
-    return canvas.toBuffer('image/png');
+    
+    return {
+      title: 'Weekly Progress Summary',
+      dateRange,
+      stats: {
+        totalDistance: `${stats.totalDistance.toFixed(1)} mi`,
+        totalRuns: stats.totalRuns,
+        averagePace: this.formatPace(stats.averagePace),
+        vdot: stats.vdotEstimate,
+        averageEffort: stats.averageEffort
+      },
+      insights: stats.insights.slice(0, 3)
+    };
   }
 
   /**
@@ -340,128 +322,6 @@ export class AnalyticsService {
     } catch (error) {
       console.error('Error storing progress summary:', error);
     }
-  }
-
-  private drawStatBox(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    label: string,
-    value: string
-  ): void {
-    // Box background
-    ctx.fillStyle = '#2a2a2a';
-    ctx.fillRect(x, y, width, height);
-    
-    // Border
-    ctx.strokeStyle = '#444444';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, width, height);
-
-    // Label
-    ctx.fillStyle = '#cccccc';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(label, x + width/2, y + 25);
-
-    // Value
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText(value, x + width/2, y + height - 25);
-  }
-
-  private drawEffortGauge(ctx: CanvasRenderingContext2D, x: number, y: number, effort: number): void {
-    const radius = 80;
-    const centerX = x + radius;
-    const centerY = y + radius;
-
-    // Background circle
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = '#2a2a2a';
-    ctx.fill();
-    ctx.strokeStyle = '#444444';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Effort arc
-    const startAngle = -Math.PI / 2;
-    const endAngle = startAngle + (effort / 10) * 2 * Math.PI;
-    
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius - 10, startAngle, endAngle);
-    ctx.lineWidth = 15;
-    
-    // Color based on effort level
-    if (effort <= 3) ctx.strokeStyle = '#4CAF50'; // Green
-    else if (effort <= 6) ctx.strokeStyle = '#FFC107'; // Yellow
-    else if (effort <= 8) ctx.strokeStyle = '#FF9800'; // Orange
-    else ctx.strokeStyle = '#F44336'; // Red
-    
-    ctx.stroke();
-
-    // Center text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 20px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(effort.toFixed(1), centerX, centerY + 5);
-    
-    ctx.font = '12px Arial';
-    ctx.fillStyle = '#cccccc';
-    ctx.fillText('Avg Effort', centerX, centerY + 25);
-  }
-
-  private drawInsights(ctx: CanvasRenderingContext2D, x: number, y: number, insights: ProgressInsight[]): void {
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 18px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText('Key Insights', x, y);
-
-    let currentY = y + 30;
-    
-    insights.forEach((insight, index) => {
-      // Icon based on type
-      let icon = '•';
-      let iconColor = '#cccccc';
-      
-      switch (insight.type) {
-        case 'improvement':
-          icon = '↗';
-          iconColor = '#4CAF50';
-          break;
-        case 'concern':
-          icon = '⚠';
-          iconColor = '#FF9800';
-          break;
-        case 'milestone':
-          icon = '🏆';
-          iconColor = '#FFD700';
-          break;
-        case 'recommendation':
-          icon = '💡';
-          iconColor = '#2196F3';
-          break;
-      }
-
-      // Icon
-      ctx.fillStyle = iconColor;
-      ctx.font = '16px Arial';
-      ctx.fillText(icon, x, currentY);
-
-      // Title
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px Arial';
-      ctx.fillText(insight.title, x + 25, currentY);
-
-      // Description
-      ctx.fillStyle = '#cccccc';
-      ctx.font = '12px Arial';
-      ctx.fillText(insight.description, x + 25, currentY + 18);
-
-      currentY += 45;
-    });
   }
 
   private formatPace(secondsPerMile: number): string {

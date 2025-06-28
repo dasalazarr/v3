@@ -20,7 +20,6 @@
     "@running-coach/plan-generator": "workspace:*",
     "@running-coach/shared": "workspace:*",
     "@running-coach/vector-memory": "workspace:*",
-    "canvas": "^2.11.2",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.31.0",
