@@ -5,6 +5,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { container } from 'tsyringe';
 import cron from 'node-cron';
+import fetch from 'node-fetch';
 
 // Import services and configurations
 import { Database } from '@running-coach/database';
@@ -17,6 +18,42 @@ import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 
 // Load environment variables
 dotenv.config();
+
+// Function to send WhatsApp messages via Meta API
+async function sendWhatsAppMessage(to: string, message: string, config: any) {
+  try {
+    const url = `https://graph.facebook.com/v17.0/${config.NUMBER_ID}/messages`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.JWT_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: to,
+        type: 'text',
+        text: {
+          body: message
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Failed to send WhatsApp message: ${response.status} - ${errorText}`);
+      return false;
+    }
+
+    const result = await response.json();
+    console.log(`✅ WhatsApp message sent successfully:`, result);
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending WhatsApp message:', error);
+    return false;
+  }
+}
 
 // Configuration interfaces
 interface Config {
@@ -193,7 +230,7 @@ async function initializeBot(config: Config, services: any) {
   });
 
   console.log('✅ WhatsApp bot initialized');
-  return bot;
+  return { bot, provider }; // Devolvemos tanto el bot como el provider
 }
 
 // Setup scheduled tasks
@@ -308,7 +345,7 @@ async function main() {
     console.log(`🌍 Environment: ${config.NODE_ENV}`);
     
     const services = await initializeServices(config);
-    const bot = await initializeBot(config, services);
+    const { bot, provider } = await initializeBot(config, services);
     
     // Setup Express app for health checks, metrics, and webhook
     const app = express();
@@ -339,7 +376,7 @@ async function main() {
     });
     
     // Configure webhook POST endpoint for receiving messages
-    app.post('/webhook', (req, res) => {
+    app.post('/webhook', async (req, res) => {
       // Always respond with 200 OK to WhatsApp as required
       res.status(200).send('OK');
       
@@ -348,10 +385,52 @@ async function main() {
         const data = req.body;
         console.log('💬 Received WhatsApp webhook:', JSON.stringify(data).substring(0, 100) + '...');
         
-        // The bot will handle the webhook data automatically
-        // BuilderBot is designed to process webhooks internally
+        // Process webhook data for WhatsApp Business API
+        if (data && data.object === 'whatsapp_business_account') {
+          console.log('💬 Processing WhatsApp webhook data...');
+          
+          // Extract messages and process them
+          if (data.entry && Array.isArray(data.entry)) {
+            for (const entry of data.entry) {
+              if (entry.changes && Array.isArray(entry.changes)) {
+                for (const change of entry.changes) {
+                  if (change.value && change.value.messages && Array.isArray(change.value.messages)) {
+                    console.log(`📱 Found ${change.value.messages.length} messages to process`);
+                    
+                    // Process each message with AI Agent
+                    for (const message of change.value.messages) {
+                      try {
+                        if (message.type === 'text' && message.text && message.text.body) {
+                          const userId = message.from;
+                          const messageText = message.text.body;
+                          const messageId = message.id;
+                          
+                          console.log(`📩 Processing message from ${userId}: ${messageText.substring(0, 50)}...`);
+                          
+                          // Process message with AI Agent
+                          const aiResponse = await services.aiAgent.processMessage({
+                            userId,
+                            message: messageText
+                          });
+                          
+                          if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
+                            // Send response back to WhatsApp
+                            await sendWhatsAppMessage(userId, aiResponse.content, config);
+                            console.log(`✅ Sent AI response to ${userId}: ${aiResponse.content.substring(0, 50)}...`);
+                          }
+                        }
+                      } catch (messageError) {
+                        console.error('❌ Error processing individual message:', messageError);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       } catch (error) {
-        console.error('Error processing webhook:', error);
+        console.error('❌ Error processing webhook:', error);
       }
     });
     
