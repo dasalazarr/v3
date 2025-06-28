@@ -1,0 +1,27 @@
+{
+  "name": "@running-coach/vector-memory",
+  "version": "1.0.0",
+  "description": "Vector memory system with Redis chat buffer and Qdrant integration",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@running-coach/shared": "workspace:*",
+    "@qdrant/js-client-rest": "^1.8.0",
+    "ioredis": "^5.3.2",
+    "openai": "^4.77.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "typescript": "^5.4.3",
+    "eslint": "^8.52.0",
+    "vitest": "^1.0.0"
+  }
+}

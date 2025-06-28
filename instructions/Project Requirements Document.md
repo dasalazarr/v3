@@ -1,137 +1,345 @@
-# Project Requirements Document (PRD) - Khipu: Asistente Financiero por WhatsApp
+# Project Requirements Document - Andes Running Coach Bot 2.0
+## Intelligent Memory-Driven WhatsApp Coach
 
-## 1. App Overview
+**Version**: 2.0  
+**Date**: December 2024  
+**Status**: Active Development  
 
-Khipu es un asistente financiero conversacional implementado como un chatbot de WhatsApp, diseñado para ayudar a los usuarios a gestionar sus finanzas personales de manera eficiente. El sistema permite registrar gastos a través de conversaciones naturales, clasificar automáticamente los gastos utilizando inteligencia artificial, y almacenar toda la información en hojas de cálculo de Google para facilitar el seguimiento y análisis.
+---
 
-El nombre "Khipu" se inspira en el sistema de registro contable utilizado por los Incas, simbolizando un enfoque innovador para la gestión financiera personal a través de la tecnología moderna.
+## 📋 **Executive Summary**
 
-## 2. User Flow
+Andes is an intelligent WhatsApp running coach bot that transforms from a stateless prototype into a memory-driven, adaptive training companion. The system leverages advanced AI orchestration, persistent memory, and scientific training methodologies to provide personalized coaching that evolves with each user interaction.
 
-1. **Primer Contacto**: El usuario contacta al bot por primera vez a través de WhatsApp y es directamente dirigido al flujo FAQ sin necesidad de registro.
+### **Vision Statement**
+"To create the most intelligent and personalized running coach that learns from every interaction, helping runners achieve their goals while preventing injuries through data-driven insights."
 
-2. **Interacción Diaria**: El usuario puede enviar mensajes en lenguaje natural describiendo sus gastos (ej. "Gasté $45 en comida ayer").
+### **Mission Statement**
+"Democratize access to expert running coaching through AI-powered WhatsApp conversations that remember, learn, and adapt to each runner's unique journey."
 
-3. **Procesamiento Automático**: El sistema detecta patrones de gasto, extrae la información relevante y clasifica el gasto en categorías predefinidas.
+---
 
-4. **Gestión de Citas**: El usuario puede programar, modificar o cancelar citas a través de la conversación, utilizando frases como "quiero agendar una cita".
+## 🎯 **Core Objectives**
 
-5. **Confirmación y Feedback**: El sistema confirma el registro del gasto o la programación de citas y ofrece opciones para corregir información si es necesario.
+### **Primary Goals**
+1. **Memory Persistence**: Transform zero-memory interactions into contextual conversations
+2. **Adaptive Training Plans**: Generate scientific VDOT-based plans that evolve with user progress
+3. **Injury Prevention**: Proactive monitoring and plan adjustments based on user feedback
+4. **High Engagement**: Achieve 45%+ D14 retention through personalized experiences
+5. **Commercial Viability**: Build scalable freemium model targeting $12M ARR by Year 3
 
-6. **Consultas y Reportes**: El usuario puede solicitar información sobre sus gastos (ej. "¿Cuánto gasté este mes en comida?") y recibir resúmenes personalizados.
+### **Success Metrics**
+- **User Retention**: 45% D14, 25% D30
+- **Personalization**: 70%+ responses mention user-specific data
+- **Intent Recognition**: F1 score ≥ 0.9 for action classification
+- **Response Quality**: <2s average response time
+- **Plan Adherence**: 60%+ users complete weekly training targets
 
-## 3. Tech Stack & APIs
+---
 
-### Frontend
-- **WhatsApp Business API**: Como interfaz principal para la interacción con el usuario
+## 🏗️ **System Architecture**
 
-### Backend
-- **Node.js & TypeScript**: Para la lógica del servidor
-- **BuilderBot**: Framework para la gestión de flujos conversacionales
-- **Docker**: Para containerización y despliegue
+### **High-Level Architecture**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   WhatsApp      │───▶│   API Gateway   │───▶│ LLM Orchestrator│
+│   Business API  │    │ (Express+tRPC)  │    │   (DeepSeek)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │                       │
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │ Vector Memory   │    │ Plan Generator  │
+                       │   (Qdrant)      │    │ (VDOT-based)    │
+                       └─────────────────┘    └─────────────────┘
+                                │
+                       ┌─────────────────┐
+                       │   PostgreSQL    │
+                       │ (User Profiles, │
+                       │ Runs, Plans)    │
+                       └─────────────────┘
+```
 
-### APIs Externas
-- **Meta WhatsApp Business API**: Para la mensajería
-- **DeepSeek API**: Para procesamiento de lenguaje natural y clasificación
-- **Google Sheets API**: Para almacenamiento y gestión de datos
-- **Google Calendar API**: Para gestión de citas
+### **Memory System Architecture**
+1. **Short-term Memory** (Redis): Last 20 messages, 24h TTL
+2. **Semantic Memory** (Qdrant): Vector embeddings of conversations and runs
+3. **Structured Memory** (PostgreSQL): User profiles, training data, analytics
 
-### Base de Datos
-- **Google Sheets**: Como sistema de almacenamiento principal
+---
 
-## 4. Core Features
+## 🚀 **Functional Requirements**
 
-1. **Procesamiento de Lenguaje Natural**: Capacidad para comprender e interpretar mensajes en lenguaje natural del usuario.
+### **FR1: Intelligent Onboarding**
+- **Requirement**: Interactive button-driven onboarding that captures comprehensive user profile
+- **Components**: Age, goal race, weekly frequency, injury history, motivation, fitness level
+- **Acceptance Criteria**: 
+  - 90%+ onboarding completion rate
+  - Data validation with error handling
+  - Bilingual support (ES/EN)
 
-2. **Detección Inteligente de Gastos**: Capacidad para identificar información financiera en lenguaje natural.
+### **FR2: Memory-Driven Conversations**
+- **Requirement**: AI that remembers and references previous interactions
+- **Components**: Chat buffer, vector search, context injection
+- **Acceptance Criteria**:
+  - 70%+ responses include personal references
+  - Conversation continuity across sessions
+  - Context-aware follow-up questions
 
-3. **Categorización Automática**: Clasificación de gastos utilizando IA basada en la descripción.
+### **FR3: Adaptive Training Plans**
+- **Requirement**: VDOT-based 14-day training blocks that adapt to progress
+- **Components**: Fitness assessment, pace calculation, workout generation
+- **Acceptance Criteria**:
+  - Plans adjust based on completed runs
+  - Injury modifications automatic
+  - Progressive overload principles applied
 
-4. **Seguimiento de Gastos**: Creación automática de hojas mensuales con formato adecuado.
+### **FR4: Run Logging and Analysis**
+- **Requirement**: Natural language run logging with automatic data extraction
+- **Components**: NLP processing, structured data storage, trend analysis
+- **Acceptance Criteria**:
+  - 95%+ accuracy in data extraction
+  - Support for various input formats
+  - Automatic pace/effort validation
 
-5. **Gestión de Citas**: Sistema completo para programar, modificar y cancelar citas con integración a Google Calendar.
+### **FR5: Injury Prevention System**
+- **Requirement**: Proactive injury monitoring and plan modifications
+- **Components**: Risk assessment, load monitoring, recovery recommendations
+- **Acceptance Criteria**:
+  - Real-time plan adjustments for reported pain
+  - Load progression warnings
+  - Recovery protocol suggestions
 
-6. **Consultas en Lenguaje Natural**: Capacidad para responder a preguntas sobre gastos históricos.
+### **FR6: Progress Tracking and Analytics**
+- **Requirement**: Automated bi-weekly summaries with visual progress cards
+- **Components**: Metrics calculation, PNG card generation, trend analysis
+- **Acceptance Criteria**:
+  - Bi-weekly automated summaries
+  - Visual progress cards with key metrics
+  - Monthly trend analysis and recommendations
 
-7. **Reportes Periódicos**: Generación automática de resúmenes (diarios, semanales, mensuales).
+---
 
-8. **Alertas Personalizadas**: Notificaciones sobre gastos que exceden límites predefinidos.
+## 🔧 **Technical Requirements**
 
-## 5. In-Scope vs. Out-of-Scope
+### **TR1: Performance Standards**
+- **Response Time**: <2s for 95% of interactions
+- **Availability**: 99.5% uptime (allowing 3.65h/month downtime)
+- **Concurrency**: Support 1000+ simultaneous conversations
+- **Scalability**: Horizontal scaling capability
 
-### In-Scope
-- Registro de gastos mediante mensajes de texto
-- Categorización automática de gastos
-- Consultas sobre gastos históricos
-- Reportes básicos por categoría y período
-- Integración con Google Sheets para almacenamiento
-- Recordatorios para registro de gastos
-- Programación y gestión de citas a través de WhatsApp
-- Integración con Google Calendar para gestión de citas
+### **TR2: Data Management**
+- **Database**: PostgreSQL 15+ with ACID compliance
+- **Cache**: Redis 7+ for session management
+- **Vector Store**: Qdrant 1.8+ for semantic search
+- **Backup**: Daily automated backups with 30-day retention
 
-### Out-of-Scope
-- Integración directa con cuentas bancarias
-- Procesamiento de pagos o transferencias
-- Reconocimiento de imágenes de recibos
-- Presupuestos colaborativos (múltiples usuarios)
-- Integración con plataformas fiscales
-- Aplicación móvil dedicada (se utiliza exclusivamente WhatsApp)
+### **TR3: AI and ML Requirements**
+- **LLM**: DeepSeek-LLM-33B with tool-calling support
+- **Embeddings**: deepseek-embedding-7B for vector generation
+- **Context Window**: Support for 8K+ token conversations
+- **Tool Integration**: Structured function calling for actions
 
-## 6. Non-Functional Requirements
+### **TR4: Integration Requirements**
+- **WhatsApp**: Business API with webhook support
+- **Payment**: Stripe integration for subscription management
+- **Monitoring**: OpenTelemetry for observability
+- **CDN**: Image hosting for progress cards
 
-### Rendimiento
-- Tiempo de respuesta menor a 3 segundos para consultas estándar
-- Capacidad para manejar hasta 1,000 usuarios concurrentes
-- Disponibilidad del 99.5% en horario de operación (24/7)
+---
 
-### Seguridad
-- Protección de datos personales según normativas GDPR
-- No almacenar información financiera sensible (números de tarjetas, etc.)
-- Autenticación segura para acceso a las hojas de cálculo
-- Cifrado en tránsito para todas las comunicaciones
+## 📱 **User Experience Requirements**
 
-### Escalabilidad
-- Diseño modular que permite añadir nuevas funcionalidades
-- Capacidad para escalar horizontalmente con aumento de usuarios
+### **UX1: Conversation Flow**
+- **Natural Language**: Support casual conversational input
+- **Multilingual**: English and Spanish with auto-detection
+- **Context Awareness**: References to previous conversations
+- **Error Handling**: Graceful degradation with helpful messages
 
-### Usabilidad
-- Interacción conversacional intuitiva sin necesidad de comandos específicos
-- Feedback claro sobre acciones completadas y errores
-- Soporte para corrección de información ingresada erróneamente
+### **UX2: Interactive Elements**
+- **Quick Replies**: Buttons for common actions
+- **Progress Visualization**: Charts and progress cards
+- **Rich Media**: Images, links, and formatted text
+- **Accessibility**: Support for screen readers
 
-## 7. Constraints & Assumptions
+### **UX3: Personalization**
+- **Adaptive Responses**: Tone and complexity based on user level
+- **Goal Alignment**: All advice aligned with user's stated goals
+- **Progress Recognition**: Celebration of achievements
+- **Motivation**: Personalized encouragement based on patterns
 
-### Constraints
-- Limitaciones de la API de WhatsApp (tipos de mensajes, frecuencia)
-- Cuotas y límites de las APIs de DeepSeek y Google Sheets
-- Dependencia de servicios externos (disponibilidad, cambios en APIs)
-- Necesidad de conexión a internet por parte del usuario
+---
 
-### Assumptions
-- Los usuarios tienen acceso a WhatsApp
-- Los patrones de gasto pueden ser detectados en lenguaje natural
-- Los usuarios prefieren interacción por chat sobre interfaces gráficas
-- La mayoría de los gastos pueden ser categorizados automáticamente
-- Los usuarios proporcionarán feedback para mejorar la categorización
-- Las fechas y horas para citas pueden ser interpretadas correctamente desde lenguaje natural
-- Los usuarios prefieren gestionar sus citas a través de WhatsApp sin necesidad de otros sistemas
+## 🔐 **Security and Compliance**
 
-## 8. Known Issues & Potential Pitfalls
+### **Data Protection**
+- **Encryption**: AES-256 for data at rest, TLS 1.3 for transit
+- **Access Control**: Role-based permissions with audit logging
+- **Privacy**: GDPR/CCPA compliance with data portability
+- **Anonymization**: PII anonymization for analytics
 
-### Issues
-- Posible degradación del rendimiento con aumento significativo de usuarios
-- Limitaciones en el procesamiento de lenguaje natural en casos ambiguos
-- Riesgo de falsos positivos en la detección de patrones de gasto
+### **API Security**
+- **Authentication**: JWT tokens with 24h expiration
+- **Rate Limiting**: 100 requests/minute per user
+- **Input Validation**: Comprehensive sanitization and validation
+- **CORS**: Strict origin validation
 
-### Pitfalls
-- **Dependencia de Servicios Externos**: Cambios en las políticas de WhatsApp o Google podrían afectar el funcionamiento.
-- **Escalabilidad de Google Sheets**: Para volúmenes muy grandes de datos, podrían surgir limitaciones.
-- **Seguridad de Datos**: Aunque no se almacenan datos financieros sensibles, la información de gastos podría ser valiosa para atacantes.
-- **Expectativas de Usuario**: Los usuarios podrían esperar funcionalidades avanzadas como integración bancaria directa.
-- **Mantenimiento de Categorías**: La evolución de patrones de gasto podría requerir actualizaciones frecuentes en el sistema de categorización.
+---
 
-### Mitigación
-- Diseño modular para facilitar adaptación a cambios en APIs externas
-- Implementación de sistema de caché para reducir dependencia de servicios externos
-- Monitoreo constante de uso de recursos y patrones de interacción
-- Feedback regular de usuarios para mejorar precisión de clasificación
+## 📊 **Business Requirements**
+
+### **BR1: Freemium Model**
+```
+FREE TIER:
+- 5 runs/month logging
+- Basic AI responses
+- 2 citas/month scheduling
+
+PREMIUM TIER ($19.99/month):
+- Unlimited run logging
+- Advanced AI with memory
+- Personalized training plans
+- Progress analytics
+- Injury prevention
+
+PRO TIER ($49.99/month):
+- Everything Premium +
+- Video coaching sessions
+- Nutrition guidance
+- Community access
+```
+
+### **BR2: Growth Targets**
+- **Year 1**: 1,000 active users, 100 paying ($20K MRR)
+- **Year 2**: 10,000 active users, 1,000 paying ($200K MRR)
+- **Year 3**: 50,000 active users, 10,000 paying ($2M MRR)
+
+---
+
+## 🛣️ **Development Roadmap**
+
+### **Phase 1: Foundation (Weeks 1-4)**
+- [ ] Mono-repo setup with pnpm workspaces
+- [ ] PostgreSQL schema implementation
+- [ ] Basic AI orchestration with DeepSeek
+- [ ] WhatsApp webhook integration
+- [ ] User onboarding flow
+
+### **Phase 2: Intelligence (Weeks 5-8)**
+- [ ] Vector memory implementation
+- [ ] Context-aware conversations
+- [ ] Training plan generation
+- [ ] Run logging with NLP
+- [ ] Basic analytics
+
+### **Phase 3: Advanced Features (Weeks 9-12)**
+- [ ] Automated progress summaries
+- [ ] Injury prevention system
+- [ ] Payment integration
+- [ ] Advanced analytics
+- [ ] Performance optimization
+
+### **Phase 4: Production (Weeks 13-16)**
+- [ ] Load testing and optimization
+- [ ] Monitoring and alerting
+- [ ] Security audit
+- [ ] Production deployment
+- [ ] User acquisition campaigns
+
+---
+
+## 🧪 **Testing Strategy**
+
+### **Testing Requirements**
+- **Unit Tests**: 80%+ code coverage
+- **Integration Tests**: API endpoint validation
+- **E2E Tests**: Complete user journey testing
+- **Load Tests**: 1000+ concurrent users
+- **Security Tests**: Penetration testing
+
+### **Quality Gates**
+- All tests passing in CI/CD
+- Code review approval required
+- Performance benchmarks met
+- Security scan clean
+
+---
+
+## 🚀 **Deployment and Infrastructure**
+
+### **Infrastructure Requirements**
+- **Runtime**: Node.js 18+ on Railway/AWS
+- **Database**: Neon PostgreSQL or AWS RDS
+- **Cache**: Redis Cloud or AWS ElastiCache
+- **Vector DB**: Qdrant Cloud
+- **CDN**: AWS CloudFront for images
+
+### **Deployment Strategy**
+- **Blue-Green Deployment**: Zero-downtime deployments
+- **Feature Flags**: Gradual feature rollouts
+- **Monitoring**: Real-time performance monitoring
+- **Rollback**: Automated rollback on failures
+
+---
+
+## 📈 **Success Criteria and KPIs**
+
+### **Technical KPIs**
+- **Uptime**: 99.5%+
+- **Response Time**: <2s p95
+- **Error Rate**: <0.1%
+- **Memory Usage**: <80% of allocated
+
+### **Business KPIs**
+- **User Acquisition**: 100 new users/week
+- **Retention**: 45% D14, 25% D30
+- **Conversion**: 8% free-to-paid
+- **Revenue**: $200K ARR by end of Year 1
+
+### **User Experience KPIs**
+- **Personalization**: 70% responses with personal data
+- **Intent Recognition**: F1 ≥ 0.9
+- **User Satisfaction**: NPS ≥ 50
+- **Support Tickets**: <5% users requiring support
+
+---
+
+## 🔄 **Risk Assessment and Mitigation**
+
+### **Technical Risks**
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| DeepSeek API Downtime | Medium | High | Multiple LLM provider fallback |
+| Database Performance | Low | High | Read replicas and caching |
+| Vector Search Latency | Medium | Medium | Optimized indexing and batching |
+
+### **Business Risks**
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| User Acquisition Cost | High | High | Organic growth via word-of-mouth |
+| Competitor Launch | Medium | Medium | Feature differentiation and community |
+| WhatsApp Policy Change | Low | High | Multi-platform strategy |
+
+---
+
+## 📝 **Acceptance Criteria**
+
+### **Definition of Done**
+- [ ] All functional requirements implemented
+- [ ] 80%+ test coverage achieved
+- [ ] Performance benchmarks met
+- [ ] Security review completed
+- [ ] Documentation updated
+- [ ] Stakeholder approval received
+
+### **Launch Criteria**
+- [ ] 100 beta users successfully onboarded
+- [ ] <0.1% error rate in production
+- [ ] Monitoring and alerting operational
+- [ ] Support documentation complete
+- [ ] Payment system tested
+- [ ] Legal compliance verified
+
+---
+
+**Document Owner**: Development Team  
+**Stakeholders**: Product Owner, CTO, Business Development  
+**Next Review**: Weekly during development, monthly post-launch  
+**Version Control**: All changes tracked in git with approval process

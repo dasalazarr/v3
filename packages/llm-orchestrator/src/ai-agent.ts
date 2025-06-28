@@ -1,0 +1,368 @@
+import OpenAI from 'openai';
+import { franc } from 'franc';
+import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
+import { UserProfile, ApiResponse } from '@running-coach/shared';
+import { ToolRegistry } from './tool-registry.js';
+
+export interface OpenAIConfig {
+  apiKey: string;
+  model?: string;
+  baseURL?: string;
+}
+
+export interface AgentResponse {
+  content: string;
+  toolCalls?: Array<{
+    name: string;
+    parameters: any;
+    result: any;
+  }>;
+  language: 'en' | 'es';
+  confidence: number;
+}
+
+export interface ProcessMessageRequest {
+  userId: string;
+  message: string;
+  userProfile?: UserProfile;
+  contextOverride?: Array<{role: string, content: string}>;
+}
+
+export class AIAgent {
+  private openai: OpenAI;
+  private chatBuffer: ChatBuffer;
+  private vectorMemory: VectorMemory;
+  private toolRegistry: ToolRegistry;
+  private model: string;
+
+  constructor(
+    openaiConfig: OpenAIConfig,
+    chatBuffer: ChatBuffer,
+    vectorMemory: VectorMemory,
+    toolRegistry: ToolRegistry
+  ) {
+    this.openai = new OpenAI({
+      apiKey: openaiConfig.apiKey,
+      baseURL: openaiConfig.baseURL,
+    });
+    
+    this.chatBuffer = chatBuffer;
+    this.vectorMemory = vectorMemory;
+    this.toolRegistry = toolRegistry;
+    this.model = openaiConfig.model || 'gpt-4';
+  }
+
+  /**
+   * Process a user message with full context and tool calling
+   */
+  public async processMessage(request: ProcessMessageRequest): Promise<AgentResponse> {
+    const { userId, message, userProfile, contextOverride } = request;
+
+    try {
+      // Store user message in chat buffer and vector memory
+      await this.chatBuffer.addMessage(userId, 'user', message);
+      await this.vectorMemory.storeConversation(userId, 'user', message);
+
+      // Detect language
+      const language = this.detectLanguage(message);
+
+      // Get conversation context
+      const conversationHistory = contextOverride || 
+        await this.chatBuffer.getConversationContext(userId);
+
+      // Get relevant vector memory context
+      const memoryContext = await this.vectorMemory.retrieveContext(userId, message);
+
+      // Build system prompt
+      const systemPrompt = this.buildSystemPrompt(userProfile, memoryContext, language);
+
+      // Prepare messages for OpenAI
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        { role: 'system', content: systemPrompt },
+        ...conversationHistory.map(msg => ({
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content
+        })),
+        { role: 'user', content: message }
+      ];
+
+      // Get available tools
+      const tools = this.toolRegistry.getOpenAITools();
+
+      // Call OpenAI with function calling
+      const completion = await this.openai.chat.completions.create({
+        model: this.model,
+        messages,
+        tools: tools.length > 0 ? tools : undefined,
+        tool_choice: tools.length > 0 ? 'auto' : undefined,
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+
+      const choice = completion.choices[0];
+      let content = choice.message.content || '';
+      const toolCalls: any[] = [];
+
+      // Execute tool calls if any
+      if (choice.message.tool_calls) {
+        for (const toolCall of choice.message.tool_calls) {
+          try {
+            const result = await this.toolRegistry.execute({
+              name: toolCall.function.name,
+              parameters: JSON.parse(toolCall.function.arguments),
+            });
+
+            toolCalls.push({
+              name: toolCall.function.name,
+              parameters: JSON.parse(toolCall.function.arguments),
+              result,
+            });
+
+            // Add tool result to context for follow-up response
+            messages.push({
+              role: 'assistant',
+              content: null,
+              tool_calls: [toolCall],
+            });
+            messages.push({
+              role: 'tool',
+              content: JSON.stringify(result),
+              tool_call_id: toolCall.id,
+            });
+          } catch (error) {
+            console.error(`Tool execution failed: ${toolCall.function.name}`, error);
+            toolCalls.push({
+              name: toolCall.function.name,
+              parameters: JSON.parse(toolCall.function.arguments),
+              result: { error: error.message },
+            });
+          }
+        }
+
+        // Get final response after tool execution
+        if (toolCalls.length > 0) {
+          const followupCompletion = await this.openai.chat.completions.create({
+            model: this.model,
+            messages,
+            temperature: 0.7,
+            max_tokens: 1000,
+          });
+          content = followupCompletion.choices[0].message.content || content;
+        }
+      }
+
+      // Store assistant response
+      await this.chatBuffer.addMessage(userId, 'assistant', content);
+      await this.vectorMemory.storeConversation(userId, 'assistant', content);
+
+      return {
+        content,
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        language,
+        confidence: this.calculateConfidence(completion),
+      };
+
+    } catch (error) {
+      console.error(`❌ Error processing message for ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate a standalone response without storing in memory
+   */
+  public async generateResponse(
+    prompt: string,
+    context?: Array<{role: string, content: string}>
+  ): Promise<string> {
+    try {
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        ...(context || []).map(msg => ({
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content
+        })),
+        { role: 'user', content: prompt }
+      ];
+
+      const completion = await this.openai.chat.completions.create({
+        model: this.model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+
+      return completion.choices[0].message.content || '';
+    } catch (error) {
+      console.error('❌ Error generating response:', error);
+      throw error;
+    }
+  }
+
+  private detectLanguage(text: string): 'en' | 'es' {
+    const detected = franc(text);
+    return detected === 'spa' ? 'es' : 'en';
+  }
+
+  private buildSystemPrompt(
+    userProfile?: UserProfile,
+    memoryContext?: any,
+    language: 'en' | 'es' = 'en'
+  ): string {
+    const basePrompt = language === 'es' 
+      ? this.getSpanishSystemPrompt()
+      : this.getEnglishSystemPrompt();
+
+    let enhancedPrompt = basePrompt;
+
+    // Add user profile context
+    if (userProfile) {
+      const profileContext = this.buildProfileContext(userProfile, language);
+      enhancedPrompt += `\n\n## PERFIL DEL USUARIO:\n${profileContext}`;
+    }
+
+    // Add memory context
+    if (memoryContext?.summary) {
+      enhancedPrompt += `\n\n## CONTEXTO RELEVANTE:\n${memoryContext.summary}`;
+    }
+
+    return enhancedPrompt;
+  }
+
+  private getEnglishSystemPrompt(): string {
+    return `You are an expert AI running coach specialized in personalized training plans and motivation. Your expertise includes:
+
+## CORE COMPETENCIES
+- Creating scientific training plans using Jack Daniels VDOT methodology
+- Analyzing running data and providing actionable insights
+- Motivating runners and adapting to their psychological state
+- Injury prevention and recovery guidance
+- Nutrition and hydration advice for runners
+
+## PERSONALITY
+- Encouraging and motivational, but realistic
+- Uses running community language and terminology
+- Celebrates achievements, no matter how small
+- Provides specific, actionable advice
+- Empathetic to struggles and setbacks
+
+## RESPONSE GUIDELINES
+- Always personalize responses using user's history and goals
+- Include specific training paces and distances when relevant
+- Suggest concrete next steps
+- Ask follow-up questions to gather more context
+- Use motivational language while being informative
+
+## AVAILABLE TOOLS
+You have access to tools for:
+- Logging runs and workouts
+- Updating training plans
+- Generating VDOT-based pace recommendations
+- Scheduling workouts and rest days
+- Tracking progress and generating insights
+
+Always use tools when the user provides data or requests specific actions.`;
+  }
+
+  private getSpanishSystemPrompt(): string {
+    return `Eres un entrenador experto de running especializado en planes de entrenamiento personalizados y motivación. Tu experiencia incluye:
+
+## COMPETENCIAS PRINCIPALES
+- Crear planes de entrenamiento científicos usando la metodología VDOT de Jack Daniels
+- Analizar datos de running y proporcionar insights accionables
+- Motivar corredores y adaptarte a su estado psicológico
+- Prevención de lesiones y guía de recuperación
+- Consejos de nutrición e hidratación para corredores
+
+## PERSONALIDAD
+- Alentador y motivacional, pero realista
+- Usa el lenguaje y terminología de la comunidad runner
+- Celebra logros, sin importar cuán pequeños sean
+- Proporciona consejos específicos y accionables
+- Empático con las luchas y contratiempos
+
+## GUÍAS DE RESPUESTA
+- Siempre personaliza las respuestas usando el historial y objetivos del usuario
+- Incluye ritmos y distancias específicas cuando sea relevante
+- Sugiere pasos concretos a seguir
+- Haz preguntas de seguimiento para obtener más contexto
+- Usa lenguaje motivacional mientras eres informativo
+
+## HERRAMIENTAS DISPONIBLES
+Tienes acceso a herramientas para:
+- Registrar carreras y entrenamientos
+- Actualizar planes de entrenamiento
+- Generar recomendaciones de ritmo basadas en VDOT
+- Programar entrenamientos y días de descanso
+- Seguir progreso y generar insights
+
+Siempre usa las herramientas cuando el usuario proporcione datos o solicite acciones específicas.`;
+  }
+
+  private buildProfileContext(userProfile: UserProfile, language: 'en' | 'es'): string {
+    const context: string[] = [];
+
+    if (userProfile.age) {
+      context.push(language === 'es' ? `Edad: ${userProfile.age} años` : `Age: ${userProfile.age} years`);
+    }
+
+    if (userProfile.goalRace) {
+      const raceNames = {
+        '5k': '5K',
+        '10k': '10K',
+        'half_marathon': language === 'es' ? 'Media Maratón' : 'Half Marathon',
+        'marathon': language === 'es' ? 'Maratón' : 'Marathon',
+        'ultra': 'Ultra'
+      };
+      context.push(language === 'es' 
+        ? `Objetivo de carrera: ${raceNames[userProfile.goalRace]}`
+        : `Goal race: ${raceNames[userProfile.goalRace]}`
+      );
+    }
+
+    if (userProfile.experienceLevel) {
+      const levels = {
+        'beginner': language === 'es' ? 'Principiante' : 'Beginner',
+        'intermediate': language === 'es' ? 'Intermedio' : 'Intermediate',
+        'advanced': language === 'es' ? 'Avanzado' : 'Advanced'
+      };
+      context.push(language === 'es'
+        ? `Nivel: ${levels[userProfile.experienceLevel]}`
+        : `Level: ${levels[userProfile.experienceLevel]}`
+      );
+    }
+
+    if (userProfile.weeklyMileage) {
+      context.push(language === 'es'
+        ? `Kilometraje semanal: ${userProfile.weeklyMileage} millas`
+        : `Weekly mileage: ${userProfile.weeklyMileage} miles`
+      );
+    }
+
+    if (userProfile.injuryHistory && userProfile.injuryHistory.length > 0) {
+      const activeInjuries = userProfile.injuryHistory.filter(injury => !injury.recovered);
+      if (activeInjuries.length > 0) {
+        context.push(language === 'es'
+          ? `Lesiones activas: ${activeInjuries.map(i => i.type).join(', ')}`
+          : `Active injuries: ${activeInjuries.map(i => i.type).join(', ')}`
+        );
+      }
+    }
+
+    return context.join('\n');
+  }
+
+  private calculateConfidence(completion: OpenAI.Chat.Completions.ChatCompletion): number {
+    // Simple confidence calculation based on response characteristics
+    // In production, this could be more sophisticated
+    const choice = completion.choices[0];
+    const hasToolCalls = choice.message.tool_calls && choice.message.tool_calls.length > 0;
+    const contentLength = choice.message.content?.length || 0;
+    
+    let confidence = 0.7; // Base confidence
+    
+    if (hasToolCalls) confidence += 0.2; // Tool usage indicates higher confidence
+    if (contentLength > 100) confidence += 0.1; // Longer responses tend to be more confident
+    
+    return Math.min(confidence, 1.0);
+  }
+}

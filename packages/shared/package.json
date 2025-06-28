@@ -1,0 +1,22 @@
+{
+  "name": "@running-coach/shared",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for running coach",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.22.4",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.3",
+    "eslint": "^8.52.0"
+  }
+}

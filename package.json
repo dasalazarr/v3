@@ -1,42 +1,29 @@
 {
-  "name": "base-bailey-json",
+  "name": "running-coach-workspace",
   "version": "1.0.0",
-  "description": "",
-  "main": "dist/app.js",
+  "description": "AI-powered running coach with memory and adaptive training plans",
+  "private": true,
   "type": "module",
   "scripts": {
-    "start": "node ./dist/app.js",
-    "lint": "eslint . --no-ignore",
-    "dev": "npm run lint && nodemon ./src/app.ts",
-    "build": "npx rollup -c"
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter api-gateway dev",
+    "start": "pnpm --filter api-gateway start",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "migrate": "pnpm --filter database migrate",
+    "type-check": "pnpm -r type-check"
   },
-  "keywords": [],
-  "dependencies": {
-    "@builderbot/bot": "1.2.2",
-    "@builderbot/provider-meta": "1.2.2",
-    "chrono-node": "^2.7.9",
-    "date-fns": "^4.1.0",
-    "dotenv": "^16.4.7",
-    "franc": "^6.2.0",
-    "google-auth-library": "^9.4.1",
-    "googleapis": "^144.0.0",
-    "openai": "^4.77.0",
-    "reflect-metadata": "^0.2.1",
-    "tslib": "^2.8.1",
-    "tsyringe": "^4.8.0"
-  },
+  "keywords": ["running", "ai", "coaching", "whatsapp", "fitness"],
   "devDependencies": {
     "@types/node": "^20.11.30",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.4.0",
     "eslint": "^8.52.0",
-    "eslint-plugin-builderbot": "latest",
     "nodemon": "^3.1.0",
-    "rollup": "^4.10.0",
-    "rollup-plugin-typescript2": "^0.36.0",
     "tsx": "^4.7.1",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.3",
+    "vitest": "^1.0.0"
   },
-  "author": "",
+  "author": "Running Coach Team",
   "license": "ISC"
 }
