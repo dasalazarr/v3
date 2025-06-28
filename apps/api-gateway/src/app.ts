@@ -310,9 +310,50 @@ async function main() {
     const services = await initializeServices(config);
     const bot = await initializeBot(config, services);
     
-    // Setup Express app for health checks and metrics
+    // Setup Express app for health checks, metrics, and webhook
     const app = express();
     app.use(express.json());
+    
+    // Configure WhatsApp webhook endpoint
+    app.get('/webhook', (req, res) => {
+      const mode = req.query['hub.mode'] as string;
+      const token = req.query['hub.verify_token'] as string;
+      const challenge = req.query['hub.challenge'] as string;
+      
+      // Check if a token and mode is in the query string of the request
+      if (mode && token) {
+        // Check the mode and token sent is correct
+        if (mode === 'subscribe' && token === config.VERIFY_TOKEN) {
+          // Respond with the challenge token from the request
+          console.log('✅ WEBHOOK_VERIFIED');
+          res.status(200).send(challenge);
+        } else {
+          // Respond with '403 Forbidden' if verify tokens do not match
+          console.log('❌ WEBHOOK_VERIFICATION_FAILED: Token mismatch');
+          res.sendStatus(403);
+        }
+      } else {
+        console.log('❌ WEBHOOK_VERIFICATION_FAILED: Missing parameters');
+        res.sendStatus(400);
+      }
+    });
+    
+    // Configure webhook POST endpoint for receiving messages
+    app.post('/webhook', (req, res) => {
+      // Always respond with 200 OK to WhatsApp as required
+      res.status(200).send('OK');
+      
+      try {
+        // Process the incoming webhook data
+        const data = req.body;
+        console.log('💬 Received WhatsApp webhook:', JSON.stringify(data).substring(0, 100) + '...');
+        
+        // The bot will handle the webhook data automatically
+        // BuilderBot is designed to process webhooks internally
+      } catch (error) {
+        console.error('Error processing webhook:', error);
+      }
+    });
     
     setupHealthEndpoints(app, services);
     setupScheduledTasks(services);
