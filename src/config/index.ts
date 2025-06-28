@@ -15,7 +15,7 @@ const getApiKey = () => {
 
 // Validate and get base URL
 const getBaseUrl = () => {
-  const url = process.env.baseURL || "https://api.deepseek.com";
+  const url = process.env.baseURL || "https://api.deepseek.com/v1";
   console.log("🔗 Using API URL:", url);
   return url;
 };

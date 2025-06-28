@@ -52,7 +52,7 @@ export QDRANT_COLLECTION="running_coach_memories"
 ### DeepSeek API
 ```bash
 export DEEPSEEK_API_KEY="your-deepseek-key"
-export DEEPSEEK_BASE_URL="https://api.deepseek.com"
+export DEEPSEEK_BASE_URL="https://api.deepseek.com/v1"
 export DEEPSEEK_MODEL="deepseek-chat"
 ```
 
