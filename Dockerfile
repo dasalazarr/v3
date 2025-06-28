@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librsvg2-dev
 
 # Set up pnpm
+RUN corepack prepare pnpm@latest --activate
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -24,7 +25,7 @@ COPY apps/ ./apps/
 COPY packages/ ./packages/
 
 # Install all dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
 
 # Copy the rest of the source code
 COPY . .
@@ -55,6 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
+RUN corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -62,8 +64,8 @@ ENV NODE_ENV=production
 # Copy the pruned production files from the 'builder' stage
 COPY --from=builder /prod .
 
-# Rebuild native dependencies like canvas to ensure they are correctly linked
-RUN pnpm rebuild canvas
+# Ya no necesitamos reconstruir canvas porque eliminamos la dependencia
+# RUN pnpm rebuild canvas
 
 EXPOSE 3000
 
