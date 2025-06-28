@@ -228,6 +228,16 @@ function setupScheduledTasks(services: any) {
 
 // Setup health endpoints
 function setupHealthEndpoints(app: express.Application, services: any) {
+  // Root endpoint for basic verification
+  app.get('/', (req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      message: 'Running Coach API Gateway is running',
+      documentation: '/health - Health check endpoint',
+      version: '1.0.0'
+    });
+  });
+
   app.get('/health', async (req, res) => {
     try {
       const dbHealth = await services.database.healthCheck();
