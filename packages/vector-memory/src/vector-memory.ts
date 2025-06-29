@@ -28,6 +28,7 @@ export class VectorMemory {
   private qdrant: QdrantClient;
   private openai: OpenAI;
   private collectionName: string;
+  private embeddingModel: string;
 
   private constructor(qdrantConfig: QdrantConfig, openaiConfig: OpenAIConfig) {
     this.qdrant = new QdrantClient({
@@ -39,6 +40,8 @@ export class VectorMemory {
       apiKey: openaiConfig.apiKey,
       baseURL: openaiConfig.baseURL,
     });
+
+    this.embeddingModel = openaiConfig.model || 'text-embedding-ada-002';
 
     this.collectionName = qdrantConfig.collectionName;
   }
@@ -264,7 +267,7 @@ export class VectorMemory {
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
       const response = await this.openai.embeddings.create({
-        model: 'text-embedding-ada-002',
+        model: this.embeddingModel,
         input: text,
       });
       return response.data[0].embedding;
