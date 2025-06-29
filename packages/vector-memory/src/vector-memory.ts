@@ -14,6 +14,12 @@ export interface OpenAIConfig {
   baseURL?: string;
 }
 
+export interface EmbeddingsConfig {
+  apiKey: string;
+  model?: string;
+  baseURL?: string;
+}
+
 export interface MemoryEntry {
   id: string;
   userId: string;
@@ -27,9 +33,11 @@ export class VectorMemory {
   private static instance: VectorMemory;
   private qdrant: QdrantClient;
   private openai: OpenAI;
+  private embeddingsClient: OpenAI;
   private collectionName: string;
+  private embeddingsModel: string;
 
-  private constructor(qdrantConfig: QdrantConfig, openaiConfig: OpenAIConfig) {
+  private constructor(qdrantConfig: QdrantConfig, openaiConfig: OpenAIConfig, embeddingsConfig?: EmbeddingsConfig) {
     this.qdrant = new QdrantClient({
       url: qdrantConfig.url,
       apiKey: qdrantConfig.apiKey,
@@ -39,16 +47,28 @@ export class VectorMemory {
       apiKey: openaiConfig.apiKey,
       baseURL: openaiConfig.baseURL,
     });
+    
+    // Use separate embeddings client if provided, otherwise use the same client
+    if (embeddingsConfig) {
+      this.embeddingsClient = new OpenAI({
+        apiKey: embeddingsConfig.apiKey,
+        baseURL: embeddingsConfig.baseURL,
+      });
+      this.embeddingsModel = embeddingsConfig.model || 'text-embedding-ada-002';
+    } else {
+      this.embeddingsClient = this.openai;
+      this.embeddingsModel = 'text-embedding-ada-002';
+    }
 
     this.collectionName = qdrantConfig.collectionName;
   }
 
-  public static getInstance(qdrantConfig?: QdrantConfig, openaiConfig?: OpenAIConfig): VectorMemory {
+  public static getInstance(qdrantConfig?: QdrantConfig, openaiConfig?: OpenAIConfig, embeddingsConfig?: EmbeddingsConfig): VectorMemory {
     if (!VectorMemory.instance) {
       if (!qdrantConfig || !openaiConfig) {
         throw new Error('Both Qdrant and OpenAI configs required for first initialization');
       }
-      VectorMemory.instance = new VectorMemory(qdrantConfig, openaiConfig);
+      VectorMemory.instance = new VectorMemory(qdrantConfig, openaiConfig, embeddingsConfig);
     }
     return VectorMemory.instance;
   }
@@ -263,8 +283,8 @@ export class VectorMemory {
 
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await this.openai.embeddings.create({
-        model: 'text-embedding-ada-002',
+      const response = await this.embeddingsClient.embeddings.create({
+        model: this.embeddingsModel,
         input: text,
       });
       return response.data[0].embedding;
