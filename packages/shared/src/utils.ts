@@ -2,8 +2,10 @@
  * Utility functions used across the running coach application
  */
 
+import { randomUUID } from 'crypto';
+
 export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return randomUUID();
 }
 
 export function formatPace(secondsPerMile: number): string {

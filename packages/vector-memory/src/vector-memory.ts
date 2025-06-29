@@ -1,5 +1,6 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import OpenAI from 'openai';
+import { randomUUID } from 'crypto';
 import { MemoryContext, VECTOR_DIMENSION } from '@running-coach/shared';
 
 export interface QdrantConfig {
@@ -28,6 +29,7 @@ export class VectorMemory {
   private qdrant: QdrantClient;
   private openai: OpenAI;
   private collectionName: string;
+  private embeddingModel: string;
 
   private constructor(qdrantConfig: QdrantConfig, openaiConfig: OpenAIConfig) {
     this.qdrant = new QdrantClient({
@@ -39,6 +41,8 @@ export class VectorMemory {
       apiKey: openaiConfig.apiKey,
       baseURL: openaiConfig.baseURL,
     });
+
+    this.embeddingModel = openaiConfig.model || 'text-embedding-ada-002';
 
     this.collectionName = qdrantConfig.collectionName;
   }
@@ -90,8 +94,8 @@ export class VectorMemory {
       // Generate embedding
       const embedding = await this.generateEmbedding(entry.content);
 
-      // Store in Qdrant
-      const vectorId = `${entry.userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Store in Qdrant using a UUID as point ID
+      const vectorId = randomUUID();
       
       await this.qdrant.upsert(this.collectionName, {
         wait: true,
@@ -264,7 +268,7 @@ export class VectorMemory {
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
       const response = await this.openai.embeddings.create({
-        model: 'text-embedding-ada-002',
+        model: this.embeddingModel,
         input: text,
       });
       return response.data[0].embedding;
@@ -307,6 +311,6 @@ export class VectorMemory {
   }
 
   private generateId(): string {
-    return `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return randomUUID();
   }
 }
