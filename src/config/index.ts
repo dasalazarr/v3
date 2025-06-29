@@ -23,6 +23,14 @@ const getBaseUrl = () => {
   return url;
 };
 
+const getEmbeddingsConfig = () => {
+  return {
+    embeddingsApiKey: process.env.EMBEDDINGS_API_KEY,
+    embeddingsBaseUrl: process.env.EMBEDDINGS_BASE_URL || 'https://api.openai.com/v1',
+    embeddingsModel: process.env.EMBEDDINGS_MODEL || 'text-embedding-ada-002'
+  };
+};
+
 // Validate Meta credentials
 const getMetaCredentials = () => {
   const jwtToken = process.env.jwtToken;
@@ -52,6 +60,9 @@ export interface Config {
   Model: string;
   baseURL: string;
   apiKey?: string;
+  embeddingsApiKey?: string;
+  embeddingsBaseUrl?: string;
+  embeddingsModel?: string;
   assistant_id?: string;
   spreadsheetId?: string;
   trainingSpreadsheetId?: string; // ID de la hoja para registrar entrenamientos
@@ -66,6 +77,7 @@ export const config: Config = {
   Model: process.env.Model || process.env.model || process.env.DEEPSEEK_MODEL || "deepseek-chat",
   baseURL: getBaseUrl(),
   apiKey: getApiKey(),
+  ...getEmbeddingsConfig(),
   assistant_id: process.env.ASSISTANT_ID || process.env.assistant_id,
   spreadsheetId: process.env.spreadsheetId,
   trainingSpreadsheetId: process.env.TRAINING_SPREADSHEET_ID,
@@ -75,19 +87,22 @@ export const config: Config = {
 };
 
 // Verificación de variables críticas
-const requiredVars = {
-  'API Key': config.apiKey,
-  'JWT Token': config.jwtToken,
-  'Number ID': config.numberId,
-  'Verify Token': config.verifyToken,
-  'Spreadsheet ID': config.spreadsheetId,
-  'Training Spreadsheet ID': config.trainingSpreadsheetId,
-  'Private Key': config.privateKey,
-  'Client Email': config.clientEmail,
-  'Calendar ID': config.calendarId,
-  'Base URL': config.baseURL,
-  'Model': config.Model
-};
+  const requiredVars = {
+    'API Key': config.apiKey,
+    'Embeddings API Key': config.embeddingsApiKey,
+    'JWT Token': config.jwtToken,
+    'Number ID': config.numberId,
+    'Verify Token': config.verifyToken,
+    'Spreadsheet ID': config.spreadsheetId,
+    'Training Spreadsheet ID': config.trainingSpreadsheetId,
+    'Private Key': config.privateKey,
+    'Client Email': config.clientEmail,
+    'Calendar ID': config.calendarId,
+    'Base URL': config.baseURL,
+    'Model': config.Model,
+    'Embeddings Base URL': config.embeddingsBaseUrl,
+    'Embeddings Model': config.embeddingsModel
+  };
 
 // Verificar variables críticas
 Object.entries(requiredVars).forEach(([name, value]) => {
