@@ -433,9 +433,9 @@ numberId=your_number_id_here
 verifyToken=your_verify_token_here
 
 # DeepSeek API
-apiKey=your_deepseek_api_key_here
-baseURL=https://api.deepseek.com/v1
-Model=deepseek-chat
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
 
 # Google Sheets API
 spreadsheetId=your_spreadsheet_id_here

@@ -118,7 +118,7 @@ function loadConfig(): Config {
     QDRANT_API_KEY: process.env.QDRANT_API_KEY,
     QDRANT_COLLECTION: process.env.QDRANT_COLLECTION || 'running_coach_memories',
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY!,
-    DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
+    DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
     DEEPSEEK_MODEL: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
     EMBEDDINGS_API_KEY: process.env.EMBEDDINGS_API_KEY!,
     EMBEDDINGS_BASE_URL: process.env.EMBEDDINGS_BASE_URL || 'https://api.openai.com/v1',
