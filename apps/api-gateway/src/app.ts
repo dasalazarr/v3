@@ -74,6 +74,9 @@ interface Config {
   DEEPSEEK_API_KEY: string;
   DEEPSEEK_BASE_URL: string;
   DEEPSEEK_MODEL: string;
+  EMBEDDINGS_API_KEY: string;
+  EMBEDDINGS_BASE_URL: string;
+  EMBEDDINGS_MODEL: string;
   
   // WhatsApp
   JWT_TOKEN: string;
@@ -92,6 +95,7 @@ function loadConfig(): Config {
     'REDIS_HOST',
     'QDRANT_URL',
     'DEEPSEEK_API_KEY',
+    'EMBEDDINGS_API_KEY',
     'JWT_TOKEN',
     'NUMBER_ID',
     'VERIFY_TOKEN'
@@ -114,6 +118,9 @@ function loadConfig(): Config {
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY!,
     DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
     DEEPSEEK_MODEL: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+    EMBEDDINGS_API_KEY: process.env.EMBEDDINGS_API_KEY!,
+    EMBEDDINGS_BASE_URL: process.env.EMBEDDINGS_BASE_URL || 'https://api.openai.com/v1',
+    EMBEDDINGS_MODEL: process.env.EMBEDDINGS_MODEL || 'text-embedding-ada-002',
     JWT_TOKEN: process.env.JWT_TOKEN!,
     NUMBER_ID: process.env.NUMBER_ID!,
     VERIFY_TOKEN: process.env.VERIFY_TOKEN!,
@@ -159,8 +166,9 @@ async function initializeServices(config: Config) {
       collectionName: config.QDRANT_COLLECTION
     },
     {
-      apiKey: config.DEEPSEEK_API_KEY,
-      baseURL: config.DEEPSEEK_BASE_URL
+      apiKey: config.EMBEDDINGS_API_KEY,
+      baseURL: config.EMBEDDINGS_BASE_URL,
+      model: config.EMBEDDINGS_MODEL
     }
   );
   await vectorMemory.initialize();
