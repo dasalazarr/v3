@@ -1,5 +1,6 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import OpenAI from 'openai';
+import { randomUUID } from 'crypto';
 import { MemoryContext, VECTOR_DIMENSION } from '@running-coach/shared';
 
 export interface QdrantConfig {
@@ -110,8 +111,8 @@ export class VectorMemory {
       // Generate embedding
       const embedding = await this.generateEmbedding(entry.content);
 
-      // Store in Qdrant
-      const vectorId = `${entry.userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Store in Qdrant using a UUID as point ID
+      const vectorId = randomUUID();
       
       await this.qdrant.upsert(this.collectionName, {
         wait: true,
@@ -327,6 +328,6 @@ export class VectorMemory {
   }
 
   private generateId(): string {
-    return `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return randomUUID();
   }
 }
