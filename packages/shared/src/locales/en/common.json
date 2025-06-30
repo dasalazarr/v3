@@ -1,0 +1,28 @@
+{
+  "welcome": "Welcome to your personal running assistant!",
+  "greeting": "Hello, I'm your running coach. How can I help you today?",
+  "farewell": "See you soon! Keep running and improving.",
+  "language_changed": "You have changed the language to English.",
+  "language_already_set": "Your language is already set to English",
+  "language_command_help": "You can change the language using /english or /español",
+  "fallback": {
+    "message": "Sorry, I had trouble processing your message. Could you try again?\n\nYou can tell me about:\n🏃‍♂️ Your runs (e.g., \"I ran 5K in 25 minutes\")\n📋 Training plans\n🎯 Race goals\n💪 How you feel after running\n\nI'm here to help you improve your running!"
+  },
+  "run_logged": "Training session logged successfully!",
+  "run_stats": "Your run statistics:",
+  "distance": "Distance",
+  "duration": "Duration",
+  "pace": "Pace",
+  "effort": "Effort",
+  "vdot": "Current VDOT",
+  "plan_updated": "Training plan updated",
+  "plan_details": "Plan details:",
+  "training_paces": "Training paces:",
+  "easy": "Easy",
+  "tempo": "Tempo",
+  "interval": "Interval",
+  "next_workouts": "Next workouts:",
+  "frequency": "Frequency",
+  "error": "Sorry, an error has occurred. Please try again.",
+  "help": "You can ask me about your training plan, log a run, or ask for running advice."
+}

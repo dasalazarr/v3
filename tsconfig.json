@@ -16,7 +16,17 @@
     "incremental": true,
     "skipLibCheck": true,
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@running-coach/shared": ["./packages/shared/src"],
+      "@running-coach/shared/*": ["./packages/shared/src/*"],
+      "@running-coach/database": ["./packages/database/src"],
+      "@running-coach/database/*": ["./packages/database/src/*"],
+      "@running-coach/llm-orchestrator": ["./packages/llm-orchestrator/src"],
+      "@running-coach/llm-orchestrator/*": ["./packages/llm-orchestrator/src/*"],
+      "@running-coach/vector-memory": ["./packages/vector-memory/src"],
+      "@running-coach/vector-memory/*": ["./packages/vector-memory/src/*"],
+      "@running-coach/plan-generator": ["./packages/plan-generator/src"],
+      "@running-coach/plan-generator/*": ["./packages/plan-generator/src/*"]
     }
   },
   "include": [

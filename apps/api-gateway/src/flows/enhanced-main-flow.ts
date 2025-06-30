@@ -4,25 +4,44 @@ import { Database } from '@running-coach/database';
 import { VectorMemory } from '@running-coach/vector-memory';
 import { users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
+import { LanguageDetector, i18nService, templateEngine } from '@running-coach/shared';
+import { LanguageCommandMiddleware } from '../middleware/language-commands.js';
 
 export class EnhancedMainFlow {
+  private languageCommandMiddleware: LanguageCommandMiddleware;
+
   constructor(
     private aiAgent: AIAgent,
     private database: Database,
-    private vectorMemory: VectorMemory
-  ) {}
+    private vectorMemory: VectorMemory,
+    private languageDetector: LanguageDetector
+  ) {
+    this.languageCommandMiddleware = new LanguageCommandMiddleware(database);
+  }
 
   public createFlow() {
     return addKeyword(EVENTS.WELCOME)
       .addAction(async (ctx, { flowDynamic, state, endFlow }) => {
         try {
           const phoneNumber = ctx.from;
-          console.log(`📱 New message from ${phoneNumber}: ${ctx.body}`);
+          const message = ctx.body;
+          console.log(`📱 New message from ${phoneNumber}: ${message}`);
 
           // Get or create user
-          const user = await this.getOrCreateUser(phoneNumber);
+          const user = await this.getOrCreateUser(phoneNumber, message);
+          
+          // Verificar si es un comando de idioma
+          if (process.env.LANG_DETECTION === 'true') {
+            const commandResult = await this.languageCommandMiddleware.process(message, user.id);
+            if (commandResult.isCommand && commandResult.processedMessage) {
+              // Es un comando de idioma, responder directamente
+              await flowDynamic(commandResult.processedMessage);
+              return;
+            }
+          }
           
           // Process message with AI agent
+          console.log(`🌐 Processing message with user language: ${user.preferredLanguage}`);
           const response = await this.aiAgent.processMessage({
             userId: user.id,
             message: ctx.body,
@@ -54,7 +73,7 @@ export class EnhancedMainFlow {
       });
   }
 
-  private async getOrCreateUser(phoneNumber: string): Promise<any> {
+  private async getOrCreateUser(phoneNumber: string, message?: string): Promise<any> {
     try {
       // Try to find existing user
       const existingUser = await this.database.query.select()
@@ -71,22 +90,31 @@ export class EnhancedMainFlow {
         return existingUser[0];
       }
 
+      // Detect language if message is provided
+      let detectedLanguage: 'en' | 'es' = 'es'; // Default to Spanish
+      if (message && process.env.LANG_DETECTION === 'true') {
+        const detected = this.languageDetector.detect(message);
+        // Solo aceptamos 'en' o 'es' como valores válidos
+        detectedLanguage = detected === 'en' ? 'en' : 'es';
+        console.log(`🌐 Detected language for new user: ${detectedLanguage}`);
+      }
+
       // Create new user
       const newUser = await this.database.query.insert(users).values({
         phoneNumber,
-        preferredLanguage: 'es', // Default to Spanish
+        preferredLanguage: detectedLanguage,
         onboardingCompleted: false,
         createdAt: new Date(),
         updatedAt: new Date()
       }).returning();
 
-      console.log(`👤 New user created: ${phoneNumber}`);
+      console.log(`👤 New user created: ${phoneNumber} with language: ${detectedLanguage}`);
       
       // Store welcome event in vector memory
       await this.vectorMemory.storeConversation(
         newUser[0].id,
         'assistant',
-        `New user joined the running coach assistant`
+        `New user joined the running coach assistant. Language: ${detectedLanguage}`
       );
 
       return newUser[0];
@@ -99,57 +127,61 @@ export class EnhancedMainFlow {
   private formatToolResponse(toolCall: any): string | null {
     const { name, result } = toolCall;
 
+    // Obtener el idioma del usuario desde la base de datos
+    // Por ahora, usaremos el idioma detectado en el mensaje
+    const userLang = result.userLanguage || 'es'; // Fallback a español si no hay idioma
+
     switch (name) {
       case 'log_run':
         if (result.success) {
-          let message = `✅ ${result.message}`;
-          
-          if (result.stats) {
-            message += `\n\n📊 **Run Stats:**`;
-            if (result.stats.pace) {
-              message += `\n🏃‍♂️ Pace: ${result.stats.pace}/mile`;
-            }
-            if (result.stats.effort) {
-              message += `\n💪 Effort: ${result.stats.effort}/10`;
-            }
-            if (result.stats.estimatedVDOT) {
-              message += `\n🎯 Current VDOT: ${result.stats.estimatedVDOT}`;
-            }
-          }
-          
-          return message;
+          // Usar el motor de plantillas para la respuesta
+          return templateEngine.process(
+            't("run_logged") \n\n📊 t("run_stats") \n' +
+            '🏃‍♂️ t("pace"): {{pace}}/mile \n' +
+            '💪 t("effort"): {{effort}}/10 \n' +
+            '🎯 t("vdot"): {{vdot}}',
+            {
+              pace: result.stats?.pace || '-',
+              effort: result.stats?.effort || '-',
+              vdot: result.stats?.estimatedVDOT || '-'
+            },
+            userLang
+          );
         }
         break;
 
       case 'update_training_plan':
         if (result.success) {
-          let message = `🏃‍♂️ ${result.message}`;
+          const details = result.details || {};
+          const paces = details.newPaces || {};
           
-          if (result.details) {
-            const details = result.details;
-            message += `\n\n📋 **Plan Details:**`;
-            
-            if (details.duration) {
-              message += `\n⏱️ Duration: ${details.duration}`;
-            }
-            if (details.frequency) {
-              message += `\n📅 Frequency: ${details.frequency}`;
-            }
-            if (details.newPaces) {
-              message += `\n\n🎯 **Training Paces:**`;
-              message += `\n🚶‍♂️ Easy: ${details.newPaces.easy}/mile`;
-              message += `\n🏃‍♂️ Tempo: ${details.newPaces.tempo}/mile`;
-              message += `\n💨 Interval: ${details.newPaces.interval}/mile`;
-            }
-            if (details.nextWorkouts) {
-              message += `\n\n📅 **Next Workouts:**`;
-              details.nextWorkouts.forEach((workout: any, index: number) => {
-                message += `\n${index + 1}. ${workout.date}: ${workout.type} - ${workout.description}`;
-              });
-            }
-          }
+          // Crear un array de workouts formateados para la plantilla
+          const formattedWorkouts = details.nextWorkouts ? 
+            details.nextWorkouts.map((w: any, i: number) => 
+              `${i + 1}. ${w.date}: ${w.type} - ${w.description}`
+            ).join('\n') : '';
           
-          return message;
+          // Usar el motor de plantillas para la respuesta
+          return templateEngine.process(
+            '🏃‍♂️ t("plan_updated") \n\n' +
+            '📋 t("plan_details") \n' +
+            '⏱️ t("duration"): {{duration}} \n' +
+            '📅 t("frequency"): {{frequency}} \n\n' +
+            '🎯 t("training_paces") \n' +
+            '🚶‍♂️ t("easy"): {{easyPace}}/mile \n' +
+            '🏃‍♂️ t("tempo"): {{tempoPace}}/mile \n' +
+            '💨 t("interval"): {{intervalPace}}/mile \n\n' +
+            '📅 t("next_workouts") \n{{workouts}}',
+            {
+              duration: details.duration || '-',
+              frequency: details.frequency || '-',
+              easyPace: paces.easy || '-',
+              tempoPace: paces.tempo || '-',
+              intervalPace: paces.interval || '-',
+              workouts: formattedWorkouts
+            },
+            userLang
+          );
         }
         break;
     }
@@ -159,28 +191,13 @@ export class EnhancedMainFlow {
 
   private getFallbackMessage(userMessage: string): string {
     // Detect language for fallback
-    const isSpanish = /[ñáéíóúü]|hola|corr|entrenam|kilómet/i.test(userMessage);
+    const detectedLang = this.languageDetector.detect(userMessage);
     
-    if (isSpanish) {
-      return `Lo siento, tuve un problema procesando tu mensaje. ¿Podrías intentar de nuevo? 
-
-Puedes contarme sobre:
-🏃‍♂️ Tus carreras (ej: "Corrí 5km en 25 minutos")
-📋 Planes de entrenamiento
-🎯 Objetivos de carrera
-💪 Cómo te sientes después de correr
-
-¡Estoy aquí para ayudarte a mejorar tu running!`;
-    } else {
-      return `Sorry, I had trouble processing your message. Could you try again?
-
-You can tell me about:
-🏃‍♂️ Your runs (e.g., "I ran 5K in 25 minutes")
-📋 Training plans
-🎯 Race goals
-💪 How you feel after running
-
-I'm here to help you improve your running!`;
-    }
+    // Usar el motor de plantillas con el idioma detectado
+    return templateEngine.process(
+      't("fallback.message")',
+      {}, // No variables needed for this template
+      detectedLang
+    );
   }
 }

@@ -63,8 +63,17 @@ export class AIAgent {
       await this.chatBuffer.addMessage(userId, 'user', message);
       await this.vectorMemory.storeConversation(userId, 'user', message);
 
-      // Detect language
-      const language = this.detectLanguage(message);
+      // Use preferred language from user profile or detect language
+      let language: 'en' | 'es' = 'es'; // Default to Spanish
+      
+      if (userProfile?.preferredLanguage && (userProfile.preferredLanguage === 'en' || userProfile.preferredLanguage === 'es')) {
+        language = userProfile.preferredLanguage;
+        console.log(`🌐 Using user's preferred language: ${language}`);
+      } else {
+        // Fallback to language detection
+        language = this.detectLanguage(message);
+        console.log(`🌐 Detected language: ${language}`);
+      }
 
       // Get conversation context
       const conversationHistory = contextOverride || 
@@ -111,6 +120,11 @@ export class AIAgent {
               name: toolCall.function.name,
               parameters: JSON.parse(toolCall.function.arguments),
             });
+            
+            // Add user language to result for localization
+            if (userProfile?.preferredLanguage) {
+              result.userLanguage = userProfile.preferredLanguage;
+            }
 
             toolCalls.push({
               name: toolCall.function.name,
@@ -214,15 +228,20 @@ export class AIAgent {
 
     let enhancedPrompt = basePrompt;
 
+    // Add language context explicitly
+    enhancedPrompt += `\n\n## LANGUAGE / IDIOMA:\n${language === 'es' ? 'Español' : 'English'}`;
+    
     // Add user profile context
     if (userProfile) {
       const profileContext = this.buildProfileContext(userProfile, language);
-      enhancedPrompt += `\n\n## PERFIL DEL USUARIO:\n${profileContext}`;
+      const profileTitle = language === 'es' ? 'PERFIL DEL USUARIO' : 'USER PROFILE';
+      enhancedPrompt += `\n\n## ${profileTitle}:\n${profileContext}`;
     }
 
     // Add memory context
     if (memoryContext?.summary) {
-      enhancedPrompt += `\n\n## CONTEXTO RELEVANTE:\n${memoryContext.summary}`;
+      const contextTitle = language === 'es' ? 'CONTEXTO RELEVANTE' : 'RELEVANT CONTEXT';
+      enhancedPrompt += `\n\n## ${contextTitle}:\n${memoryContext.summary}`;
     }
 
     return enhancedPrompt;

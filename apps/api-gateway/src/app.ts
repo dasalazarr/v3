@@ -11,10 +11,12 @@ import fetch from 'node-fetch';
 import { Database } from '@running-coach/database';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
+import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
 import { AnalyticsService } from './services/analytics-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
+import { FaqFlow } from './flows/faq-flow.js';
 
 // Load environment variables
 dotenv.config();
@@ -204,6 +206,11 @@ async function initializeServices(config: Config) {
   // Initialize Analytics Service
   const analyticsService = new AnalyticsService(database);
 
+  // Inicializar servicios de idioma
+  // Estos servicios ya deberían estar inicializados en el paquete shared
+  // y exportados como instancias singleton
+  const { languageDetector, i18nService, templateEngine } = await import('@running-coach/shared');
+
   // Register services in DI container
   container.registerInstance('Database', database);
   container.registerInstance('ChatBuffer', chatBuffer);
@@ -211,6 +218,9 @@ async function initializeServices(config: Config) {
   container.registerInstance('AIAgent', aiAgent);
   container.registerInstance('AnalyticsService', analyticsService);
   container.registerInstance('ToolRegistry', toolRegistry);
+  container.registerInstance('LanguageDetector', languageDetector);
+  container.registerInstance('I18nService', i18nService);
+  container.registerInstance('TemplateEngine', templateEngine);
 
   return {
     database,
@@ -218,7 +228,10 @@ async function initializeServices(config: Config) {
     vectorMemory,
     aiAgent,
     analyticsService,
-    toolRegistry
+    toolRegistry,
+    languageDetector,
+    i18nService,
+    templateEngine
   };
 }
 
@@ -233,9 +246,26 @@ async function initializeBot(config: Config, services: any) {
     version: 'v18.0'
   });
 
-  // Create enhanced main flow with AI integration
-  const mainFlow = new EnhancedMainFlow(services.aiAgent, services.database, services.vectorMemory);
-  const flow = createFlow([mainFlow.createFlow()]);
+  // Obtener servicios del contenedor
+  const languageDetector = services.languageDetector;
+  const templateEngine = services.templateEngine;
+  
+  // Inicializar flujos principales
+  const mainFlow = new EnhancedMainFlow(services.aiAgent, services.database, services.vectorMemory, languageDetector);
+  
+  // Inicializar flujo FAQ con soporte bilingüe
+  const faqFlow = new FaqFlow(services.aiAgent, languageDetector, templateEngine, services.database);
+  
+  // Registrar flujos en el contenedor
+  container.registerInstance('FaqFlow', faqFlow);
+  
+  // Crear flujo combinado con soporte para FAQ
+  const faqFlowInstance = faqFlow.createFlow();
+  const flow = createFlow([
+    mainFlow.createFlow(),
+    // Integrar el flujo FAQ como parte del flujo principal
+    faqFlowInstance
+  ]);
 
   const bot = createBot({
     provider,
