@@ -17,6 +17,7 @@ import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
+import { OnboardingFlow } from './flows/onboarding-flow.js';
 
 // Load environment variables
 dotenv.config();
@@ -256,15 +257,21 @@ async function initializeBot(config: Config, services: any) {
   // Inicializar flujo FAQ con soporte bilingüe
   const faqFlow = new FaqFlow(services.aiAgent, languageDetector, templateEngine, services.database);
   
+  // Inicializar y registrar flujo de Onboarding
+  const onboardingFlow = new OnboardingFlow(services.database, services.templateEngine);
+
   // Registrar flujos en el contenedor
   container.registerInstance('FaqFlow', faqFlow);
+  container.registerInstance('OnboardingFlow', onboardingFlow);
   
   // Crear flujo combinado con soporte para FAQ
   const faqFlowInstance = faqFlow.createFlow();
+  const onboardingFlowInstance = onboardingFlow.createFlow();
+
   const flow = createFlow([
     mainFlow.createFlow(),
-    // Integrar el flujo FAQ como parte del flujo principal
-    faqFlowInstance
+    faqFlowInstance,
+    onboardingFlowInstance
   ]);
 
   const bot = createBot({

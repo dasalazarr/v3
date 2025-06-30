@@ -1,0 +1,25 @@
+{
+  "start": {
+    "welcome": "Hi! I'm your personal running coach. To get started, I need to ask you a few questions. Are you ready?",
+    "button": "Let's start"
+  },
+  "age": {
+    "question": "Great. First, how old are you?",
+    "error": "Please enter a valid age between 15 and 99."
+  },
+  "gender": {
+    "question": "Thanks. Now, what's your gender?",
+    "options": ["Male", "Female", "Prefer not to say"]
+  },
+  "level": {
+    "question": "What do you consider your current running level to be?",
+    "options": ["Beginner", "Intermediate", "Advanced"]
+  },
+  "goal": {
+    "question": "Finally, what is your main goal?",
+    "options": ["Run my first race", "Improve my time", "Stay fit"]
+  },
+  "completed": {
+    "message": "Awesome! We're done with the basic questions. We can start training now."
+  }
+}

@@ -6,6 +6,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   phoneNumber: varchar('phone_number', { length: 20 }).unique().notNull(),
   age: integer('age'),
+  gender: text('gender', { enum: ['male', 'female', 'other'] }),
+  onboardingGoal: text('onboarding_goal', { enum: ['first_race', 'improve_time', 'stay_fit'] }),
   goalRace: text('goal_race', { enum: ['5k', '10k', 'half_marathon', 'marathon', 'ultra'] }),
   experienceLevel: text('experience_level', { enum: ['beginner', 'intermediate', 'advanced'] }),
   injuryHistory: jsonb('injury_history'),
