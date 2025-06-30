@@ -1,3 +1,8 @@
+/**
+ * Flujo de onboarding bilingüe (ES/EN) para nuevos usuarios
+ * Permite capturar información básica del usuario como edad, género y objetivos
+ * Implementa validación de inputs y persistencia en base de datos
+ */
 import { injectable, inject } from 'tsyringe';
 import { addKeyword } from '@builderbot/bot';
 
