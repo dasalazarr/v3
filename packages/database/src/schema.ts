@@ -12,6 +12,8 @@ export const users = pgTable('users', {
   experienceLevel: text('experience_level', { enum: ['beginner', 'intermediate', 'advanced'] }),
   injuryHistory: jsonb('injury_history'),
   weeklyMileage: decimal('weekly_mileage', { precision: 5, scale: 2 }),
+  weeklyMessageCount: integer('weekly_message_count').default(0),
+  subscriptionStatus: text('subscription_status', { enum: ['none', 'active', 'past_due', 'canceled'] }).default('none'),
   preferredLanguage: text('preferred_language', { enum: ['en', 'es'] }).default('en').notNull(),
   timezone: varchar('timezone', { length: 50 }),
   onboardingCompleted: boolean('onboarding_completed').default(false),

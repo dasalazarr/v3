@@ -139,7 +139,7 @@ Andes is an intelligent WhatsApp running coach bot that transforms from a statel
 
 ### **TR4: Integration Requirements**
 - **WhatsApp**: Business API with webhook support
-- **Payment**: Stripe integration for subscription management
+ - **Payment**: Gumroad integration for subscription management
 - **Monitoring**: OpenTelemetry for observability
 - **CDN**: Image hosting for progress cards
 
