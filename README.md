@@ -266,6 +266,20 @@ Usuario → WhatsApp → BuilderBot → OpenAI → Google Sheets
 - Integración de educación financiera
 - Asesoramiento financiero personalizado
 
+## Integración de pagos con Stripe
+
+Para habilitar los planes premium, la API expone un endpoint que genera una
+sesión de checkout. Desde la landing page puedes solicitar la URL y redirigir al
+usuario.
+
+```bash
+POST /stripe/session
+{ "phone": "+5491112345678" }
+```
+
+La respuesta incluye el campo `url` con el enlace a Stripe. Utiliza ese enlace
+en el botón de compra del sitio para completar el proceso de pago.
+
 ## Contribuir
 
 1. Crear una bifurcación del repositorio

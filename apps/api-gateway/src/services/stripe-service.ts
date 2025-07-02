@@ -9,7 +9,8 @@ export class StripeService {
     private webhookSecret: string,
     private db: Database
   ) {
-    this.stripe = new Stripe(apiKey, { apiVersion: '2024-04-10' });
+    // Initialize Stripe client
+    this.stripe = new Stripe(apiKey, { apiVersion: '2025-06-30.basil' });
   }
 
   public async createCheckoutSession(phone: string, priceId: string) {

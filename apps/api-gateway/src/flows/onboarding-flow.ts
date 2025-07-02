@@ -19,17 +19,21 @@ export class OnboardingFlow {
 
   private async getOrCreateUser(phoneNumber: string, lang: 'es' | 'en') {
         // Accedemos a la instancia 'db' de la clase Database para realizar consultas
-    let user = await this.database.query.query.users.findFirst({
-      where: eq(users.phoneNumber, phoneNumber),
-    });
+    const [user] = await this.database.query
+      .select()
+      .from(users)
+      .where(eq(users.phoneNumber, phoneNumber))
+      .limit(1);
 
-    if (!user) {
-      [user] = await this.database.query
+    let existingUser = user;
+
+    if (!existingUser) {
+      [existingUser] = await this.database.query
         .insert(users)
         .values({ phoneNumber, preferredLanguage: lang })
         .returning();
     }
-    return user;
+    return existingUser;
   }
 
   createFlow() {
@@ -105,16 +109,17 @@ export class OnboardingFlow {
             return fallBack(errorMessage);
           }
 
-          await this.database.query
+          await this.database
+            .query
             .update(users)
-            .set({ weeklyMileage: freq })
+            .set({ weeklyMileage: freq })         // <-- usa valor numérico
             .where(eq(users.phoneNumber, ctx.from));
         }
       )
       .addAnswer(
         't(onboarding:injury.question)',
         { capture: true },
-        async (ctx, { state }) => {
+        async (ctx, { state, flowDynamic }) => {
           const text = ctx.body.toLowerCase();
           let status = 'none';
           if (text.includes('leves') || text.includes('minor')) {
