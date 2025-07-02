@@ -241,6 +241,12 @@ importers:
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
+      franc-min:
+        specifier: ^6.2.0
+        version: 6.2.0
+      iso-639-1:
+        specifier: ^3.1.0
+        version: 3.1.5
       uuid:
         specifier: ^9.0.1
         version: 9.0.1
@@ -2924,6 +2930,8 @@ packages:
 
   strip-literal@2.1.1:
     resolution: {integrity: sha512-631UJ6O00eNGfMiWG78ck80dfBab8X6IVFB51jZK5Icd7XAs60Z5y7QdSd/wGIklnWvRbUNloVzhOKKmutxQ6Q==}
+
+        optional: true
 
   strtok3@9.1.1:
     resolution: {integrity: sha512-FhwotcEqjr241ZbjFzjlIYg6c5/L/s4yBGWSMvJ9UoExiSqL+FnFA/CaeZx17WGaZMS/4SOZp8wH18jSS4R4lw==}
@@ -5701,7 +5709,6 @@ snapshots:
     dependencies:
       js-tokens: 9.0.1
 
-  strtok3@9.1.1:
     dependencies:
       '@tokenizer/token': 0.3.0
       peek-readable: 5.4.2

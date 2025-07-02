@@ -266,6 +266,7 @@ Usuario → WhatsApp → BuilderBot → OpenAI → Google Sheets
 - Integración de educación financiera
 - Asesoramiento financiero personalizado
 
+
 ## Contribuir
 
 1. Crear una bifurcación del repositorio
