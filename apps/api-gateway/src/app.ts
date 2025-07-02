@@ -181,7 +181,8 @@ async function initializeServices(config: Config) {
     },
     {
       apiKey: config.DEEPSEEK_API_KEY,
-      baseURL: config.DEEPSEEK_BASE_URL
+      baseURL: config.DEEPSEEK_BASE_URL,
+      model: config.DEEPSEEK_MODEL
     },
     {
       apiKey: config.EMBEDDINGS_API_KEY,

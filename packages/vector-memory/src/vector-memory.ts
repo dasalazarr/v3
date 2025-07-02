@@ -37,6 +37,7 @@ export class VectorMemory {
   private embeddingsClient: OpenAI;
   private collectionName: string;
   private embeddingsModel: string;
+  private model: string;
 
   private constructor(qdrantConfig: QdrantConfig, openaiConfig: OpenAIConfig, embeddingsConfig?: EmbeddingsConfig) {
     this.qdrant = new QdrantClient({
@@ -48,6 +49,7 @@ export class VectorMemory {
       apiKey: openaiConfig.apiKey,
       baseURL: openaiConfig.baseURL,
     });
+    this.model = openaiConfig.model || 'gpt-3.5-turbo';
     
     // Use separate embeddings client if provided, otherwise use the same client
     if (embeddingsConfig) {
@@ -324,7 +326,7 @@ export class VectorMemory {
         .join('\n');
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: this.model,
         messages: [
           {
             role: 'system',
