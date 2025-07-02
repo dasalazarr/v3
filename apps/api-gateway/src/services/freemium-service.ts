@@ -1,12 +1,10 @@
 import { ChatBuffer } from '@running-coach/vector-memory';
-import { StripeService } from './stripe-service.js';
 
 export class FreemiumService {
   constructor(
     private chatBuffer: ChatBuffer,
-    private stripe: StripeService,
     private messageLimit: number,
-    private priceId: string
+    private paywallLink: string
   ) {}
 
   private getMonthKey(userId: string): string {
@@ -23,12 +21,7 @@ export class FreemiumService {
     const key = this.getMonthKey(user.id);
     const count = await this.chatBuffer.incrementKey(key, 60 * 60 * 24 * 31);
     if (count > this.messageLimit) {
-      const session = await this.stripe.createCheckoutSession(
-        user.phoneNumber,
-        this.priceId
-      );
-      const url = session.url ?? undefined;
-      return { allowed: false, link: url };
+      return { allowed: false, link: this.paywallLink };
     }
     return { allowed: true };
   }

@@ -13,8 +13,6 @@ import { eq } from 'drizzle-orm';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
 import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
-import { AnalyticsService } from './services/analytics-service.js';
-import { StripeService } from './services/stripe-service.js';
 import { FreemiumService } from './services/freemium-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
@@ -91,12 +89,8 @@ interface Config {
   NUMBER_ID: string;
   VERIFY_TOKEN: string;
 
-  // Stripe
-  STRIPE_SECRET_KEY: string;
-  STRIPE_WEBHOOK_SECRET: string;
-
   MESSAGE_LIMIT: number;
-  STRIPE_PRICE_ID: string;
+  GUMROAD_LINK: string;
   
   // Application
   PORT: number;
@@ -114,10 +108,8 @@ function loadConfig(): Config {
     'JWT_TOKEN',
     'NUMBER_ID',
     'VERIFY_TOKEN',
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET',
     'MESSAGE_LIMIT',
-    'STRIPE_PRICE_ID'
+    'GUMROAD_LINK'
   ];
 
   for (const envVar of requiredEnvVars) {
@@ -143,10 +135,8 @@ function loadConfig(): Config {
     JWT_TOKEN: process.env.JWT_TOKEN!,
     NUMBER_ID: process.env.NUMBER_ID!,
     VERIFY_TOKEN: process.env.VERIFY_TOKEN!,
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY!,
-    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET!,
     MESSAGE_LIMIT: parseInt(process.env.MESSAGE_LIMIT || '40'),
-    STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID!,
+    GUMROAD_LINK: process.env.GUMROAD_LINK!,
     PORT: parseInt(process.env.PORT || '3000'),
     NODE_ENV: process.env.NODE_ENV || 'production'
   };
@@ -224,16 +214,10 @@ async function initializeServices(config: Config) {
 
   // Initialize Analytics Service
   const analyticsService = new AnalyticsService(database);
-  const stripeService = new StripeService(
-    config.STRIPE_SECRET_KEY,
-    config.STRIPE_WEBHOOK_SECRET,
-    database
-  );
   const freemiumService = new FreemiumService(
     chatBuffer,
-    stripeService,
     config.MESSAGE_LIMIT,
-    config.STRIPE_PRICE_ID
+    config.GUMROAD_LINK
   );
 
   // Inicializar servicios de idioma
@@ -247,7 +231,6 @@ async function initializeServices(config: Config) {
   container.registerInstance('VectorMemory', vectorMemory);
   container.registerInstance('AIAgent', aiAgent);
   container.registerInstance('AnalyticsService', analyticsService);
-  container.registerInstance('StripeService', stripeService);
   container.registerInstance('FreemiumService', freemiumService);
   container.registerInstance('ToolRegistry', toolRegistry);
   container.registerInstance('LanguageDetector', languageDetector);
@@ -260,7 +243,6 @@ async function initializeServices(config: Config) {
     vectorMemory,
     aiAgent,
     analyticsService,
-    stripeService,
     freemiumService,
     toolRegistry,
     languageDetector,

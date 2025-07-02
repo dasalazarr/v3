@@ -14,8 +14,6 @@ export const users = pgTable('users', {
   weeklyMileage: decimal('weekly_mileage', { precision: 5, scale: 2 }),
   weeklyMessageCount: integer('weekly_message_count').default(0),
   subscriptionStatus: text('subscription_status', { enum: ['none', 'active', 'past_due', 'canceled'] }).default('none'),
-  stripeCustomerId: varchar('stripe_customer_id', { length: 100 }),
-  stripeSubscriptionId: varchar('stripe_subscription_id', { length: 100 }),
   preferredLanguage: text('preferred_language', { enum: ['en', 'es'] }).default('en').notNull(),
   timezone: varchar('timezone', { length: 50 }),
   onboardingCompleted: boolean('onboarding_completed').default(false),
