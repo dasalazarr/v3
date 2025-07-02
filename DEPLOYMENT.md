@@ -46,6 +46,9 @@ export QDRANT_URL="https://your-cluster.qdrant.io"
 export QDRANT_API_KEY="your-api-key"
 export QDRANT_COLLECTION="running_coach_memories"
 ```
+When the application starts, it ensures a payload index on the `userId` field
+is created for this collection. If the index already exists, initialization
+continues without error.
 
 ## 🤖 AI Services Configuration
 

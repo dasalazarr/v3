@@ -97,6 +97,25 @@ export class VectorMemory {
       } else {
         console.log(`✅ Qdrant collection already exists: ${this.collectionName}`);
       }
+
+      // Ensure payload index on userId exists
+      try {
+        await this.qdrant.createPayloadIndex(this.collectionName, {
+          field_name: 'userId',
+          field_schema: 'uuid',
+          wait: true,
+        });
+        console.log('✅ Created userId payload index');
+      } catch (indexError: any) {
+        if (
+          indexError?.message?.includes('already exists') ||
+          indexError?.response?.status === 409
+        ) {
+          console.log('ℹ️ userId payload index already exists');
+        } else {
+          console.error('❌ Error creating userId payload index:', indexError);
+        }
+      }
     } catch (error) {
       console.error('❌ Error initializing vector memory:', error);
       throw error;
