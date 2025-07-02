@@ -69,6 +69,74 @@ export class OnboardingFlow {
             .set({ age })
             .where(eq(users.phoneNumber, ctx.from));
         }
+      )
+      .addAnswer(
+        't(onboarding:goal.question)',
+        { capture: true },
+        async (ctx, { state, flowDynamic }) => {
+          const lang = state.get('lang');
+          const text = ctx.body.toLowerCase();
+          let goal: 'first_race' | 'improve_time' | 'stay_fit' = 'stay_fit';
+          if (text.includes('primera') || text.includes('first')) {
+            goal = 'first_race';
+          } else if (text.includes('mejorar') || text.includes('improve')) {
+            goal = 'improve_time';
+          }
+
+          await this.database.query
+            .update(users)
+            .set({ onboardingGoal: goal })
+            .where(eq(users.phoneNumber, ctx.from));
+        }
+      )
+      .addAnswer(
+        't(onboarding:frequency.question)',
+        { capture: true },
+        async (ctx, { state, fallBack }) => {
+          const lang = state.get('lang');
+          const freq = parseInt(ctx.body, 10);
+
+          if (isNaN(freq) || freq < 1 || freq > 7) {
+            const errorMessage = this.templateEngine.process(
+              't(onboarding:frequency.error)',
+              {},
+              lang
+            );
+            return fallBack(errorMessage);
+          }
+
+          await this.database.query
+            .update(users)
+            .set({ weeklyMileage: freq })
+            .where(eq(users.phoneNumber, ctx.from));
+        }
+      )
+      .addAnswer(
+        't(onboarding:injury.question)',
+        { capture: true },
+        async (ctx, { state }) => {
+          const text = ctx.body.toLowerCase();
+          let status = 'none';
+          if (text.includes('leves') || text.includes('minor')) {
+            status = 'minor';
+          } else if (text.includes('recuper') || text.includes('recover')) {
+            status = 'recovery';
+          }
+
+          await this.database.query
+            .update(users)
+            .set({ injuryHistory: { status } })
+            .where(eq(users.phoneNumber, ctx.from));
+
+          const lang = state.get('lang');
+          const doneMsg = this.templateEngine.process(
+            't(onboarding:completed.message)',
+            {},
+            lang
+          );
+          await state.update({});
+          await flowDynamic(doneMsg);
+        }
       );
   }
 }

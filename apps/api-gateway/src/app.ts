@@ -8,11 +8,14 @@ import cron from 'node-cron';
 import fetch from 'node-fetch';
 
 // Import services and configurations
-import { Database } from '@running-coach/database';
+import { Database, users } from '@running-coach/database';
+import { eq } from 'drizzle-orm';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
 import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
 import { AnalyticsService } from './services/analytics-service.js';
+import { StripeService } from './services/stripe-service.js';
+import { FreemiumService } from './services/freemium-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
@@ -87,6 +90,13 @@ interface Config {
   JWT_TOKEN: string;
   NUMBER_ID: string;
   VERIFY_TOKEN: string;
+
+  // Stripe
+  STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
+
+  MESSAGE_LIMIT: number;
+  STRIPE_PRICE_ID: string;
   
   // Application
   PORT: number;
@@ -103,7 +113,11 @@ function loadConfig(): Config {
     'EMBEDDINGS_API_KEY',
     'JWT_TOKEN',
     'NUMBER_ID',
-    'VERIFY_TOKEN'
+    'VERIFY_TOKEN',
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'MESSAGE_LIMIT',
+    'STRIPE_PRICE_ID'
   ];
 
   for (const envVar of requiredEnvVars) {
@@ -129,6 +143,10 @@ function loadConfig(): Config {
     JWT_TOKEN: process.env.JWT_TOKEN!,
     NUMBER_ID: process.env.NUMBER_ID!,
     VERIFY_TOKEN: process.env.VERIFY_TOKEN!,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY!,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET!,
+    MESSAGE_LIMIT: parseInt(process.env.MESSAGE_LIMIT || '40'),
+    STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID!,
     PORT: parseInt(process.env.PORT || '3000'),
     NODE_ENV: process.env.NODE_ENV || 'production'
   };
@@ -206,6 +224,17 @@ async function initializeServices(config: Config) {
 
   // Initialize Analytics Service
   const analyticsService = new AnalyticsService(database);
+  const stripeService = new StripeService(
+    config.STRIPE_SECRET_KEY,
+    config.STRIPE_WEBHOOK_SECRET,
+    database
+  );
+  const freemiumService = new FreemiumService(
+    chatBuffer,
+    stripeService,
+    config.MESSAGE_LIMIT,
+    config.STRIPE_PRICE_ID
+  );
 
   // Inicializar servicios de idioma
   // Estos servicios ya deberían estar inicializados en el paquete shared
@@ -218,6 +247,8 @@ async function initializeServices(config: Config) {
   container.registerInstance('VectorMemory', vectorMemory);
   container.registerInstance('AIAgent', aiAgent);
   container.registerInstance('AnalyticsService', analyticsService);
+  container.registerInstance('StripeService', stripeService);
+  container.registerInstance('FreemiumService', freemiumService);
   container.registerInstance('ToolRegistry', toolRegistry);
   container.registerInstance('LanguageDetector', languageDetector);
   container.registerInstance('I18nService', i18nService);
@@ -229,6 +260,8 @@ async function initializeServices(config: Config) {
     vectorMemory,
     aiAgent,
     analyticsService,
+    stripeService,
+    freemiumService,
     toolRegistry,
     languageDetector,
     i18nService,
@@ -400,6 +433,22 @@ async function main() {
     
     // Setup Express app for health checks, metrics, and webhook
     const app = express();
+    app.post(
+      '/stripe/webhook',
+      express.raw({ type: 'application/json' }),
+      async (req, res) => {
+        const sig = req.headers['stripe-signature'] as string;
+        try {
+          const event = services.stripeService.constructEvent(req.body, sig);
+          await services.stripeService.handleEvent(event);
+          res.json({ received: true });
+        } catch (err) {
+          console.error('❌ Stripe webhook error:', err);
+          res.status(400).send('Webhook Error');
+        }
+      }
+    );
+
     app.use(express.json());
     
     // Configure WhatsApp webhook endpoint
@@ -452,22 +501,43 @@ async function main() {
                     for (const message of change.value.messages) {
                       try {
                         if (message.type === 'text' && message.text && message.text.body) {
-                          const userId = message.from;
+                          const phone = message.from;
                           const messageText = message.text.body;
-                          const messageId = message.id;
-                          
-                          console.log(`📩 Processing message from ${userId}: ${messageText.substring(0, 50)}...`);
-                          
+
+                          console.log(`📩 Processing message from ${phone}: ${messageText.substring(0, 50)}...`);
+
+                          // Get or create user
+                          let [user] = await services.database.query
+                            .select()
+                            .from(users)
+                            .where(eq(users.phoneNumber, phone))
+                            .limit(1);
+                          if (!user) {
+                            [user] = await services.database.query
+                              .insert(users)
+                              .values({ phoneNumber: phone, preferredLanguage: 'es' })
+                              .returning();
+                          }
+
+                          const allowance = await services.freemiumService.checkMessageAllowance(user);
+                          if (!allowance.allowed) {
+                            const upsell = user.preferredLanguage === 'en'
+                              ? `You reached the free message limit. Upgrade here: ${allowance.link}`
+                              : `Has alcanzado tu límite gratuito. Mejora aquí: ${allowance.link}`;
+                            await sendWhatsAppMessage(phone, upsell, config);
+                            continue;
+                          }
+
                           // Process message with AI Agent
                           const aiResponse = await services.aiAgent.processMessage({
-                            userId,
+                            userId: user.id,
                             message: messageText
                           });
-                          
+
                           if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
                             // Send response back to WhatsApp
-                            await sendWhatsAppMessage(userId, aiResponse.content, config);
-                            console.log(`✅ Sent AI response to ${userId}: ${aiResponse.content.substring(0, 50)}...`);
+                            await sendWhatsAppMessage(phone, aiResponse.content, config);
+                            console.log(`✅ Sent AI response to ${phone}: ${aiResponse.content.substring(0, 50)}...`);
                           }
                         }
                       } catch (messageError) {
@@ -484,6 +554,7 @@ async function main() {
         console.error('❌ Error processing webhook:', error);
       }
     });
+
     
     setupHealthEndpoints(app, services);
     setupScheduledTasks(services);

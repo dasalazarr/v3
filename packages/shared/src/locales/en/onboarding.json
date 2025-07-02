@@ -19,6 +19,14 @@
     "question": "Finally, what is your main goal?",
     "options": ["Run my first race", "Improve my time", "Stay fit"]
   },
+  "frequency": {
+    "question": "How many days per week do you plan to run? (1-7)",
+    "error": "Please enter a number between 1 and 7"
+  },
+  "injury": {
+    "question": "Do you have any recent injuries or discomfort?",
+    "options": ["No", "Minor issues", "Recovering"]
+  },
   "completed": {
     "message": "Awesome! We're done with the basic questions. We can start training now."
   }
