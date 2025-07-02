@@ -210,6 +210,38 @@ export class ChatBuffer {
     }
   }
 
+  /**
+   * Increment a generic counter key with optional TTL
+   */
+  public async incrementKey(
+    key: string,
+    ttl?: number
+  ): Promise<number> {
+    try {
+      const count = await this.redis.incr(key);
+      if (ttl) {
+        await this.redis.expire(key, ttl);
+      }
+      return count;
+    } catch (error) {
+      console.error(`❌ Error incrementing key ${key}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get numeric value of a key
+   */
+  public async getKeyValue(key: string): Promise<number> {
+    try {
+      const val = await this.redis.get(key);
+      return val ? parseInt(val, 10) : 0;
+    } catch (error) {
+      console.error(`❌ Error reading key ${key}:`, error);
+      return 0;
+    }
+  }
+
   private getUserChatKey(userId: string): string {
     return `chat:${userId}`;
   }
