@@ -109,9 +109,10 @@ export class OnboardingFlow {
             return fallBack(errorMessage);
           }
 
-          await this.database.query
+          await this.database
+            .query
             .update(users)
-            .set({ weeklyMileage: String(freq) })
+            .set({ weeklyMileage: freq })         // <-- usa valor numérico
             .where(eq(users.phoneNumber, ctx.from));
         }
       )
