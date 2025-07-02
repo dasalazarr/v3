@@ -13,7 +13,6 @@ import { eq } from 'drizzle-orm';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
 import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
-import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
@@ -416,7 +415,41 @@ async function main() {
     
     // Setup Express app for health checks, metrics, and webhook
     const app = express();
+    app.post(
+      '/stripe/webhook',
+      express.raw({ type: 'application/json' }),
+      async (req, res) => {
+        const sig = req.headers['stripe-signature'] as string;
+        try {
+          const event = services.stripeService.constructEvent(req.body, sig);
+          await services.stripeService.handleEvent(event);
+          res.json({ received: true });
+        } catch (err) {
+          console.error('❌ Stripe webhook error:', err);
+          res.status(400).send('Webhook Error');
+        }
+      }
+    );
+
     app.use(express.json());
+
+    // Endpoint for landing page to create a Stripe checkout session
+    app.post('/stripe/session', async (req, res) => {
+      const { phone } = req.body;
+      if (!phone) {
+        return res.status(400).json({ error: 'phone is required' });
+      }
+      try {
+        const session = await services.stripeService.createCheckoutSession(
+          phone,
+          config.STRIPE_PRICE_ID
+        );
+        return res.json({ url: session.url });
+      } catch (error) {
+        console.error('❌ Failed to create checkout session:', error);
+        return res.status(500).json({ error: 'failed to create session' });
+      }
+    });
     
     // Configure WhatsApp webhook endpoint
     app.get('/webhook', (req, res) => {
