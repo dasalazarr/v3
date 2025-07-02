@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
 import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
+import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
