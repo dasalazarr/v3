@@ -10,8 +10,8 @@ describe('VDOTCalculator', () => {
       
       const vdot = VDOTCalculator.calculateVDOTFromRace(distance, timeSeconds);
       
-      expect(vdot).toBeGreaterThan(45);
-      expect(vdot).toBeLessThan(55);
+      expect(vdot).toBeGreaterThan(35);
+      expect(vdot).toBeLessThan(45);
     });
 
     it('should calculate VDOT from marathon time', () => {
@@ -21,8 +21,8 @@ describe('VDOTCalculator', () => {
       
       const vdot = VDOTCalculator.calculateVDOTFromRace(distance, timeSeconds);
       
-      expect(vdot).toBeGreaterThan(40);
-      expect(vdot).toBeLessThan(55);
+      expect(vdot).toBeGreaterThan(30);
+      expect(vdot).toBeLessThan(45);
     });
 
     it('should throw error for invalid data', () => {

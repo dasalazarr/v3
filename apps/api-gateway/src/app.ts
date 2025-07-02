@@ -14,6 +14,8 @@ import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
 import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
 import { FreemiumService } from './services/freemium-service.js';
+import { AnalyticsService } from './services/analytics-service.js';
+import { StripeService } from './services/stripe-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
@@ -91,6 +93,10 @@ interface Config {
 
   MESSAGE_LIMIT: number;
   GUMROAD_LINK: string;
+
+  STRIPE_API_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
+  STRIPE_PRICE_ID: string;
   
   // Application
   PORT: number;
@@ -109,7 +115,10 @@ function loadConfig(): Config {
     'NUMBER_ID',
     'VERIFY_TOKEN',
     'MESSAGE_LIMIT',
-    'GUMROAD_LINK'
+    'GUMROAD_LINK',
+    'STRIPE_API_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'STRIPE_PRICE_ID'
   ];
 
   for (const envVar of requiredEnvVars) {
@@ -137,6 +146,9 @@ function loadConfig(): Config {
     VERIFY_TOKEN: process.env.VERIFY_TOKEN!,
     MESSAGE_LIMIT: parseInt(process.env.MESSAGE_LIMIT || '40'),
     GUMROAD_LINK: process.env.GUMROAD_LINK!,
+    STRIPE_API_KEY: process.env.STRIPE_API_KEY!,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET!,
+    STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID!,
     PORT: parseInt(process.env.PORT || '3000'),
     NODE_ENV: process.env.NODE_ENV || 'production'
   };
@@ -214,6 +226,11 @@ async function initializeServices(config: Config) {
 
   // Initialize Analytics Service
   const analyticsService = new AnalyticsService(database);
+  const stripeService = new StripeService(
+    config.STRIPE_API_KEY,
+    config.STRIPE_WEBHOOK_SECRET,
+    database
+  );
   const freemiumService = new FreemiumService(
     chatBuffer,
     config.MESSAGE_LIMIT,
@@ -231,6 +248,7 @@ async function initializeServices(config: Config) {
   container.registerInstance('VectorMemory', vectorMemory);
   container.registerInstance('AIAgent', aiAgent);
   container.registerInstance('AnalyticsService', analyticsService);
+  container.registerInstance('StripeService', stripeService);
   container.registerInstance('FreemiumService', freemiumService);
   container.registerInstance('ToolRegistry', toolRegistry);
   container.registerInstance('LanguageDetector', languageDetector);
@@ -243,6 +261,7 @@ async function initializeServices(config: Config) {
     vectorMemory,
     aiAgent,
     analyticsService,
+    stripeService,
     freemiumService,
     toolRegistry,
     languageDetector,
