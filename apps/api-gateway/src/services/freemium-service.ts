@@ -28,7 +28,6 @@ export class FreemiumService {
         this.priceId
       );
       const url = session.url ?? undefined;
-
       return { allowed: false, link: url };
     }
     return { allowed: true };

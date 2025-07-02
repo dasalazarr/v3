@@ -75,6 +75,42 @@ export class OnboardingFlow {
         }
       )
       .addAnswer(
+        't(onboarding:gender.question)',
+        { capture: true },
+        async (ctx) => {
+          const text = ctx.body.toLowerCase();
+          let gender: 'male' | 'female' | 'other' = 'other';
+          if (text.startsWith('m') || text.includes('masc') || text.includes('male')) {
+            gender = 'male';
+          } else if (text.startsWith('f') || text.includes('fem') || text.includes('female')) {
+            gender = 'female';
+          }
+
+          await this.database.query
+            .update(users)
+            .set({ gender })
+            .where(eq(users.phoneNumber, ctx.from));
+        }
+      )
+      .addAnswer(
+        't(onboarding:level.question)',
+        { capture: true },
+        async (ctx) => {
+          const text = ctx.body.toLowerCase();
+          let level: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
+          if (text.includes('inter') || text.includes('medi')) {
+            level = 'intermediate';
+          } else if (text.includes('avan') || text.includes('advanced')) {
+            level = 'advanced';
+          }
+
+          await this.database.query
+            .update(users)
+            .set({ experienceLevel: level })
+            .where(eq(users.phoneNumber, ctx.from));
+        }
+      )
+      .addAnswer(
         't(onboarding:goal.question)',
         { capture: true },
         async (ctx, { state, flowDynamic }) => {
@@ -109,10 +145,9 @@ export class OnboardingFlow {
             return fallBack(errorMessage);
           }
 
-          await this.database
-            .query
+          await this.database.query
             .update(users)
-            .set({ weeklyMileage: freq })         // <-- usa valor numérico
+            .set({ weeklyMileage: String(freq) })
             .where(eq(users.phoneNumber, ctx.from));
         }
       )
