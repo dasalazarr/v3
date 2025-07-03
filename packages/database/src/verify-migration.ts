@@ -22,10 +22,10 @@ async function verify() {
 
   const client = postgres(databaseUrl, { max: 1 });
   try {
-    const rows = await client<{ table_name: string }[]>`
+    const rows = await client`
       SELECT table_name FROM information_schema.tables
       WHERE table_schema = 'public';
-    `;
+    ` as { table_name: string }[];
     const existing = rows.map((r) => r.table_name);
     const missing = expectedTables.filter(t => !existing.includes(t));
     if (missing.length === 0) {
