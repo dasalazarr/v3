@@ -105,7 +105,7 @@ export class AIAgent {
         tools: tools.length > 0 ? tools : undefined,
         tool_choice: tools.length > 0 ? 'auto' : undefined,
         temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 400,
       });
 
       const choice = completion.choices[0];
@@ -159,7 +159,7 @@ export class AIAgent {
             model: this.model,
             messages,
             temperature: 0.7,
-            max_tokens: 1000,
+            max_tokens: 400,
           });
           content = followupCompletion.choices[0].message.content || content;
         }
@@ -202,7 +202,7 @@ export class AIAgent {
         model: this.model,
         messages,
         temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 400,
       });
 
       return completion.choices[0].message.content || '';
@@ -270,6 +270,7 @@ export class AIAgent {
 - Suggest concrete next steps
 - Ask follow-up questions to gather more context
 - Use motivational language while being informative
+- Keep replies short and friendly, ideally under three sentences
 
 ## AVAILABLE TOOLS
 You have access to tools for:
@@ -305,6 +306,7 @@ Always use tools when the user provides data or requests specific actions.`;
 - Sugiere pasos concretos a seguir
 - Haz preguntas de seguimiento para obtener más contexto
 - Usa lenguaje motivacional mientras eres informativo
+- Mantén las respuestas cortas y amables, idealmente en menos de tres frases
 
 ## HERRAMIENTAS DISPONIBLES
 Tienes acceso a herramientas para:
