@@ -1,5 +1,8 @@
 # Project Requirements Document - Andes: AI-Powered Running Coach
 
+### Objetivo Aspiracional
+Nuestro objetivo aspiracional —el “norte” que guía todo el proyecto— es crear el entrenador de running más inteligente y personalizado del mercado, capaz de aprender de cada interacción para ayudar a cualquier corredor a conquistar sus metas mientras previene lesiones, y hacerlo accesible para todos a través de WhatsApp.
+
 ## 1. App Overview
 
 Andes is a conversational AI running coach implemented as a WhatsApp chatbot, designed to help runners of all levels improve their performance through personalized training plans, real-time feedback, and data-driven insights. The system processes natural language messages to track workouts, provide training recommendations, and offer motivational support.
