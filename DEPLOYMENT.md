@@ -83,7 +83,7 @@ pnpm --filter database tsx src/migrate-from-sheets.ts
 ### 2. Verify Migration
 ```bash
 # Check data integrity
-pnpm --filter database tsx src/verify-migration.ts
+pnpm --filter database verify
 ```
 
 ## 🚀 Railway Deployment
