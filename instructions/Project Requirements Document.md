@@ -16,6 +16,8 @@ Andes is an intelligent WhatsApp running coach bot that transforms from a statel
 
 ### **Mission Statement**
 "Democratize access to expert running coaching through AI-powered WhatsApp conversations that remember, learn, and adapt to each runner's unique journey."
+### Objetivo Aspiracional
+Nuestro objetivo aspiracional —el “norte” que guía todo el proyecto— es crear el entrenador de running más inteligente y personalizado del mercado, capaz de aprender de cada interacción para ayudar a cualquier corredor a conquistar sus metas mientras previene lesiones, y hacerlo accesible para todos a través de WhatsApp.
 
 ---
 
