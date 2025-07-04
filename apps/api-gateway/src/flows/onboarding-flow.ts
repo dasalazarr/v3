@@ -9,6 +9,7 @@ import { addKeyword } from '@builderbot/bot';
 import { Database, users } from '@running-coach/database';
 import { TemplateEngine } from '@running-coach/shared';
 import { eq } from 'drizzle-orm';
+import logger from '../services/logger-service';
 
 @injectable()
 export class OnboardingFlow {
@@ -18,8 +19,7 @@ export class OnboardingFlow {
   ) {}
 
   private async getOrCreateUser(phoneNumber: string, lang: 'es' | 'en') {
-        // Accedemos a la instancia 'db' de la clase Database para realizar consultas
-    const [user] = await this.database.query
+    const [user] = await this.database
       .select()
       .from(users)
       .where(eq(users.phoneNumber, phoneNumber))
@@ -28,7 +28,8 @@ export class OnboardingFlow {
     let existingUser = user;
 
     if (!existingUser) {
-      [existingUser] = await this.database.query
+      logger.info({ userId: phoneNumber, lang }, '[DB_CREATE] New user, creating record');
+      [existingUser] = await this.database
         .insert(users)
         .values({ phoneNumber, preferredLanguage: lang })
         .returning();
@@ -36,20 +37,33 @@ export class OnboardingFlow {
     return existingUser;
   }
 
+  private async updateUser(phone: string, data: Partial<typeof users.$inferInsert>) {
+    logger.debug({ userId: phone, data }, '[DB_UPDATE] Updating user record');
+    try {
+      await this.database
+        .update(users)
+        .set({ ...data, updatedAt: new Date() }) // Siempre actualiza updatedAt
+        .where(eq(users.phoneNumber, phone));
+      logger.info({ userId: phone, data }, '[DB_SUCCESS] User record updated');
+    } catch (error) {
+      logger.error({ userId: phone, error: error.message }, '[DB_ERROR] Failed to update user record');
+    }
+  }
+
   createFlow() {
     return addKeyword(['empezar', 'start'], { sensitive: false })
       .addAction(async (ctx, { flowDynamic, state }) => {
-        // Simple lang detection for now
         const lang = ctx.body.toLowerCase() === 'start' ? 'en' : 'es';
         const user = await this.getOrCreateUser(ctx.from, lang);
-        await state.update({ lang: user.preferredLanguage });
+        
+        await state.update({ 
+          lang: user.preferredLanguage,
+          onboardingStep: 'welcome',
+          userId: user.id 
+        });
 
-        const welcomeMessage = this.templateEngine.process(
-          't(onboarding:start.welcome)',
-          {},
-          lang
-        );
-
+        logger.info({ userId: ctx.from, lang }, '[ONBOARDING_START] Onboarding started');
+        const welcomeMessage = this.templateEngine.process('t(onboarding:start.welcome)', {}, lang);
         await flowDynamic(welcomeMessage);
       })
       .addAnswer(
@@ -60,24 +74,20 @@ export class OnboardingFlow {
           const age = parseInt(ctx.body, 10);
 
           if (isNaN(age) || age < 15 || age > 99) {
-            const errorMessage = this.templateEngine.process(
-              't(onboarding:age.error)',
-              {},
-              lang
-            );
+            logger.warn({ userId: ctx.from, step: 'age', input: ctx.body }, '[VALIDATION_ERROR] Invalid user input');
+            const errorMessage = this.templateEngine.process('t(onboarding:age.error)', {}, lang);
             return fallBack(errorMessage);
           }
-
-          await this.database.query
-            .update(users)
-            .set({ age })
-            .where(eq(users.phoneNumber, ctx.from));
+          
+          await this.updateUser(ctx.from, { age });
+          await state.update({ onboardingStep: 'age_completed' });
+          logger.info({ userId: ctx.from, step: 'age', value: age }, '[ONBOARDING_STEP] Step completed');
         }
       )
       .addAnswer(
         't(onboarding:gender.question)',
         { capture: true },
-        async (ctx) => {
+        async (ctx, { state }) => {
           const text = ctx.body.toLowerCase();
           let gender: 'male' | 'female' | 'other' = 'other';
           if (text.startsWith('m') || text.includes('masc') || text.includes('male')) {
@@ -85,17 +95,16 @@ export class OnboardingFlow {
           } else if (text.startsWith('f') || text.includes('fem') || text.includes('female')) {
             gender = 'female';
           }
-
-          await this.database.query
-            .update(users)
-            .set({ gender })
-            .where(eq(users.phoneNumber, ctx.from));
+          
+          await this.updateUser(ctx.from, { gender });
+          await state.update({ onboardingStep: 'gender_completed' });
+          logger.info({ userId: ctx.from, step: 'gender', value: gender }, '[ONBOARDING_STEP] Step completed');
         }
       )
       .addAnswer(
         't(onboarding:level.question)',
         { capture: true },
-        async (ctx) => {
+        async (ctx, { state }) => {
           const text = ctx.body.toLowerCase();
           let level: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
           if (text.includes('inter') || text.includes('medi')) {
@@ -104,17 +113,15 @@ export class OnboardingFlow {
             level = 'advanced';
           }
 
-          await this.database.query
-            .update(users)
-            .set({ experienceLevel: level })
-            .where(eq(users.phoneNumber, ctx.from));
+          await this.updateUser(ctx.from, { experienceLevel: level });
+          await state.update({ onboardingStep: 'level_completed' });
+          logger.info({ userId: ctx.from, step: 'level', value: level }, '[ONBOARDING_STEP] Step completed');
         }
       )
       .addAnswer(
         't(onboarding:goal.question)',
         { capture: true },
-        async (ctx, { state, flowDynamic }) => {
-          const lang = state.get('lang');
+        async (ctx, { state }) => {
           const text = ctx.body.toLowerCase();
           let goal: 'first_race' | 'improve_time' | 'stay_fit' = 'stay_fit';
           if (text.includes('primera') || text.includes('first')) {
@@ -123,10 +130,9 @@ export class OnboardingFlow {
             goal = 'improve_time';
           }
 
-          await this.database.query
-            .update(users)
-            .set({ onboardingGoal: goal })
-            .where(eq(users.phoneNumber, ctx.from));
+          await this.updateUser(ctx.from, { onboardingGoal: goal });
+          await state.update({ onboardingStep: 'goal_completed' });
+          logger.info({ userId: ctx.from, step: 'goal', value: goal }, '[ONBOARDING_STEP] Step completed');
         }
       )
       .addAnswer(
@@ -137,18 +143,14 @@ export class OnboardingFlow {
           const freq = parseInt(ctx.body, 10);
 
           if (isNaN(freq) || freq < 1 || freq > 7) {
-            const errorMessage = this.templateEngine.process(
-              't(onboarding:frequency.error)',
-              {},
-              lang
-            );
+            logger.warn({ userId: ctx.from, step: 'frequency', input: ctx.body }, '[VALIDATION_ERROR] Invalid user input');
+            const errorMessage = this.templateEngine.process('t(onboarding:frequency.error)', {}, lang);
             return fallBack(errorMessage);
           }
 
-          await this.database.query
-            .update(users)
-            .set({ weeklyMileage: String(freq) })
-            .where(eq(users.phoneNumber, ctx.from));
+          await this.updateUser(ctx.from, { weeklyMileage: String(freq) });
+          await state.update({ onboardingStep: 'frequency_completed' });
+          logger.info({ userId: ctx.from, step: 'frequency', value: freq }, '[ONBOARDING_STEP] Step completed');
         }
       )
       .addAnswer(
@@ -163,18 +165,16 @@ export class OnboardingFlow {
             status = 'recovery';
           }
 
-          await this.database.query
-            .update(users)
-            .set({ injuryHistory: { status } })
-            .where(eq(users.phoneNumber, ctx.from));
+          await this.updateUser(ctx.from, { 
+            injuryHistory: { status },
+            onboardingCompleted: true
+          });
 
           const lang = state.get('lang');
-          const doneMsg = this.templateEngine.process(
-            't(onboarding:completed.message)',
-            {},
-            lang
-          );
-          await state.update({});
+          const doneMsg = this.templateEngine.process('t(onboarding:completed.message)', {}, lang);
+          
+          logger.info({ userId: ctx.from }, '[ONBOARDING_COMPLETE] Onboarding finished');
+          await state.update({ onboardingStep: 'finished' });
           await flowDynamic(doneMsg);
         }
       );
