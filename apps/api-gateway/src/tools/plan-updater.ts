@@ -35,7 +35,10 @@ export function createPlanUpdaterTool(
       const { action, targetRace, weeklyFrequency, currentVDOT, targetDate, adjustments } = params;
       
       // Get user ID from context
-      const userId = params.userId || 'unknown';
+      const userId = params.userId;
+      if (!userId) {
+        throw new Error('User ID is required to update a training plan.');
+      }
       
       try {
         switch (action) {

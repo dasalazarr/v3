@@ -118,7 +118,7 @@ export class AIAgent {
           try {
             const result = await this.toolRegistry.execute({
               name: toolCall.function.name,
-              parameters: JSON.parse(toolCall.function.arguments),
+              parameters: { ...JSON.parse(toolCall.function.arguments), userId },
             });
             
             // Add user language to result for localization
