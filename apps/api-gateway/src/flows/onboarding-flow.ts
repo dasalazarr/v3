@@ -19,7 +19,7 @@ export class OnboardingFlow {
   ) {}
 
   private async getOrCreateUser(phoneNumber: string, lang: 'es' | 'en') {
-    const [user] = await this.database
+    const [user] = await this.database.query
       .select()
       .from(users)
       .where(eq(users.phoneNumber, phoneNumber))
@@ -29,7 +29,7 @@ export class OnboardingFlow {
 
     if (!existingUser) {
       logger.info({ userId: phoneNumber, lang }, '[DB_CREATE] New user, creating record');
-      [existingUser] = await this.database
+      [existingUser] = await this.database.query
         .insert(users)
         .values({ phoneNumber, preferredLanguage: lang })
         .returning();
@@ -40,13 +40,14 @@ export class OnboardingFlow {
   private async updateUser(phone: string, data: Partial<typeof users.$inferInsert>) {
     logger.debug({ userId: phone, data }, '[DB_UPDATE] Updating user record');
     try {
-      await this.database
+      await this.database.query
         .update(users)
         .set({ ...data, updatedAt: new Date() }) // Siempre actualiza updatedAt
         .where(eq(users.phoneNumber, phone));
       logger.info({ userId: phone, data }, '[DB_SUCCESS] User record updated');
     } catch (error) {
-      logger.error({ userId: phone, error: error.message }, '[DB_ERROR] Failed to update user record');
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        logger.error({ userId: phone, error: errorMessage }, '[DB_ERROR] Failed to update user record');
     }
   }
 
