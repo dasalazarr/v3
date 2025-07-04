@@ -121,9 +121,11 @@ export class AIAgent {
               parameters: { ...JSON.parse(toolCall.function.arguments), userId },
             });
             
-            // Add user language to result for localization
-            if (userProfile?.preferredLanguage) {
-              result.userLanguage = userProfile.preferredLanguage;
+            // Handle validation errors by asking the user for more information
+            if (result.error === 'VALIDATION_FAILED') {
+              content = result.message; // Use the validation message as the response
+              toolCalls.pop(); // Remove the failed tool call
+              break; // Exit the loop and return the validation message
             }
 
             toolCalls.push({
@@ -280,7 +282,10 @@ You have access to tools for:
 - Scheduling workouts and rest days
 - Tracking progress and generating insights
 
-Always use tools when the user provides data or requests specific actions.`;
+Always use tools when the user provides data or requests specific actions.
+
+## PROACTIVE BEHAVIOR
+If a user provides data that clearly describes a completed run (e.g., distance, duration, pace), you MUST proactively use the `log_run` tool to record it, even if not explicitly asked. After using the tool, confirm to the user that the run has been logged.`;
   }
 
   private getSpanishSystemPrompt(): string {

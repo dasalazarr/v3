@@ -38,6 +38,18 @@ export class ToolRegistry {
       console.log(`✅ Executed tool: ${toolCall.name}`);
       return result;
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.warn(`⚠️ Validation failed for tool ${toolCall.name}:`, error.issues);
+        const missingFields = error.issues.map(issue => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        }));
+        return {
+          error: 'VALIDATION_FAILED',
+          message: `I need more information to log your run. Please provide the following: ${missingFields.map(f => f.field).join(', ')}`,
+          details: missingFields,
+        };
+      }
       console.error(`❌ Error executing tool ${toolCall.name}:`, error);
       throw error;
     }
