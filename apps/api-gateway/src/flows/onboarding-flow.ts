@@ -9,7 +9,7 @@ import { addKeyword } from '@builderbot/bot';
 import { Database, users } from '@running-coach/database';
 import { TemplateEngine } from '@running-coach/shared';
 import { eq } from 'drizzle-orm';
-import logger from '../services/logger-service';
+import logger from '../services/logger-service.js';
 
 @injectable()
 export class OnboardingFlow {
