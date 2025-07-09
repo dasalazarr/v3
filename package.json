@@ -25,6 +25,7 @@
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.4.0",
     "eslint": "^8.52.0",
+    "eslint-plugin-builderbot": "^1.2.9",
     "nodemon": "^3.1.0",
     "reflect-metadata": "^0.2.1",
     "tsx": "^4.7.1",

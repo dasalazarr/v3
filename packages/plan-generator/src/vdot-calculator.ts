@@ -138,7 +138,7 @@ export class VDOTCalculator {
     const clampedVDOT = Math.max(VDOT_MIN, Math.min(VDOT_MAX, vdot));
     
     // Find closest table entry
-    let entry = this.VDOT_TABLE.find(e => e.vdot >= clampedVDOT) || this.VDOT_TABLE[this.VDOT_TABLE.length - 1];
+    const entry = this.VDOT_TABLE.find(e => e.vdot >= clampedVDOT) || this.VDOT_TABLE[this.VDOT_TABLE.length - 1];
     
     // Calculate paces based on VDOT methodology
     const milePace = entry.mile;

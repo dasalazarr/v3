@@ -51,12 +51,12 @@ export function sleep(ms: number): Promise<void> {
 
 export function isValidPhoneNumber(phone: string): boolean {
   // Basic phone number validation
-  const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
+  const phoneRegex = /^\+?[\d\s\-()]{10,}$/;
   return phoneRegex.test(phone);
 }
 
 export function sanitizePhoneNumber(phone: string): string {
-  return phone.replace(/[\s\-\(\)]/g, '');
+  return phone.replace(/[\s\-()]/g, '');
 }
 
 export function truncateText(text: string, maxLength: number): string {

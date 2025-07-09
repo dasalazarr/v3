@@ -1,0 +1,17 @@
+{
+  "project_name": "v3",
+  "preferences": {
+    "response_style": "concise",
+    "self_host_model": false
+  },
+  "sandboxing": {
+    "enabled": true,
+    "allowed_commands": [
+      "npm",
+      "git",
+      "node",
+      "pnpm",
+      "npx"
+    ]
+  }
+}
