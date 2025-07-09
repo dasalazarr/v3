@@ -1,15 +1,16 @@
+import { describe, it, expect, beforeEach, vi, type Mocked } from 'vitest';
 import { FreemiumService } from '../services/freemium-service';
 import { ChatBuffer } from '@running-coach/vector-memory';
 
 describe('FreemiumService', () => {
-  let chatBufferMock: jest.Mocked<ChatBuffer>;
+  let chatBufferMock: Mocked<ChatBuffer>;
   let freemiumService: FreemiumService;
   const MESSAGE_LIMIT = 10;
   const PAYWALL_LINK = 'https://example.com/paywall';
 
   beforeEach(() => {
     chatBufferMock = {
-      incrementKey: jest.fn(),
+      incrementKey: vi.fn(),
     } as any;
     freemiumService = new FreemiumService(chatBufferMock, MESSAGE_LIMIT, PAYWALL_LINK);
   });
