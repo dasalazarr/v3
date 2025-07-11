@@ -181,7 +181,7 @@ export class OnboardingFlow {
 
           // Find the next question to ask
           let nextQuestion = onboardingQuestions[questionIndex];
-          while (nextQuestion && nextQuestion.condition && !nextQuestion.condition(state.get())) {
+          while (nextQuestion && nextQuestion.condition && !nextQuestion.condition((state as any).get())) {
             questionIndex++;
             nextQuestion = onboardingQuestions[questionIndex];
           }
@@ -195,7 +195,7 @@ export class OnboardingFlow {
           }
 
           // If no more questions, complete the onboarding
-          const finalData = { ...state.get() };
+          const finalData = { ...(state as any).get() };
           delete finalData.questionIndex;
           finalData.onboardingCompleted = true;
 
@@ -206,7 +206,8 @@ export class OnboardingFlow {
           await flowDynamic(doneMsg);
 
           // Redirect to the main flow
-          return gotoFlow(EnhancedMainFlow);
+          const mainFlow = container.resolve(EnhancedMainFlow);
+          return gotoFlow(mainFlow.createFlow());
         }
       );
   }

@@ -51,7 +51,8 @@ export class EnhancedMainFlow {
 
         if (!user.onboardingCompleted) {
           logger.info({ userId: ctx.from }, '[ROUTER] Onboarding not completed, redirecting to OnboardingFlow');
-          return gotoFlow(OnboardingFlow);
+          const onboardingFlow = container.resolve(OnboardingFlow);
+          return gotoFlow(onboardingFlow.createFlow());
         }
         
         logger.info({ userId: ctx.from }, '[ROUTER] User has completed onboarding, proceeding to main flow');
