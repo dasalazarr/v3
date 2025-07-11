@@ -206,7 +206,7 @@ export class OnboardingFlow {
           await flowDynamic(doneMsg);
 
           // Redirect to the main flow
-          return gotoFlow(container.resolve(EnhancedMainFlow).createFlow());
+          return gotoFlow(EnhancedMainFlow);
         }
       );
   }
