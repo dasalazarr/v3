@@ -1,5 +1,5 @@
 
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject, container } from 'tsyringe';
 import { addKeyword, EVENTS } from '@builderbot/bot';
 import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
@@ -7,6 +7,7 @@ import { LanguageDetector } from '@running-coach/shared';
 import { AIAgent } from '@running-coach/llm-orchestrator';
 import { VectorMemory } from '@running-coach/vector-memory';
 import logger from '../services/logger-service.js';
+import { OnboardingFlow } from './onboarding-flow.js';
 
 @injectable()
 export class EnhancedMainFlow {
@@ -29,7 +30,7 @@ export class EnhancedMainFlow {
       return user;
     }
 
-    const lang = await this.languageDetector.detect(message);
+    const lang = (await this.languageDetector.detect(message)) as 'es' | 'en';
     logger.info({ userId: phoneNumber, lang }, '[DB_CREATE] New user, creating record');
     const [newUser] = await this.database.query
       .insert(users)
@@ -50,7 +51,8 @@ export class EnhancedMainFlow {
 
         if (!user.onboardingCompleted) {
           logger.info({ userId: ctx.from }, '[ROUTER] Onboarding not completed, redirecting to OnboardingFlow');
-          return gotoFlow(container.resolve('OnboardingFlow').createFlow());
+          const onboardingFlow = container.resolve(OnboardingFlow);
+          return gotoFlow(onboardingFlow.createFlow());
         }
         
         logger.info({ userId: ctx.from }, '[ROUTER] User has completed onboarding, proceeding to main flow');

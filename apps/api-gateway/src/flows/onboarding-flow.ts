@@ -136,7 +136,7 @@ export class OnboardingFlow {
       .addAnswer(
         ' ', // Placeholder, the real question is asked in the action
         { capture: true },
-        async function onboardingLoop(ctx, { state, flowDynamic, fallBack, gotoFlow }) {
+        async (ctx, { state, flowDynamic, fallBack, gotoFlow }) => {
           const lang = state.get('lang');
           let questionIndex = state.get('questionIndex') || 0;
 
