@@ -264,32 +264,17 @@ async function initializeBot(config: Config, services: any) {
     version: 'v18.0'
   });
 
-  // Obtener servicios del contenedor
-  const languageDetector = services.languageDetector;
-  const templateEngine = services.templateEngine;
-  
-  // Inicializar flujos principales
-  const mainFlow = new EnhancedMainFlow(services.aiAgent, services.database, services.vectorMemory, languageDetector);
-  
-  // Inicializar flujo FAQ con soporte bilingüe
-  const faqFlow = new FaqFlow(services.aiAgent, languageDetector, templateEngine, services.database);
-  
-  // Inicializar y registrar flujo de Onboarding
+  // Initialize flows and register them in the container
+  const mainFlow = new EnhancedMainFlow(services.aiAgent, services.database, services.vectorMemory, services.languageDetector);
+  container.registerInstance('EnhancedMainFlow', mainFlow);
+
   const onboardingFlow = new OnboardingFlow(services.database, services.templateEngine);
-
-  // Registrar flujos en el contenedor
-  container.registerInstance('FaqFlow', faqFlow);
   container.registerInstance('OnboardingFlow', onboardingFlow);
-  
-  // Crear flujo combinado con soporte para FAQ
-  const faqFlowInstance = faqFlow.createFlow();
-  const onboardingFlowInstance = onboardingFlow.createFlow();
 
-  const flow = createFlow([
-    mainFlow.createFlow(),
-    faqFlowInstance,
-    onboardingFlowInstance
-  ]);
+  const faqFlow = new FaqFlow(services.aiAgent, services.languageDetector, services.templateEngine, services.database);
+  container.registerInstance('FaqFlow', faqFlow);
+
+  const flow = createFlow([mainFlow.createFlow()]);
 
   const bot = createBot({
     provider,
@@ -298,7 +283,7 @@ async function initializeBot(config: Config, services: any) {
   });
 
   console.log('✅ WhatsApp bot initialized');
-  return { bot, provider }; // Devolvemos tanto el bot como el provider
+  return { bot, provider };
 }
 
 // Setup scheduled tasks
