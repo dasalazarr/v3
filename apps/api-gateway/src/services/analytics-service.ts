@@ -318,7 +318,7 @@ export class AnalyticsService {
         vdotEstimate: stats.vdotEstimate.toString(),
         insights: stats.insights,
         sent: false
-      });
+      }).execute();
     } catch (error) {
       console.error('Error storing progress summary:', error);
     }

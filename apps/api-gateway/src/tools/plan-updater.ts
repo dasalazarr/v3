@@ -90,7 +90,8 @@ async function createNewPlan(
   // Deactivate existing plans
   await db.query.update(trainingPlans)
     .set({ isActive: false, updatedAt: new Date() })
-    .where(and(eq(trainingPlans.userId, userId), eq(trainingPlans.isActive, true)));
+    .where(and(eq(trainingPlans.userId, userId), eq(trainingPlans.isActive, true)))
+    .execute();
   
   // Calculate plan duration and target VDOT
   const planDuration = calculatePlanDuration(targetRace, targetDate);
@@ -112,7 +113,8 @@ async function createNewPlan(
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date()
-  }).returning();
+  }).returning()
+    .execute();
   
   const plan = newPlan[0];
   
@@ -138,7 +140,7 @@ async function createNewPlan(
         completed: false, // Ensure this is set
         description: workout.description || '' // Ensure description is not null
       }))
-    );
+    ).execute();
   }
   
   // Store plan creation in vector memory
@@ -204,7 +206,8 @@ async function updatePlanVDOT(
       paces: newPaces,
       updatedAt: new Date()
     })
-    .where(eq(trainingPlans.id, plan.id));
+    .where(eq(trainingPlans.id, plan.id))
+    .execute();
   
   // Update future workouts with new paces
   await updateFutureWorkoutPaces(db, plan.id, newPaces);
@@ -261,7 +264,8 @@ async function adjustPlanFrequency(
       weeklyFrequency: newFrequency,
       updatedAt: new Date()
     })
-    .where(eq(trainingPlans.id, plan.id));
+    .where(eq(trainingPlans.id, plan.id))
+    .execute();
   
   // Regenerate upcoming workouts with new frequency
   await regenerateUpcomingWorkouts(db, plan, newFrequency);
@@ -314,7 +318,8 @@ async function modifyPlanGoal(
       targetDate,
       updatedAt: new Date()
     })
-    .where(eq(trainingPlans.id, plan.id));
+    .where(eq(trainingPlans.id, plan.id))
+    .execute();
   
   // Store goal change in vector memory
   await vectorMemory.storeGoal(
@@ -386,7 +391,8 @@ async function updateFutureWorkoutPaces(
     
     await db.query.update(workouts)
       .set({ targetPace: newTargetPace })
-      .where(eq(workouts.id, workout.id));
+      .where(eq(workouts.id, workout.id))
+      .execute();
   }
 }
 
@@ -400,7 +406,8 @@ async function regenerateUpcomingWorkouts(
     .where(and(
       eq(workouts.planId, plan.id),
       eq(workouts.completed, false)
-    ));
+    ))
+    .execute();
   
   // Generate new workouts with updated frequency
   const newWorkouts = PlanBuilder.generate14DayBlock({
@@ -423,7 +430,7 @@ async function regenerateUpcomingWorkouts(
         completed: false,
         description: workout.description || ''
       }))
-    );
+    ).execute();
   }
 }
 

@@ -85,7 +85,8 @@ export class EnhancedMainFlow {
         // Update last active date
         await this.database.query.update(users)
           .set({ updatedAt: new Date() })
-          .where(eq(users.id, existingUser[0].id));
+          .where(eq(users.id, existingUser[0].id))
+          .execute();
         
         return existingUser[0];
       }
@@ -106,7 +107,8 @@ export class EnhancedMainFlow {
         onboardingCompleted: false,
         createdAt: new Date(),
         updatedAt: new Date()
-      }).returning();
+      }).returning()
+        .execute();
 
       console.log(`👤 New user created: ${phoneNumber} with language: ${detectedLanguage}`);
       

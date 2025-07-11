@@ -32,7 +32,8 @@ export class OnboardingFlow {
       [existingUser] = await this.database.query
         .insert(users)
         .values({ phoneNumber, preferredLanguage: lang })
-        .returning();
+        .returning()
+        .execute();
     }
     return existingUser;
   }
@@ -43,7 +44,8 @@ export class OnboardingFlow {
       await this.database.query
         .update(users)
         .set({ ...data, updatedAt: new Date() }) // Siempre actualiza updatedAt
-        .where(eq(users.phoneNumber, phone));
+        .where(eq(users.phoneNumber, phone))
+        .execute();
       logger.info({ userId: phone, data }, '[DB_SUCCESS] User record updated');
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';

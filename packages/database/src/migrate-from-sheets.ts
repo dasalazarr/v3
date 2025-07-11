@@ -118,7 +118,7 @@ export class SheetsMigration {
               onboardingCompleted: false,
               createdAt: new Date(user.lastActiveDate),
               updatedAt: new Date(user.lastActiveDate)
-            });
+            }).execute();
             console.log(`✅ Migrated user: ${user.phoneNumber}`);
           } else {
             console.log(`⏭️ User already exists: ${user.phoneNumber}`);
@@ -220,7 +220,7 @@ export class SheetsMigration {
             perceivedEffort,
             notes: training.notes !== 'N/A' ? training.notes : null,
             createdAt: new Date(training.timestamp)
-          });
+          }).execute();
 
           console.log(`✅ Migrated training data for: ${training.phoneNumber}`);
         } catch (error) {
@@ -288,7 +288,7 @@ export class SheetsMigration {
               role: 'user',
               content: conversation.userMessage,
               timestamp
-            });
+            }).execute();
           }
 
           // Insert bot response
@@ -298,7 +298,7 @@ export class SheetsMigration {
               role: 'assistant',
               content: conversation.botResponse,
               timestamp: new Date(timestamp.getTime() + 1000) // Add 1 second
-            });
+            }).execute();
           }
 
           console.log(`✅ Migrated conversation for: ${conversation.phoneNumber}`);

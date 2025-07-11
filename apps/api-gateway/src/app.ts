@@ -485,7 +485,8 @@ async function main() {
                             [user] = await services.database.query
                               .insert(users)
                               .values({ phoneNumber: phone, preferredLanguage: 'es' })
-                              .returning();
+                              .returning()
+                              .execute();
                           }
 
                           const allowance = await services.freemiumService.checkMessageAllowance(user);

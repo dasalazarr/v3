@@ -35,7 +35,8 @@ export class StripeService {
         await this.db.query
           .update(users)
           .set({ subscriptionStatus: 'active' })
-          .where(eq(users.phoneNumber, phone));
+          .where(eq(users.phoneNumber, phone))
+          .execute();
       }
     }
   }

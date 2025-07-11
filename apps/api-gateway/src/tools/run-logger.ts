@@ -53,7 +53,8 @@ export function createRunLoggerTool(
           notes,
           aches,
           createdAt: new Date()
-        }).returning();
+        }).returning()
+        .execute();
 
         // Store in vector memory
         const runSummary = generateRunSummary(distance, duration, perceivedEffort, mood, notes);

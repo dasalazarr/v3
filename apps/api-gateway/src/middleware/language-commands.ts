@@ -55,7 +55,8 @@ export class LanguageCommandMiddleware {
       // Actualizar el idioma en la base de datos
       await this.database.query.update(users)
         .set({ preferredLanguage: language })
-        .where(eq(users.id, userId));
+        .where(eq(users.id, userId))
+        .execute();
       
       console.log(`🌐 Language changed for user ${userId} to ${language}`);
     } catch (error) {
