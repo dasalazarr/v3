@@ -16,6 +16,7 @@
     "@running-coach/database": "workspace:*",
     "@running-coach/shared": "workspace:*",
     "@running-coach/vector-memory": "workspace:*",
+    "@running-coach/plan-generator": "workspace:*",
     "franc": "^6.2.0",
     "openai": "^4.77.0",
     "zod": "^3.22.4"

@@ -1,8 +1,8 @@
 # Running Coach Bot – Arquitectura y Estado Actual
 
-Fecha: 2025-06-27
+Fecha: 2025-07-12
 
-Este documento resume la transformación del prototipo original (basado en Google Sheets) a un sistema inteligente con memoria persistente y arquitectura modular mono-repo.
+Este documento resume la transformación del prototipo original (basado en Google Sheets) a un sistema inteligente con memoria persistente y arquitectura modular mono-repo, evolucionando hacia un modelo de coaching multi-agente.
 
 ---
 
@@ -10,10 +10,10 @@ Este documento resume la transformación del prototipo original (basado en Googl
 
 ```
 ├── apps
-│   └── api-gateway            # Servidor Express + tRPC – punto de entrada HTTP/WhatsApp
+│   └── api-gateway            # Servidor Express – punto de entrada HTTP/WhatsApp (manejo directo del webhook)
 │
 ├── packages
-│   ├── llm-orchestrator       # Lógica de IA, prompts y tool-calling
+│   ├── llm-orchestrator       # **Sistema Multi-Agente de IA**, prompts y tool-calling
 │   ├── vector-memory          # Persistencia semántica (Qdrant)
 │   ├── plan-generator         # Algoritmo VDOT / Jack Daniels
 │   └── …                      # Futuras utilidades compartidas
@@ -65,20 +65,32 @@ CREATE TABLE runs (
 
 ---
 
-## 4. Orquestación de IA
+## 4. Orquestación de IA: El Equipo de Coaching Multi-Agente
 
-* Agente DeepSeek con capacidad de **tool-calling**.
-* Registro centralizado de herramientas (plan generator, data logger, etc.).
-* Prompt dinámico que incorpora historial, perfil y contexto semántico.
+El `llm-orchestrator` ha evolucionado de un agente único a un equipo colaborativo de especialistas virtuales, emulando un equipo de coaching de élite. Este enfoque permite un asesoramiento más holístico y contextualizado.
 
-```ts
-const response = await deepSeekAgent.process({
-  systemPrompt: buildSystemPrompt(user, context),
-  conversationHistory,
-  userMessage: message,
-  availableTools: toolRegistry.list()
-});
-```
+### Agentes Especializados:
+
+*   **Coach Principal (`HeadCoach`):** Actúa como el director del equipo. Es el único que interactúa directamente con el usuario (a través del webhook de WhatsApp). Interpreta la necesidad del usuario, delega tareas a los agentes especialistas y sintetiza sus respuestas para dar una recomendación unificada. Inspirado en el `orchestrator.py` de la arquitectura multi-agente v3.
+
+*   **Agente Planificador de Entrenamiento (`TrainingPlannerAgent`):** Experto en la ciencia del running. Su misión es crear, ajustar y explicar planes de entrenamiento, utilizando el `plan-generator` y el `vdot-calculator` existentes como sus herramientas principales.
+
+*   **Agente Analista de Rendimiento (`PerformanceAnalystAgent`):** Revisa los datos de los entrenamientos completados por el usuario, compara el rendimiento real con el planificado, identifica tendencias y proporciona retroalimentación crítica. Inspirado en el `reflexion_agent.py` de la arquitectura v3.
+
+*   **Agente Experto en Nutrición y Recuperación (`NutritionRecoveryAgent`):** Aconseja sobre alimentación pre/post-carrera, hidratación y técnicas de recuperación. Utiliza una base de conocimiento curada en `vector-memory`.
+
+*   **Agente Motivador y Psicólogo Deportivo (`MotivationAgent`):** Gestiona el aspecto mental del entrenamiento, ofreciendo ánimo, estrategias para superar la falta de motivación y construir disciplina.
+
+*   **Agente de Conversación (`ConversationAgent`):** Responsable de la interfaz final con el usuario. Sintetiza las respuestas de los otros agentes en un mensaje claro, fluido y natural para el usuario.
+
+### Flujo de Interacción (Ejemplo):
+
+1.  El usuario envía un mensaje a WhatsApp (ej. "¡Terminé mi carrera de hoy!").
+2.  El webhook de `api-gateway` recibe el mensaje y lo envía al `HeadCoach`.
+3.  El `HeadCoach` delega la tarea al `PerformanceAnalystAgent` para revisar los datos del entrenamiento.
+4.  Simultáneamente, el `HeadCoach` puede activar al `MotivationAgent` y al `NutritionRecoveryAgent` para que aporten sus perspectivas.
+5.  El `ConversationAgent` recibe las respuestas de todos los agentes relevantes y las sintetiza en un mensaje coherente y amigable para el usuario.
+6.  La `api-gateway` envía la respuesta final al usuario a través de la API de Meta.
 
 ---
 
@@ -110,9 +122,9 @@ const response = await deepSeekAgent.process({
 
 ## 8. Rendimiento
 
-* **Cache-first**: Redis → Qdrant → PostgreSQL.
-* Operaciones paralelas con `Promise.all` para reducir latencia.
-* Respuesta objetivo < 1 s incluso con recuperación de memoria semántica.
+*   **Cache-first**: Redis → Qdrant → PostgreSQL.
+*   Operaciones paralelas con `Promise.all` para reducir latencia.
+*   Respuesta objetivo < 1 s incluso con recuperación de memoria semántica.
 
 ---
 
@@ -133,4 +145,4 @@ const response = await deepSeekAgent.process({
 
 ---
 
-> Documento generado automáticamente por Cascade para reflejar el estado arquitectónico al 27-Jun-2025.
+> Documento generado automáticamente por Cascade para reflejar el estado arquitectónico al 12-Jul-2025.

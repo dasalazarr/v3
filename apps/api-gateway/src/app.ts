@@ -1,6 +1,5 @@
 import 'reflect-metadata';
-import { createBot, createFlow, createProvider, MemoryDB } from '@builderbot/bot';
-import { MetaProvider } from '@builderbot/provider-meta';
+
 import express from 'express';
 import dotenv from 'dotenv';
 import { container } from 'tsyringe';
@@ -11,15 +10,14 @@ import fetch from 'node-fetch';
 import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
-import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
+
 import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
 import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
-import { createRunLoggerTool } from './tools/run-logger.js';
-import { createPlanUpdaterTool } from './tools/plan-updater.js';
-import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
-import { FaqFlow } from './flows/faq-flow.js';
-import { OnboardingFlow } from './flows/onboarding-flow.js';
+
+import { PlanBuilder } from '@running-coach/plan-generator';
+import { HeadCoach } from '@running-coach/llm-orchestrator';
+
 
 // Load environment variables
 dotenv.config();
@@ -145,6 +143,7 @@ function loadConfig(): Config {
 
 // Initialize services
 async function initializeServices(config: Config) {
+  
   console.log('🚀 Initializing Running Coach services...');
 
   // Parse database URL
@@ -193,26 +192,17 @@ async function initializeServices(config: Config) {
   await vectorMemory.initialize();
   console.log('✅ Vector memory initialized');
 
-  // Initialize Tool Registry
-  const toolRegistry = new ToolRegistry();
   
-  // Register tools
-  toolRegistry.register(createRunLoggerTool(database, vectorMemory));
-  toolRegistry.register(createPlanUpdaterTool(database, vectorMemory));
-  console.log('✅ Tools registered');
 
-  // Initialize AI Agent
-  const aiAgent = new AIAgent(
-    {
-      apiKey: config.DEEPSEEK_API_KEY,
-      baseURL: config.DEEPSEEK_BASE_URL,
-      model: config.DEEPSEEK_MODEL
-    },
-    chatBuffer,
+  // Initialize Plan Builder
+  const planBuilder = new PlanBuilder();
+
+  // Initialize Head Coach
+  const headCoach = new HeadCoach({
     vectorMemory,
-    toolRegistry
-  );
-  console.log('✅ AI Agent initialized');
+        planBuilder,
+  });
+  console.log('✅ Head Coach initialized');
 
   // Initialize Analytics Service
   const analyticsService = new AnalyticsService(database);
@@ -231,10 +221,10 @@ async function initializeServices(config: Config) {
   container.registerInstance('Database', database);
   container.registerInstance('ChatBuffer', chatBuffer);
   container.registerInstance('VectorMemory', vectorMemory);
-  container.registerInstance('AIAgent', aiAgent);
+          container.registerInstance('HeadCoach', headCoach);
   container.registerInstance('AnalyticsService', analyticsService);
   container.registerInstance('FreemiumService', freemiumService);
-  container.registerInstance('ToolRegistry', toolRegistry);
+  
   container.registerInstance('LanguageDetector', languageDetector);
   container.registerInstance('I18nService', i18nService);
   container.registerInstance('TemplateEngine', templateEngine);
@@ -243,48 +233,16 @@ async function initializeServices(config: Config) {
     database,
     chatBuffer,
     vectorMemory,
-    aiAgent,
+    headCoach,
     analyticsService,
     freemiumService,
-    toolRegistry,
-    languageDetector,
     i18nService,
     templateEngine
   };
 }
 
 // Initialize WhatsApp Bot
-async function initializeBot(config: Config, services: any) {
-  console.log('🤖 Initializing WhatsApp bot...');
 
-  const provider = createProvider(MetaProvider, {
-    jwtToken: config.JWT_TOKEN,
-    numberId: config.NUMBER_ID,
-    verifyToken: config.VERIFY_TOKEN,
-    version: 'v18.0'
-  });
-
-  // Initialize flows and register them in the container
-  const mainFlow = new EnhancedMainFlow(services.aiAgent, services.database, services.vectorMemory, services.languageDetector);
-  container.registerInstance('EnhancedMainFlow', mainFlow);
-
-  const onboardingFlow = new OnboardingFlow(services.database, services.templateEngine);
-  container.registerInstance('OnboardingFlow', onboardingFlow);
-
-  const faqFlow = new FaqFlow(services.aiAgent, services.languageDetector, services.templateEngine, services.database);
-  container.registerInstance('FaqFlow', faqFlow);
-
-  const flow = createFlow([mainFlow.createFlow()]);
-
-  const bot = createBot({
-    provider,
-    flow,
-    database: new MemoryDB() // We handle our own database
-  });
-
-  console.log('✅ WhatsApp bot initialized');
-  return { bot, provider };
-}
 
 // Setup scheduled tasks
 function setupScheduledTasks(services: any) {
@@ -397,8 +355,7 @@ async function main() {
     const config = loadConfig();
     console.log(`🌍 Environment: ${config.NODE_ENV}`);
     
-    const services = await initializeServices(config);
-    const { bot, provider } = await initializeBot(config, services);
+        const services = await initializeServices(config);
     
     // Setup Express app for health checks, metrics, and webhook
     const app = express();
@@ -482,16 +439,17 @@ async function main() {
                             continue;
                           }
 
-                          // Process message with AI Agent
-                          const aiResponse = await services.aiAgent.processMessage({
+                          // Process message with Head Coach
+                          const aiResponse = await services.headCoach.handleMessage({
                             userId: user.id,
-                            message: messageText
+                            conversationHistory: [], // Simplified for now
+                            userMessage: messageText,
                           });
 
-                          if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
+                          if (aiResponse && aiResponse.length > 0) {
                             // Send response back to WhatsApp
-                            await sendWhatsAppMessage(phone, aiResponse.content, config);
-                            console.log(`✅ Sent AI response to ${phone}: ${aiResponse.content.substring(0, 50)}...`);
+                            await sendWhatsAppMessage(phone, aiResponse, config);
+                            console.log(`✅ Sent AI response to ${phone}: ${aiResponse.substring(0, 50)}...`);
                           }
                         }
                       } catch (messageError) {

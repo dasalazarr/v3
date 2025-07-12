@@ -13,8 +13,6 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@builderbot/bot": "1.2.2",
-    "@builderbot/provider-meta": "1.2.2",
     "@running-coach/database": "workspace:*",
     "@running-coach/llm-orchestrator": "workspace:*",
     "@running-coach/plan-generator": "workspace:*",
