@@ -19,7 +19,7 @@ export class MotivationAgent extends BaseAgent {
     try {
       const prompt = this.getPrompt(context);
       console.log(`[${this.name}] Sending prompt to LLM.`);
-      const llmResponse = await this.tools.llmClient.generateResponse(prompt);
+      const llmResponse = await this.tools.llmClient.generateResponse(prompt, undefined, "none") as string;
       console.log(`[${this.name}] Received LLM response.`);
       return llmResponse;
     } catch (error) {

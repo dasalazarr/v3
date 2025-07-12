@@ -57,7 +57,7 @@ class HeadCoach {
       Based on the user's message, user profile, and conversation history, list the names of the agents that should be activated, separated by commas. If no specific agent is needed, activate only the MotivationAgent. Example: "TrainingPlannerAgent, MotivationAgent".
     `;
 
-    const selectedAgentsResponse = await this.tools.llmClient.generateResponse(selectionPrompt);
+    const selectedAgentsResponse = await this.tools.llmClient.generateResponse(selectionPrompt, undefined, "none") as string;
     const selectedAgentNames = selectedAgentsResponse.split(",").map(name => name.trim());
 
     const agentOutputs: string[] = [];

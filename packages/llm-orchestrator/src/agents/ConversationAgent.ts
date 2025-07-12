@@ -30,7 +30,7 @@ export class ConversationAgent extends BaseAgent {
         User's original message: ${context.userMessage}
       `;
       console.log(`[${this.name}] Sending prompt to LLM.`);
-      const llmResponse = await this.tools.llmClient.generateResponse(prompt);
+      const llmResponse = await this.tools.llmClient.generateResponse(prompt, undefined, "none") as string;
       console.log(`[${this.name}] Received LLM response.`);
       return llmResponse;
     } catch (error) {

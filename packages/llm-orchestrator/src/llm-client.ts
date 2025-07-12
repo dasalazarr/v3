@@ -14,14 +14,26 @@ export class LLMClient {
     this.model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
   }
 
-  async generateResponse(prompt: string): Promise<string> {
+  async generateResponse(prompt: string, tools?: any[], tool_choice?: "auto" | "none" | { type: "function"; function: { name: string; }; }): Promise<string | OpenAI.Chat.Completions.ChatCompletionMessage.FunctionCall> {
     try {
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [{ role: "user", content: prompt }];
+
       const completion = await this.openai.chat.completions.create({
         model: this.model,
-        messages: [{ role: "user", content: prompt }],
+        messages,
         temperature: 0.7,
+        tools,
+        tool_choice,
       });
-      return completion.choices[0].message?.content || "";
+
+      const responseMessage = completion.choices[0].message;
+
+      if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
+        // Assuming only one tool call for simplicity
+        return responseMessage.tool_calls[0].function;
+      } else {
+        return responseMessage?.content || "";
+      }
     } catch (error) {
       console.error("Error generating LLM response:", error);
       return "Lo siento, tuve un problema al procesar tu solicitud. Por favor, inténtalo de nuevo.";

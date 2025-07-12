@@ -1,6 +1,6 @@
 
 import { BaseAgent, AgentContext, AgentTool } from "./BaseAgent.js";
-import { users } from "@running-coach/database";
+import { users, runs } from "@running-coach/database";
 import { eq } from "drizzle-orm";
 
 export class PerformanceAnalystAgent extends BaseAgent {
@@ -24,20 +24,21 @@ export class PerformanceAnalystAgent extends BaseAgent {
       const [user] = await this.tools.database.query.select().from(users).where(eq(users.id, context.userId)).limit(1);
       console.log(`[${this.name}] User data fetched: ${JSON.stringify(user)}`);
       
-      // In a real scenario, you'd also fetch workout data related to the user
-      const workoutData = "(Simulated workout data: 5km in 25 minutes, felt great)"; // Placeholder
+      console.log(`[${this.name}] Fetching recent runs for user ${context.userId}`);
+      const recentRuns = await this.tools.database.query.select().from(runs).where(eq(runs.userId, context.userId)).orderBy(runs.date).limit(5);
+      console.log(`[${this.name}] Recent runs fetched: ${JSON.stringify(recentRuns)}`);
 
       const prompt = `
         System: You are ${this.name}, a ${this.role}. Your personality is: ${this.personality}.
         
         User's message: ${context.userMessage}
         User's profile (partial): ${JSON.stringify(user)}
-        User's workout data: ${workoutData}
+        Recent workout data (last 5 runs): ${JSON.stringify(recentRuns)}
 
         Analyze the provided workout data and user message. Compare it with any implied plan or previous performance. Identify trends (positive or negative) and provide actionable feedback for improvement. Be concise and insightful.
       `;
       console.log(`[${this.name}] Sending prompt to LLM.`);
-      const llmResponse = await this.tools.llmClient.generateResponse(prompt);
+      const llmResponse = await this.tools.llmClient.generateResponse(prompt, undefined, "none") as string;
       console.log(`[${this.name}] Received LLM response.`);
       return llmResponse;
     } catch (error) {
