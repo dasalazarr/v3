@@ -1,6 +1,6 @@
 
-export * from "./TrainingPlannerAgent";
-export * from "./PerformanceAnalystAgent";
-export * from "./NutritionRecoveryAgent";
-export * from "./MotivationAgent";
-export * from "./ConversationAgent";
+export * from "./TrainingPlannerAgent.js";
+export * from "./PerformanceAnalystAgent.js";
+export * from "./NutritionRecoveryAgent.js";
+export * from "./MotivationAgent.js";
+export * from "./ConversationAgent.js";
