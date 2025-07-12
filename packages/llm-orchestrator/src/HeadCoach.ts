@@ -5,7 +5,7 @@ import {
   NutritionRecoveryAgent,
   MotivationAgent,
   ConversationAgent,
-} from "./agents";
+} from "./agents/index.js";
 import { AgentTool, AgentContext } from "./agents/BaseAgent";
 
 class HeadCoach {
