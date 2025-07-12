@@ -11,12 +11,20 @@ export class MotivationAgent extends BaseAgent {
   }
 
   protected getTask(context: AgentContext): string {
-    return `Provide encouragement, mental strategies, and motivational support based on the user's conversation.`;
+    return `Provide concise encouragement, mental strategies, or motivational support based on the user's current message and conversation history. Focus on uplifting the user and reinforcing positive habits.`;
   }
 
   async run(context: AgentContext): Promise<string> {
-    // In a real implementation, this would call the LLM with the prompt.
-    console.log(`Running ${this.name} for user ${context.userId}`);
-    return "That's the spirit! Every step you take is a victory. You've got this!";
+    console.log(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
+    try {
+      const prompt = this.getPrompt(context);
+      console.log(`[${this.name}] Sending prompt to LLM.`);
+      const llmResponse = await this.tools.llmClient.generateResponse(prompt);
+      console.log(`[${this.name}] Received LLM response.`);
+      return llmResponse;
+    } catch (error) {
+      console.error(`[${this.name}] Error processing request for user ${context.userId}:`, error);
+      return "Siempre estoy aquí para apoyarte. ¡Sigue adelante!";
+    }
   }
 }

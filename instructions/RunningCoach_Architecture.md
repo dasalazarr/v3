@@ -94,6 +94,14 @@ El `llm-orchestrator` ha evolucionado de un agente único a un equipo colaborati
 
 ---
 
+### Optimización de Prompts
+
+*   **Claridad y Concisión:** Los prompts de cada agente han sido refinados para ser más directos y efectivos, eliminando redundancias y enfocándose en la tarea específica del LLM.
+*   **Contexto Relevante:** Se asegura que solo la información necesaria (historial de conversación, perfil de usuario, datos de herramientas) se incluya en el prompt para optimizar el uso de tokens y la calidad de la respuesta.
+*   **Formato de Salida:** Se instruye al LLM sobre el formato de salida esperado cuando sea necesario (ej. explicar un plan generado en lenguaje natural).
+
+---
+
 ## 5. Generación de Planes de Entrenamiento
 
 * Integración con fórmulas **Jack Daniels VDOT**.
@@ -106,21 +114,32 @@ El `llm-orchestrator` ha evolucionado de un agente único a un equipo colaborati
 
 ## 6. Observabilidad y Analítica
 
-* Job cron semanal que crea tarjetas de progreso (canvas 800×600).
-* Métricas clave: volumen, VDOT, consistencia, estado de ánimo.
-* Las tarjetas se envían por WhatsApp cada 14 días.
+*   **Logs Detallados:** Implementación de logs contextuales y detallados en cada agente y en el `HeadCoach` para facilitar la depuración y el seguimiento del flujo de ejecución.
+*   Job cron semanal que crea tarjetas de progreso (canvas 800×600).
+*   Métricas clave: volumen, VDOT, consistencia, estado de ánimo.
+*   Las tarjetas se envían por WhatsApp cada 14 días.
 
 ---
 
-## 7. Testing & QA
+## 7. Manejo de Errores y Robustez
 
-* +80 % de cobertura con Jest en cada paquete.
-* Load testing k6 (stages 10→50 usuarios) para validar rendimiento.
-* GitHub Actions ejecuta pruebas → despliegue Railway.
+*   **Manejo de Errores Centralizado:** Implementación de bloques `try-catch` en los métodos `run` de cada agente y en el `HeadCoach` para capturar y registrar errores de manera controlada.
+*   **Mensajes de Fallback Amigables:** En caso de errores, el sistema proporciona mensajes de fallback al usuario para mantener una experiencia fluida.
+*   **Validación de Entradas:** (Pendiente de implementación más profunda) Asegurar la validación de las entradas del usuario antes de procesarlas.
 
 ---
 
-## 8. Rendimiento
+## 8. Testing & QA
+
+*   **Pruebas Unitarias:** Implementación de pruebas unitarias con Vitest para cada agente (`LLMClient`, `TrainingPlannerAgent`, etc.) y para el `HeadCoach`, utilizando mocks para aislar las dependencias.
+*   **Pruebas de Integración:** (Pendiente de implementación completa) Simulación de interacciones de webhook para verificar el flujo completo del sistema.
+*   +80 % de cobertura con Jest en cada paquete.
+*   Load testing k6 (stages 10→50 usuarios) para validar rendimiento.
+*   GitHub Actions ejecuta pruebas → despliegue Railway.
+
+---
+
+## 9. Rendimiento
 
 *   **Cache-first**: Redis → Qdrant → PostgreSQL.
 *   Operaciones paralelas con `Promise.all` para reducir latencia.
@@ -128,7 +147,7 @@ El `llm-orchestrator` ha evolucionado de un agente único a un equipo colaborati
 
 ---
 
-## 9. Ruta de Migración
+## 10. Ruta de Migración
 
 1. Desplegar schema PG en paralelo a Google Sheets.
 2. Scripts ETL para migrar y validar datos.
@@ -137,7 +156,7 @@ El `llm-orchestrator` ha evolucionado de un agente único a un equipo colaborati
 
 ---
 
-## 10. Próximos Pasos
+## 11. Próximos Pasos
 
 * Despliegue independiente de `vector-memory` para escalado horizontal.
 * Integración de analítica avanzada (TimescaleDB). 

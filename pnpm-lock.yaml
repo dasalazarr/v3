@@ -205,6 +205,9 @@ importers:
       '@running-coach/vector-memory':
         specifier: workspace:*
         version: link:../vector-memory
+      drizzle-orm:
+        specifier: ^0.44.2
+        version: 0.44.2(postgres@3.4.7)
       franc:
         specifier: ^6.2.0
         version: 6.2.0

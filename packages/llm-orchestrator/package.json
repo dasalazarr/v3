@@ -19,7 +19,8 @@
     "@running-coach/plan-generator": "workspace:*",
     "franc": "^6.2.0",
     "openai": "^4.77.0",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "drizzle-orm": "^0.44.2"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",

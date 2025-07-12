@@ -15,10 +15,30 @@ export class NutritionRecoveryAgent extends BaseAgent {
   }
 
   async run(context: AgentContext): Promise<string> {
-    // In a real implementation, this would query the vector memory
-    // and then call the LLM with the prompt.
-    console.log(`Running ${this.name} for user ${context.userId}`);
-    // const relevantInfo = await this.tools.vectorMemory.search(context.userMessage, { namespace: 'nutrition' });
-    return "Remember to have a snack with a 4:1 carb-to-protein ratio within 45 minutes of finishing your run to maximize recovery.";
+    console.log(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
+    try {
+      // Search vector memory for relevant nutrition/recovery info
+      console.log(`[${this.name}] Searching vector memory for: "${context.userMessage}"`);
+      const relevantInfo = await this.tools.vectorMemory.retrieveContext(context.userId, context.userMessage, 3);
+      const infoText = relevantInfo.relevantMemories.map((item: { content: string }) => item.content).join("\n");
+      console.log(`[${this.name}] Relevant info from vector memory: ${infoText.substring(0, 100)}...`);
+
+      const prompt = `
+        System: You are ${this.name}, a ${this.role}. Your personality is: ${this.personality}.
+        
+        User's message: ${context.userMessage}
+        Relevant knowledge from vector memory:
+        ${infoText || "(No specific information found for this query)"}
+
+        Provide concise advice on pre-run meals, post-run recovery nutrition, and hydration strategies based on the user's message and the provided knowledge.
+      `;
+      console.log(`[${this.name}] Sending prompt to LLM.`);
+      const llmResponse = await this.tools.llmClient.generateResponse(prompt);
+      console.log(`[${this.name}] Received LLM response.`);
+      return llmResponse;
+    } catch (error) {
+      console.error(`[${this.name}] Error processing request for user ${context.userId}:`, error);
+      return "Lo siento, no pude proporcionarte consejos de nutrición o recuperación en este momento. Por favor, inténtalo de nuevo más tarde.";
+    }
   }
 }

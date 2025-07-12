@@ -16,7 +16,7 @@ import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
 
 import { PlanBuilder } from '@running-coach/plan-generator';
-import { HeadCoach } from '@running-coach/llm-orchestrator';
+import { HeadCoach, LLMClient } from '@running-coach/llm-orchestrator';
 
 
 // Load environment variables
@@ -194,13 +194,19 @@ async function initializeServices(config: Config) {
 
   
 
+  // Initialize LLM Client
+  const llmClient = new LLMClient();
+
   // Initialize Plan Builder
   const planBuilder = new PlanBuilder();
 
   // Initialize Head Coach
   const headCoach = new HeadCoach({
     vectorMemory,
-        planBuilder,
+    planBuilder,
+    llmClient,
+    database,
+    chatBuffer,
   });
   console.log('✅ Head Coach initialized');
 
@@ -394,7 +400,7 @@ async function main() {
       try {
         // Process the incoming webhook data
         const data = req.body;
-        console.log('💬 Received WhatsApp webhook:', JSON.stringify(data).substring(0, 100) + '...');
+        console.log('💬 Received WhatsApp webhook:', JSON.stringify(data, null, 2));
         
         // Process webhook data for WhatsApp Business API
         if (data && data.object === 'whatsapp_business_account') {
@@ -415,7 +421,7 @@ async function main() {
                           const phone = message.from;
                           const messageText = message.text.body;
 
-                          console.log(`📩 Processing message from ${phone}: ${messageText.substring(0, 50)}...`);
+                          console.log(`📩 Processing message from ${phone}: ${messageText}`);
 
                           // Get or create user
                           let [user] = await services.database.query
@@ -444,12 +450,13 @@ async function main() {
                             userId: user.id,
                             conversationHistory: [], // Simplified for now
                             userMessage: messageText,
+                            channel: 'whatsapp',
                           });
 
                           if (aiResponse && aiResponse.length > 0) {
                             // Send response back to WhatsApp
                             await sendWhatsAppMessage(phone, aiResponse, config);
-                            console.log(`✅ Sent AI response to ${phone}: ${aiResponse.substring(0, 50)}...`);
+                            console.log(`✅ Sent AI response to ${phone}: ${aiResponse}`);
                           }
                         }
                       } catch (messageError) {
