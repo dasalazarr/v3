@@ -58,6 +58,7 @@ class HeadCoach {
     `;
 
     const selectedAgentsResponse = await this.tools.llmClient.generateResponse(selectionPrompt, undefined, "none") as string;
+    console.log(`[HeadCoach] Agent selection response: ${selectedAgentsResponse}`);
     const selectedAgentNames = selectedAgentsResponse.split(",").map(name => name.trim());
 
     const agentOutputs: string[] = [];
@@ -97,6 +98,7 @@ class HeadCoach {
     await this.tools.chatBuffer.addMessage(context.userId, "user", context.userMessage);
     await this.tools.chatBuffer.addMessage(context.userId, "assistant", finalResponse);
 
+    console.log(`[HeadCoach] Final synthesized response: ${finalResponse}`);
     return finalResponse;
   }
 }
