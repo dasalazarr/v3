@@ -29,7 +29,9 @@ export class Database {
       connect_timeout: 60,
     });
 
-    this.db = drizzle(this.client, { schema });
+    // Enable Drizzle ORM logging in non-production environments or when DEBUG_SQL is true
+const enableLogger = process.env.NODE_ENV !== 'production' || process.env.DEBUG_SQL === 'true';
+this.db = drizzle(this.client, { schema, logger: enableLogger });
   }
 
   public static getInstance(config?: DatabaseConfig): Database {
