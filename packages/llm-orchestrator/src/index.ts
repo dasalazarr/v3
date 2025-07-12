@@ -1,1 +1,1 @@
-export * from "./HeadCoach";
+export * from "./HeadCoach.js";
