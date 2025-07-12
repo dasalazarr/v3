@@ -1,6 +1,6 @@
 
 
-import { BaseAgent, AgentContext, AgentTool } from "./BaseAgent";
+import { BaseAgent, AgentContext, AgentTool } from "./BaseAgent.js";
 
 export class ConversationAgent extends BaseAgent {
   name = "Coach-Interface";

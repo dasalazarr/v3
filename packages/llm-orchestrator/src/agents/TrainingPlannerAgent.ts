@@ -1,5 +1,5 @@
 
-import { BaseAgent, AgentContext, AgentTool } from "./BaseAgent";
+import { BaseAgent, AgentContext, AgentTool } from "./BaseAgent.js";
 import { PlanBuilder } from "@running-coach/plan-generator";
 
 export class TrainingPlannerAgent extends BaseAgent {

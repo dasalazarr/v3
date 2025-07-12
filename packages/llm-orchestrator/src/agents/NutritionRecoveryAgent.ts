@@ -1,5 +1,5 @@
 
-import { BaseAgent, AgentContext, AgentTool } from "./BaseAgent";
+import { BaseAgent, AgentContext, AgentTool } from "./BaseAgent.js";
 
 export class NutritionRecoveryAgent extends BaseAgent {
   name = "Coach-Nutritionist";
