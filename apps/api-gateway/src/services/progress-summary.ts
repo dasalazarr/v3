@@ -34,13 +34,13 @@ export class ProgressSummaryService {
         .orderBy(runs.date);
 
       // Calculate key metrics
-      const totalDistance = recentRuns.reduce((sum, run) => sum + (run.distance || 0), 0);
+      const totalDistance = recentRuns.reduce((sum, run) => sum + (parseFloat(run.distance) || 0), 0);
       const totalDuration = recentRuns.reduce((sum, run) => sum + (run.duration || 0), 0);
       const averagePace = totalDuration > 0 && totalDistance > 0 ? totalDuration / totalDistance : 0;
       const averageEffort = recentRuns.length > 0 ? recentRuns.reduce((sum, run) => sum + (run.perceivedEffort || 0), 0) / recentRuns.length : 0;
 
       // Estimate VDOT from recent runs
-      const vdotEstimate = VDOTCalculator.calculateFromRecentRuns(recentRuns);
+      const vdotEstimate = VDOTCalculator.calculateFromRecentRuns(recentRuns.map(run => ({...run, distance: parseFloat(run.distance)})));
 
       // Fetch active training plan
       const [activePlan] = await this.database.query.select().from(trainingPlans)
@@ -56,7 +56,7 @@ export class ProgressSummaryService {
       this.logger.info(`Generated dummy progress card URL: ${dummyImageUrl}`);
 
       // Store summary in database (optional, for historical tracking)
-      await this.database.query.insert(sql`progress_summaries`).values({
+      await this.database.query.insert(progressSummaries).values({
         userId,
         weekStartDate: fourWeeksAgo,
         weekEndDate: new Date(),

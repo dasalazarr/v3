@@ -12,7 +12,7 @@ import { setupGracefulShutdown } from './graceful-shutdown.js';
 import { Database } from '@running-coach/database';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 
-import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
+import { LanguageDetector, TemplateEngine, I18nService, i18nService, languageDetector, templateEngine } from '@running-coach/shared';
 import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
 import { ProgressSummaryService } from './services/progress-summary.js';
