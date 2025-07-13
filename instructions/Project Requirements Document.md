@@ -267,7 +267,7 @@ PRO TIER ($49.99/month):
 ## 🚀 **Deployment and Infrastructure**
 
 ### **Infrastructure Requirements**
-- **Runtime**: Node.js 18+ on Railway/AWS
+- **Runtime**: Node.js 20+ on Railway/AWS
 - **Database**: Neon PostgreSQL or AWS RDS
 - **Cache**: Redis Cloud or AWS ElastiCache
 - **Vector DB**: Qdrant Cloud

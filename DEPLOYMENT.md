@@ -15,7 +15,7 @@ This guide walks through deploying the transformed Running Coach system from a s
 - **Meta WhatsApp Business API** (messaging)
 
 ### Development Tools
-- Node.js 18+ with pnpm
+- Node.js 20+ with pnpm
 - Docker (for local development)
 - Git with GitHub Actions access
 

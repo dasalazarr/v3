@@ -1,6 +1,6 @@
 # STAGE 1: BUILDER
 # This stage builds the app and creates a pruned production-ready folder.
-FROM node:21-bullseye-slim AS builder
+FROM node:20-bullseye-slim AS builder
 
 # Install system dependencies required by node-canvas
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -41,7 +41,7 @@ RUN pnpm --filter api-gateway deploy --prod --legacy /prod
 
 # Stage 2: Production image
 # This stage creates the final, lightweight image.
-FROM node:21-bullseye-slim AS runner
+FROM node:20-bullseye-slim AS runner
 
 # Install system dependencies required by node-canvas for runtime and build
 RUN apt-get update && apt-get install -y --no-install-recommends \

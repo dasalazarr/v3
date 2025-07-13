@@ -18,7 +18,7 @@ Bot inteligente para WhatsApp que combina IA de OpenAI con almacenamiento estruc
 - **Docker**: Empaquetado y despliegue
 
 ## Requisitos Previos
-- Node.js 18+
+- Node.js 20+
 - Cuenta de WhatsApp Business
 - API Key de OpenAI
 - Google Service Account (credentials.json)
