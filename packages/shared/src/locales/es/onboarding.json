@@ -1,14 +1,16 @@
 {
-  "goal_race_prompt": "¡Hola! Para empezar, ¿cuál es tu meta principal? ¿Correr 5K, 10K, una Media Maratón (21K) o una Maratón (42K)?",
-  "goal_race_error": "No entendí tu meta. Por favor, elige entre 5K, 10K, Media Maratón o Maratón.",
-  "experience_level_prompt": "Genial. Ahora, cuéntame sobre tu experiencia. ¿Eres principiante, intermedio o avanzado?",
+  "onboarding_goal_prompt": "¡Hola! Para empezar, ¿cuál es tu meta principal? ¿Estás entrenando para tu primera carrera, buscando mejorar tu tiempo, o solo quieres mantenerte en forma?",
+  "onboarding_goal_error": "No entendí tu meta. Por favor, elige entre 'primera carrera', 'mejorar tiempo', o 'mantenerse en forma'.",
+  "goal_race_prompt": "¡Genial! ¿Cuál es tu carrera objetivo? ¿Un 5K, 10K, Media Maratón (21K), Maratón (42K) o Ultra?",
+  "goal_race_error": "No entendí tu meta. Por favor, elige entre 5K, 10K, Media Maratón, Maratón o Ultra.",
+  "experience_level_prompt": "Ahora, cuéntame sobre tu experiencia. ¿Eres principiante, intermedio o avanzado?",
   "experience_level_error": "No entendí tu nivel de experiencia. Por favor, elige entre principiante, intermedio o avanzado.",
-  "weekly_mileage_prompt": "¿Cuántas veces a la semana te gustaría correr? (ej. 3, 4, 5)",
-  "weekly_mileage_error": "Por favor, ingresa un número entre 1 y 7 para tus sesiones semanales.",
-  "injury_history_prompt": "¿Tienes alguna lesión o molestia actual que deba saber? (Sí/No)",
-  "injury_history_error": "Por favor, responde Sí o No.",
+  "weekly_frequency_prompt": "¿Cuántas veces a la semana te gustaría correr? (ej. 3, 4, 5)",
+  "weekly_frequency_error": "Por favor, ingresa un número entre 1 y 7 para tus sesiones semanales.",
   "age_prompt": "Para personalizar aún más, ¿cuál es tu edad? (Solo el número)",
   "age_error": "Por favor, ingresa una edad válida entre 16 y 80 años.",
   "gender_prompt": "Y finalmente, ¿cuál es tu género? (Hombre/Mujer/Otro)",
-  "gender_error": "Por favor, elige entre Hombre, Mujer u Otro."
+  "gender_error": "Por favor, elige entre Hombre, Mujer u Otro.",
+  "injury_history_prompt": "¿Tienes alguna lesión o molestia actual que deba saber? (Sí/No)",
+  "injury_history_error": "Por favor, responde Sí o No."
 }

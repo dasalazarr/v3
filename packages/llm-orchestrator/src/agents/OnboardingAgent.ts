@@ -19,6 +19,19 @@ interface OnboardingQuestion {
 
 const onboardingQuestions: OnboardingQuestion[] = [
   {
+    key: 'onboardingGoal',
+    prompt: 'onboarding:onboarding_goal_prompt',
+    validation: {
+      type: 'choice',
+      options: {
+        'first_race': ['primera carrera', 'correr por primera vez'],
+        'improve_time': ['mejorar tiempo', 'ser mas rapido'],
+        'stay_fit': ['mantenerme en forma', 'salud', 'bienestar'],
+      },
+      error: 'onboarding:onboarding_goal_error',
+    },
+  },
+  {
     key: 'goalRace',
     prompt: 'onboarding:goal_race_prompt',
     validation: {
@@ -28,6 +41,7 @@ const onboardingQuestions: OnboardingQuestion[] = [
         '10k': ['10k', 'diez k'],
         'half_marathon': ['21k', 'media maraton', 'media', 'half'],
         'marathon': ['42k', 'maraton'],
+        'ultra': ['ultra', 'ultramaraton'],
       },
       error: 'onboarding:goal_race_error',
     },
@@ -46,27 +60,15 @@ const onboardingQuestions: OnboardingQuestion[] = [
     },
   },
   {
-    key: 'weeklyMileage',
-    prompt: 'onboarding:weekly_mileage_prompt',
-    validation: { type: 'number', range: { min: 1, max: 7 }, error: 'onboarding:weekly_mileage_error' },
-  },
-  {
-    key: 'injuryHistory',
-    prompt: 'onboarding:injury_history_prompt',
-    validation: {
-      type: 'choice',
-      options: {
-        'yes': ['si', 'sí', 'yes'],
-        'no': ['no', 'ninguna'],
-      },
-      error: 'onboarding:injury_history_error',
-    },
+    key: 'weeklyFrequency',
+    prompt: 'onboarding:weekly_frequency_prompt',
+    validation: { type: 'number', range: { min: 1, max: 7 }, error: 'onboarding:weekly_frequency_error' },
   },
   {
     key: 'age',
     prompt: 'onboarding:age_prompt',
     validation: { type: 'number', range: { min: 16, max: 80 }, error: 'onboarding:age_error' },
-    condition: (userProfile) => !userProfile.age, // Only ask if age is not set
+    condition: (userProfile) => !userProfile.age,
   },
   {
     key: 'gender',
@@ -74,13 +76,19 @@ const onboardingQuestions: OnboardingQuestion[] = [
     validation: {
       type: 'choice',
       options: {
-        male: ['hombre', 'masculino'],
-        female: ['mujer', 'femenino'],
-        other: ['otro'],
+        male: ['masculino', 'hombre'],
+        female: ['femenino', 'mujer'],
+        other: ['otro', 'no binario'],
       },
       error: 'onboarding:gender_error',
     },
-    condition: (userProfile) => !userProfile.gender, // Only ask if gender is not set
+    condition: (userProfile) => !userProfile.gender,
+  },
+  {
+    key: 'injuryHistory',
+    prompt: 'onboarding:injury_history_prompt',
+    validation: { type: 'text', error: 'onboarding:injury_history_error' },
+    condition: (userProfile) => !userProfile.injuryHistory,
   },
 ];
 
@@ -161,8 +169,8 @@ export class OnboardingAgent extends BaseAgent {
       // --- Find the next question to ask ---
       let nextQuestion: OnboardingQuestion | undefined;
       for (const q of onboardingQuestions) {
-        // Check if the question's key is not set in userProfile or if its condition is not met
-        if (!userProfile?.[q.key] || (q.condition && !q.condition(userProfile))) {
+        // Check if the question's key is not set in userProfile AND condition is met (if exists)
+        if (!userProfile?.[q.key] && (!q.condition || q.condition(userProfile))) {
           nextQuestion = q;
           break;
         }
@@ -187,8 +195,12 @@ export class OnboardingAgent extends BaseAgent {
         return llmResponse;
       } else {
         // All questions answered, complete onboarding
-        await this.tools.database.query.update(users).set({ onboardingCompleted: true, currentOnboardingQuestion: null }).where(eq(users.id, context.userId));
-        console.log(`[${this.name}] Onboarding completed for user ${context.userId}.`);
+        await this.tools.database.query.update(users).set({ 
+          onboardingCompleted: true, 
+          currentOnboardingQuestion: null,
+          updatedAt: new Date()
+        }).where(eq(users.id, context.userId));
+        console.log(`[${this.name}] Onboarding completed for user ${context.userId}. Profile: goalRace=${userProfile?.goalRace}, experienceLevel=${userProfile?.experienceLevel}, weeklyFrequency=${userProfile?.weeklyFrequency}, age=${userProfile?.age}`);
 
         // Generate micro-milestone
         const microMilestonePrompt = `

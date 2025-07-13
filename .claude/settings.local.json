@@ -7,7 +7,10 @@
       "Bash(npm run build:*)",
       "Bash(pnpm install:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm test:*)",
+      "Bash(chmod:*)",
+      "Bash(./validate-onboarding-fix.sh:*)"
     ],
     "deny": []
   }

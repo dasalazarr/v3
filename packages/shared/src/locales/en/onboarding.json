@@ -1,14 +1,16 @@
 {
-  "goal_race_prompt": "Hi! To start, what's your main goal? Run a 5K, 10K, Half Marathon (21K), or Marathon (42K)?",
-  "goal_race_error": "I didn't understand your goal. Please choose between 5K, 10K, Half Marathon, or Marathon.",
-  "experience_level_prompt": "Great. Now, tell me about your experience. Are you a beginner, intermediate, or advanced?",
+  "onboarding_goal_prompt": "Hi! To start, what's your main goal? Are you training for your first race, looking to improve your time, or just want to stay fit?",
+  "onboarding_goal_error": "I didn't understand your goal. Please choose between 'first race', 'improve time', or 'stay fit'.",
+  "goal_race_prompt": "Great! What's your goal race? A 5K, 10K, Half Marathon (21K), Marathon (42K), or Ultra?",
+  "goal_race_error": "I didn't understand your goal. Please choose between 5K, 10K, Half Marathon, Marathon, or Ultra.",
+  "experience_level_prompt": "Now, tell me about your experience. Are you a beginner, intermediate, or advanced?",
   "experience_level_error": "I didn't understand your experience level. Please choose between beginner, intermediate, or advanced.",
-  "weekly_mileage_prompt": "How many times a week would you like to run? (e.g., 3, 4, 5)",
-  "weekly_mileage_error": "Please enter a number between 1 and 7 for your weekly sessions.",
-  "injury_history_prompt": "Do you have any current injuries or discomfort I should know about? (Yes/No)",
-  "injury_history_error": "Please answer Yes or No.",
+  "weekly_frequency_prompt": "How many times a week would you like to run? (e.g., 3, 4, 5)",
+  "weekly_frequency_error": "Please enter a number between 1 and 7 for your weekly sessions.",
   "age_prompt": "To personalize even more, what's your age? (Number only)",
   "age_error": "Please enter a valid age between 16 and 80 years.",
   "gender_prompt": "And finally, what's your gender? (Male/Female/Other)",
-  "gender_error": "Please choose between Male, Female, or Other."
+  "gender_error": "Please choose between Male, Female, or Other.",
+  "injury_history_prompt": "Do you have any current injuries or discomfort I should know about? (Yes/No)",
+  "injury_history_error": "Please answer Yes or No."
 }

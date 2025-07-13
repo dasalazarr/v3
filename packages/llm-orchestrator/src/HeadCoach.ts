@@ -59,10 +59,11 @@ class HeadCoach {
       agentOutputs.push(await this.agents.onboarding.run(updatedContext));
       // If OnboardingAgent returns a response, it means it's still in progress or completed
       if (agentOutputs[0] && agentOutputs[0] !== "") {
-        // If onboarding is completed by this turn, trigger planner
-        if (updatedContext.userProfile?.onboardingCompleted) {
+        // Check if onboarding was completed during this interaction by re-fetching user profile
+        const [refreshedProfile] = await this.tools.database.query.select().from(users).where(eq(users.id, context.userId)).limit(1);
+        if (refreshedProfile?.onboardingCompleted) {
           this.tools.logger.info(`[HeadCoach] Onboarding completed. Triggering TrainingPlannerAgent.`);
-          agentOutputs.push(await this.agents.planner.run(updatedContext));
+          agentOutputs.push(await this.agents.planner.run({...updatedContext, userProfile: refreshedProfile}));
         }
         // If OnboardingAgent returned a message, it's the primary response
         const finalResponse = await this.agents.conversation.run({

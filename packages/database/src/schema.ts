@@ -11,7 +11,7 @@ export const users = pgTable('users', {
   goalRace: text('goal_race', { enum: ['5k', '10k', 'half_marathon', 'marathon', 'ultra'] }),
   experienceLevel: text('experience_level', { enum: ['beginner', 'intermediate', 'advanced'] }),
   injuryHistory: jsonb('injury_history'),
-  weeklyMileage: decimal('weekly_mileage', { precision: 5, scale: 2 }),
+  weeklyFrequency: integer('weekly_frequency'),
   weeklyMessageCount: integer('weekly_message_count').default(0),
   subscriptionStatus: text('subscription_status', { enum: ['none', 'active', 'past_due', 'canceled'] }).default('none'),
   preferredLanguage: text('preferred_language', { enum: ['en', 'es'] }).default('en').notNull(),
