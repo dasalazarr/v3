@@ -15,6 +15,7 @@ import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
 import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
+import { ProgressSummaryService } from './services/progress-summary.js';
 
 import { PlanBuilder } from '@running-coach/plan-generator';
 import { HeadCoach, LLMClient } from '@running-coach/llm-orchestrator';
@@ -172,6 +173,7 @@ async function initializeServices(config: Config) {
     database,
     chatBuffer,
     logger,
+    i18nService,
   });
   logger.info('✅ Head Coach initialized');
 
@@ -182,6 +184,7 @@ async function initializeServices(config: Config) {
     config.MESSAGE_LIMIT,
     config.GUMROAD_LINK
   );
+  const progressSummaryService = new ProgressSummaryService(database, logger);
 
   // Inicializar servicios de idioma
   // Estos servicios ya deberían estar inicializados en el paquete shared
@@ -195,6 +198,7 @@ async function initializeServices(config: Config) {
           container.registerInstance('HeadCoach', headCoach);
   container.registerInstance('AnalyticsService', analyticsService);
   container.registerInstance('FreemiumService', freemiumService);
+  container.registerInstance('ProgressSummaryService', progressSummaryService);
   
   container.registerInstance('LanguageDetector', languageDetector);
   container.registerInstance('I18nService', i18nService);
@@ -208,7 +212,8 @@ async function initializeServices(config: Config) {
     analyticsService,
     freemiumService,
     i18nService,
-    templateEngine
+    templateEngine,
+    progressSummaryService
   };
 }
 
@@ -287,7 +292,7 @@ async function main() {
 
     setupWhatsAppWebhook(app, services, config);
     setupHealthEndpoints(app, services);
-    setupScheduledTasks(services);
+    setupScheduledTasks(services, config);
     setupGracefulShutdown(services);
     
     // Start HTTP server for health checks

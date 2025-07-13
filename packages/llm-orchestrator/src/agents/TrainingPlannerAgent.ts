@@ -18,6 +18,13 @@ export class TrainingPlannerAgent extends BaseAgent {
   async run(context: AgentContext): Promise<string> {
     this.tools.logger.info(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
     try {
+      // Retrieve relevant context from vector memory
+      const semanticContext = await this.tools.vectorMemory.retrieveContext(
+        context.userId,
+        context.userMessage + " " + JSON.stringify(context.userProfile)
+      );
+      this.tools.logger.info(`[${this.name}] Retrieved semantic context: ${JSON.stringify(semanticContext)}`);
+
       const tools = [
         {
           type: "function",
@@ -59,6 +66,7 @@ export class TrainingPlannerAgent extends BaseAgent {
         The user wants a training plan. Extract the necessary parameters from the user's message and call the 'generatePlan' tool. If any required information is missing, ask the user for it.
         User's message: ${context.userMessage}
         User's profile: ${JSON.stringify(context.userProfile)}
+        Relevant past memories: ${semanticContext.summary || 'None'}
         Conversation History: ${context.conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n")}
       `;
 
@@ -85,6 +93,17 @@ export class TrainingPlannerAgent extends BaseAgent {
         this.tools.logger.info(`[${this.name}] Generating plan with request: ${JSON.stringify(request)}`);
         const trainingPlan = PlanBuilder.generatePlan(request);
         this.tools.logger.info(`[${this.name}] Plan generated: ${JSON.stringify(trainingPlan)}`);
+
+        // Store the generated plan as a memory
+        await this.tools.vectorMemory.storeMemory({
+          id: this.tools.vectorMemory.generateId(),
+          userId: context.userId,
+          content: `Generated training plan for ${request.targetRace} with ${request.weeklyFrequency} runs/week. VDOT: ${request.currentVDOT}.`,
+          type: 'goal',
+          timestamp: new Date(),
+          metadata: { plan: trainingPlan, request: request },
+        });
+        this.tools.logger.info(`[${this.name}] Stored generated plan in vector memory.`);
 
         const explanationPrompt = `
           System: You are ${this.name}, a ${this.role}. Your personality is: ${this.personality}.

@@ -1,33 +1,14 @@
 {
-  "start": {
-    "welcome": "¡Hola! Soy tu coach de running personal. Para empezar, necesito hacerte algunas preguntas. ¿Estás listo?",
-    "button": "Empezar"
-  },
-  "age": {
-    "question": "Perfecto. Primero, ¿cuántos años tienes?",
-    "error": "Por favor, ingresa un número válido entre 15 y 99."
-  },
-  "gender": {
-    "question": "Gracias. Ahora, ¿cuál es tu género?",
-    "options": ["Masculino", "Femenino", "Prefiero no decirlo"]
-  },
-  "level": {
-    "question": "¿Cuál consideras que es tu nivel actual como corredor?",
-    "options": ["Principiante", "Intermedio", "Avanzado"]
-  },
-  "goal": {
-    "question": "Finalmente, ¿cuál es tu principal objetivo?",
-    "options": ["Correr mi primera carrera", "Mejorar mi tiempo", "Mantenerme en forma"]
-  },
-  "frequency": {
-    "question": "¿Cuántos días a la semana planeas correr? (1-7)",
-    "error": "Ingresa un número entre 1 y 7"
-  },
-  "injury": {
-    "question": "¿Tienes lesiones o molestias recientes?",
-    "options": ["No", "Sí, leves", "Sí, en recuperación"]
-  },
-  "completed": {
-    "message": "¡Genial! Hemos terminado con las preguntas básicas. Ya podemos empezar a entrenar."
-  }
+  "goal_race_prompt": "¡Hola! Para empezar, ¿cuál es tu meta principal? ¿Correr 5K, 10K, una Media Maratón (21K) o una Maratón (42K)?",
+  "goal_race_error": "No entendí tu meta. Por favor, elige entre 5K, 10K, Media Maratón o Maratón.",
+  "experience_level_prompt": "Genial. Ahora, cuéntame sobre tu experiencia. ¿Eres principiante, intermedio o avanzado?",
+  "experience_level_error": "No entendí tu nivel de experiencia. Por favor, elige entre principiante, intermedio o avanzado.",
+  "weekly_mileage_prompt": "¿Cuántas veces a la semana te gustaría correr? (ej. 3, 4, 5)",
+  "weekly_mileage_error": "Por favor, ingresa un número entre 1 y 7 para tus sesiones semanales.",
+  "injury_history_prompt": "¿Tienes alguna lesión o molestia actual que deba saber? (Sí/No)",
+  "injury_history_error": "Por favor, responde Sí o No.",
+  "age_prompt": "Para personalizar aún más, ¿cuál es tu edad? (Solo el número)",
+  "age_error": "Por favor, ingresa una edad válida entre 16 y 80 años.",
+  "gender_prompt": "Y finalmente, ¿cuál es tu género? (Hombre/Mujer/Otro)",
+  "gender_error": "Por favor, elige entre Hombre, Mujer u Otro."
 }

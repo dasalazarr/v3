@@ -3,6 +3,7 @@
 import { BaseAgent, AgentContext, AgentTool } from "./BaseAgent.js";
 import { users } from "@running-coach/database";
 import { eq } from "drizzle-orm";
+import { I18nService } from "@running-coach/shared";
 
 interface OnboardingQuestion {
   key: keyof typeof users.$inferInsert;
@@ -19,7 +20,7 @@ interface OnboardingQuestion {
 const onboardingQuestions: OnboardingQuestion[] = [
   {
     key: 'goalRace',
-    prompt: '¡Hola! Para empezar, ¿cuál es tu meta principal? ¿Correr 5K, 10K, una Media Maratón (21K) o una Maratón (42K)?',
+    prompt: 'onboarding:goal_race_prompt',
     validation: {
       type: 'choice',
       options: {
@@ -28,12 +29,12 @@ const onboardingQuestions: OnboardingQuestion[] = [
         'half_marathon': ['21k', 'media maraton', 'media', 'half'],
         'marathon': ['42k', 'maraton'],
       },
-      error: 'No entendí tu meta. Por favor, elige entre 5K, 10K, Media Maratón o Maratón.',
+      error: 'onboarding:goal_race_error',
     },
   },
   {
     key: 'experienceLevel',
-    prompt: 'Genial. Ahora, cuéntame sobre tu experiencia. ¿Eres principiante, intermedio o avanzado?',
+    prompt: 'onboarding:experience_level_prompt',
     validation: {
       type: 'choice',
       options: {
@@ -41,35 +42,35 @@ const onboardingQuestions: OnboardingQuestion[] = [
         intermediate: ['intermedio', 'corro ocasional'],
         advanced: ['avanzado', 'corro seguido'],
       },
-      error: 'No entendí tu nivel de experiencia. Por favor, elige entre principiante, intermedio o avanzado.',
+      error: 'onboarding:experience_level_error',
     },
   },
   {
     key: 'weeklyMileage',
-    prompt: '¿Cuántas veces a la semana te gustaría correr? (ej. 3, 4, 5)',
-    validation: { type: 'number', range: { min: 1, max: 7 }, error: 'Por favor, ingresa un número entre 1 y 7 para tus sesiones semanales.' },
+    prompt: 'onboarding:weekly_mileage_prompt',
+    validation: { type: 'number', range: { min: 1, max: 7 }, error: 'onboarding:weekly_mileage_error' },
   },
   {
     key: 'injuryHistory',
-    prompt: '¿Tienes alguna lesión o molestia actual que deba saber? (Sí/No)',
+    prompt: 'onboarding:injury_history_prompt',
     validation: {
       type: 'choice',
       options: {
         'yes': ['si', 'sí', 'yes'],
         'no': ['no', 'ninguna'],
       },
-      error: 'Por favor, responde Sí o No.',
+      error: 'onboarding:injury_history_error',
     },
   },
   {
     key: 'age',
-    prompt: 'Para personalizar aún más, ¿cuál es tu edad? (Solo el número)',
-    validation: { type: 'number', range: { min: 16, max: 80 }, error: 'Por favor, ingresa una edad válida entre 16 y 80 años.' },
+    prompt: 'onboarding:age_prompt',
+    validation: { type: 'number', range: { min: 16, max: 80 }, error: 'onboarding:age_error' },
     condition: (userProfile) => !userProfile.age, // Only ask if age is not set
   },
   {
     key: 'gender',
-    prompt: 'Y finalmente, ¿cuál es tu género? (Hombre/Mujer/Otro)',
+    prompt: 'onboarding:gender_prompt',
     validation: {
       type: 'choice',
       options: {
@@ -77,7 +78,7 @@ const onboardingQuestions: OnboardingQuestion[] = [
         female: ['mujer', 'femenino'],
         other: ['otro'],
       },
-      error: 'Por favor, elige entre Hombre, Mujer u Otro.',
+      error: 'onboarding:gender_error',
     },
     condition: (userProfile) => !userProfile.gender, // Only ask if gender is not set
   },
@@ -100,6 +101,7 @@ export class OnboardingAgent extends BaseAgent {
     console.log(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
     try {
       let userProfile = context.userProfile;
+      const lang = userProfile?.preferredLanguage || 'es';
 
       // If onboarding is already completed, this agent should not run
       if (userProfile?.onboardingCompleted) {
@@ -113,25 +115,29 @@ export class OnboardingAgent extends BaseAgent {
           System: You are ${this.name}, a ${this.role}. Your personality is: ${this.personality}.
           ${context.channel ? `You are responding via the ${context.channel} channel.` : ''}
           
-          Your task is to provide a warm welcome message to the user and then ask the first onboarding question: "${onboardingQuestions[0].prompt}".
+          Your task is to provide a warm welcome message to the user and then ask the first onboarding question: "${this.tools.i18nService.t(onboardingQuestions[0].prompt, lang)}".
           Make sure to greet them by name if available in userProfile.phoneNumber, otherwise use a generic greeting.
           User's message: ${context.userMessage}
         `;
         const welcomeMessage = await this.tools.llmClient.generateResponse(welcomePrompt, undefined, "none") as string;
+        // Store the current question key
+        await this.tools.database.query.update(users).set({ currentOnboardingQuestion: onboardingQuestions[0].key }).where(eq(users.id, context.userId));
         return welcomeMessage;
       }
 
       // --- Process previous answer (if any) ---
-      // Only process if there's a question that was implicitly asked
-      const lastAssistantMessage = [...context.conversationHistory].reverse().find((msg: { role: string; content: string }) => msg.role === 'assistant');
-      const lastQuestionAsked = lastAssistantMessage ? this.findQuestionByPrompt(lastAssistantMessage.content) : undefined;
+      const currentQuestionKey = userProfile?.currentOnboardingQuestion;
+      const lastQuestionAsked = currentQuestionKey ? onboardingQuestions.find(q => q.key === currentQuestionKey) : undefined;
 
       if (lastQuestionAsked) {
         const validationResult = this.validateAnswer(context.userMessage, lastQuestionAsked);
 
         if (validationResult.isValid) {
-          await this.tools.database.query.update(users).set({ [lastQuestionAsked.key]: validationResult.parsedValue }).where(eq(users.id, context.userId));
-          userProfile = { ...userProfile, [lastQuestionAsked.key]: validationResult.parsedValue }; // Update local profile
+          await this.tools.database.query.update(users).set({
+            [lastQuestionAsked.key]: validationResult.parsedValue,
+            currentOnboardingQuestion: null // Clear the current question
+          }).where(eq(users.id, context.userId));
+          userProfile = { ...userProfile, [lastQuestionAsked.key]: validationResult.parsedValue, currentOnboardingQuestion: null }; // Update local profile
           console.log(`[${this.name}] Updated user ${context.userId} with ${String(lastQuestionAsked.key)}: ${validationResult.parsedValue}`);
         } else {
           // Invalid answer, re-ask the question with error
@@ -139,14 +145,15 @@ export class OnboardingAgent extends BaseAgent {
             System: You are ${this.name}, a ${this.role}. Your personality is: ${this.personality}.
             ${context.channel ? `You are responding via the ${context.channel} channel.` : ''}
             
-            The user's last response was invalid for the question: "${lastQuestionAsked.prompt}".
-            The validation error is: "${lastQuestionAsked.validation.error}".
+            The user's last response was invalid for the question: "${this.tools.i18nService.t(lastQuestionAsked.prompt, lang)}".
+            The validation error is: "${this.tools.i18nService.t(lastQuestionAsked.validation.error, lang)}".
             
             Your task is to politely re-ask the question, explaining the error. Provide options if it's a choice question.
             User's message: ${context.userMessage}
             Conversation History: ${context.conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n")}
           `;
           const llmResponse = await this.tools.llmClient.generateResponse(prompt, undefined, "none") as string;
+          // Keep the current question key as it's still pending
           return llmResponse;
         }
       }
@@ -168,17 +175,19 @@ export class OnboardingAgent extends BaseAgent {
           ${context.channel ? `You are responding via the ${context.channel} channel.` : ''}
           
           Your task is to ask the user the following onboarding question:
-          "${nextQuestion.prompt}"
+          "${this.tools.i18nService.t(nextQuestion.prompt, lang)}"
           
           If it's a choice question, provide the options clearly.
           User's message: ${context.userMessage}
           Conversation History: ${context.conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n")}
         `;
         const llmResponse = await this.tools.llmClient.generateResponse(prompt, undefined, "none") as string;
+        // Store the current question key
+        await this.tools.database.query.update(users).set({ currentOnboardingQuestion: nextQuestion.key }).where(eq(users.id, context.userId));
         return llmResponse;
       } else {
         // All questions answered, complete onboarding
-        await this.tools.database.query.update(users).set({ onboardingCompleted: true }).where(eq(users.id, context.userId));
+        await this.tools.database.query.update(users).set({ onboardingCompleted: true, currentOnboardingQuestion: null }).where(eq(users.id, context.userId));
         console.log(`[${this.name}] Onboarding completed for user ${context.userId}.`);
 
         // Generate micro-milestone
@@ -198,6 +207,7 @@ export class OnboardingAgent extends BaseAgent {
       }
 
     } catch (error) {
+
       console.error(`[${this.name}] Error during onboarding for user ${context.userId}:`, error);
       return "Lo siento, hubo un problema durante tu proceso de registro. Por favor, inténtalo de nuevo más tarde.";
     }

@@ -1,5 +1,5 @@
 import { addDays, startOfWeek } from 'date-fns';
-import { TrainingPlan, Workout, UserProfile } from '@running-coach/shared';
+import { TrainingPlan, Workout, UserProfile, Run } from '@running-coach/shared';
 import { VDOTCalculator, VDOTPaces } from './vdot-calculator.js';
 
 export interface PlanGenerationRequest {
@@ -200,15 +200,21 @@ export class PlanBuilder {
   /**
    * Generate a complete training plan
    */
-  public static generatePlan(request: PlanGenerationRequest): TrainingPlan {
+  public static generatePlan(request: PlanGenerationRequest, recentRuns: Run[] = []): TrainingPlan {
     const {
       userId,
-      currentVDOT,
       targetRace,
       targetDate,
       weeklyFrequency,
-      experienceLevel
+      experienceLevel,
+      injuryHistory,
+      preferences
     } = request;
+
+    // Dynamically calculate currentVDOT from recent runs if available, otherwise use provided or default
+    const calculatedVDOT = recentRuns.length > 0 
+      ? VDOTCalculator.calculateFromRecentRuns(recentRuns)
+      : request.currentVDOT || 35; // Default to 35 if no runs and no VDOT provided
 
     // Calculate plan duration (12-20 weeks depending on race distance)
     const baseDuration = this.getBasePlanDuration(targetRace, experienceLevel);
@@ -220,16 +226,16 @@ export class PlanBuilder {
     const baseWeeklyMileage = request.weeklyMileage || this.estimateWeeklyMileage(
       targetRace, 
       experienceLevel, 
-      currentVDOT
+      calculatedVDOT
     );
 
     // Get training paces
-    const paces = VDOTCalculator.getPaces(currentVDOT);
+    const paces = VDOTCalculator.getPaces(calculatedVDOT);
 
     const plan: TrainingPlan = {
       id: `plan_${userId}_${Date.now()}`,
       userId,
-      vdot: currentVDOT,
+      vdot: calculatedVDOT,
       weeklyFrequency,
       targetRace,
       targetDate,
@@ -243,6 +249,45 @@ export class PlanBuilder {
     return plan;
   }
 
+  private static applyInjuryAdaptations(
+    workouts: Workout[],
+    injuryHistory: PlanGenerationRequest['injuryHistory']
+  ): Workout[] {
+    if (!injuryHistory || injuryHistory.length === 0) {
+      return workouts;
+    }
+
+    let adaptedWorkouts = [...workouts];
+
+    for (const injury of injuryHistory) {
+      if (injury.recovered) continue;
+
+      switch (injury.type) {
+        case 'knee':
+        case 'shin_splints':
+          // Reduce intensity/distance for high-impact workouts
+          adaptedWorkouts = adaptedWorkouts.map(w => {
+            if (w.type === 'intervals' || w.type === 'tempo') {
+              return { ...w, distance: w.distance ? w.distance * 0.7 : w.distance, description: `(Adapted for ${injury.type}) ${w.description}` };
+            }
+            return w;
+          });
+          break;
+        case 'hamstring':
+          // Focus on easy runs, reduce speed work
+          adaptedWorkouts = adaptedWorkouts.map(w => {
+            if (w.type === 'intervals' || w.type === 'tempo') {
+              return { ...w, type: 'easy', description: `(Adapted for ${injury.type}) ${w.description}` };
+            }
+            return w;
+          });
+          break;
+        // Add more injury types and adaptations as needed
+      }
+    }
+    return adaptedWorkouts;
+  }
+
   /**
    * Generate workouts for a specific week
    */
@@ -251,7 +296,7 @@ export class PlanBuilder {
     weekNumber: number,
     request: PlanGenerationRequest
   ): Workout[] {
-    const workouts: Workout[] = [];
+    let workouts: Workout[] = [];
     const weeklyMileage = this.calculateWeeklyMileage(plan, weekNumber, request);
     const templates = this.WORKOUT_TEMPLATES[plan.targetRace];
     
@@ -277,15 +322,18 @@ export class PlanBuilder {
       workouts.push(workout);
     }
 
+    // Apply injury adaptations
+    workouts = this.applyInjuryAdaptations(workouts, request.injuryHistory);
+
     return workouts;
   }
 
   /**
    * Generate next 14 days of workouts
    */
-  public static generate14DayBlock(request: PlanGenerationRequest): Workout[] {
-    const plan = this.generatePlan(request);
-    const workouts: Workout[] = [];
+  public static generate14DayBlock(request: PlanGenerationRequest, recentRuns: Run[] = []): Workout[] {
+    const plan = this.generatePlan(request, recentRuns);
+    let workouts: Workout[] = [];
     
     // Generate 2 weeks of workouts
     const week1Workouts = this.generateWeekWorkouts(plan, 1, request);
@@ -417,6 +465,20 @@ export class PlanBuilder {
       selected.push(easyTemplate);
     }
 
+    // Apply avoidBackToBack preference
+    if (request.preferences?.avoidBackToBack) {
+      const hardWorkouts = ['tempo', 'intervals', 'long'];
+      const newSelected: WorkoutTemplate[] = [];
+      for (let i = 0; i < selected.length; i++) {
+        newSelected.push(selected[i]);
+        if (i < selected.length - 1 && hardWorkouts.includes(selected[i].type) && hardWorkouts.includes(selected[i+1].type)) {
+          // Insert an easy day if two hard workouts are consecutive
+          newSelected.push(easyTemplate);
+        }
+      }
+      selected = newSelected.slice(0, frequency);
+    }
+
     return selected.slice(0, frequency);
   }
 
@@ -515,12 +577,13 @@ export class PlanBuilder {
     // Default schedule: avoid back-to-back hard days
     const defaultSchedule = [1, 3, 5, 0, 2, 4, 6]; // Mon, Wed, Fri, Sun, Tue, Thu, Sat
     
-    if (request.preferences?.preferredRestDays) {
+    if (request.preferences?.preferredRestDays && request.preferences.preferredRestDays.length > 0) {
       // Custom scheduling based on user preferences
       const allDays = [0, 1, 2, 3, 4, 5, 6];
       const availableDays = allDays.filter(day => 
         !request.preferences!.preferredRestDays!.includes(day)
       );
+      // Distribute workouts evenly among available days
       return availableDays[workoutIndex % availableDays.length];
     }
 

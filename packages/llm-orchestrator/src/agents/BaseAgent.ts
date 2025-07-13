@@ -12,6 +12,7 @@ export interface AgentTool {
   database: Database;
   chatBuffer: ChatBuffer;
   logger: Logger;
+  i18nService: I18nService;
   // Future tools can be added here
 }
 

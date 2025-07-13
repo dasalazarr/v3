@@ -1,0 +1,6 @@
+{
+  "parse_error": "Tuve problemas para entender los detalles de tu carrera. Por favor, intenta de nuevo con un formato más claro, por ejemplo, 'Corrí 5k en 30 minutos, me sentí genial'.",
+  "missing_data_error": "No pude encontrar todos los detalles necesarios para tu carrera (distancia, duración o esfuerzo). Por favor, proporciónalos.",
+  "success_confirmation": "¡Excelente trabajo! He registrado tu carrera. ¡Sigue así!",
+  "generic_error": "Lo siento, no pude registrar tu carrera en este momento. Por favor, inténtalo de nuevo más tarde."
+}

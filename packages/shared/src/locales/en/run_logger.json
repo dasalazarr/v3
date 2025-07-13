@@ -1,0 +1,6 @@
+{
+  "parse_error": "I had trouble understanding your run details. Please try again with a clearer format, e.g., 'I ran 5k in 30 minutes, felt great'.",
+  "missing_data_error": "I couldn't find all the necessary details for your run (distance, duration, or effort). Please provide them.",
+  "success_confirmation": "Great job! I've logged your run. Keep up the good work!",
+  "generic_error": "I'm sorry, I couldn't log your run at this moment. Please try again later."
+}

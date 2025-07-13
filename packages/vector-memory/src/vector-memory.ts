@@ -348,7 +348,7 @@ export class VectorMemory {
     }
   }
 
-  private generateId(): string {
+  public generateId(): string {
     return randomUUID();
   }
 }

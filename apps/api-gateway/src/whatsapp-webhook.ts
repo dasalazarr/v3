@@ -7,7 +7,7 @@ import logger from './services/logger-service.js';
 /**
  * Send a WhatsApp message using the Meta API
  */
-async function sendWhatsAppMessage(to: string, message: string, config: any) {
+export async function sendWhatsAppMessage(to: string, message: string, config: any) {
   try {
     const url = `https://graph.facebook.com/v17.0/${config.NUMBER_ID}/messages`;
 

@@ -16,6 +16,7 @@ export const users = pgTable('users', {
   subscriptionStatus: text('subscription_status', { enum: ['none', 'active', 'past_due', 'canceled'] }).default('none'),
   preferredLanguage: text('preferred_language', { enum: ['en', 'es'] }).default('en').notNull(),
   timezone: varchar('timezone', { length: 50 }),
+  currentOnboardingQuestion: text('current_onboarding_question'),
   onboardingCompleted: boolean('onboarding_completed').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()

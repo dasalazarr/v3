@@ -20,6 +20,7 @@ class HeadCoach {
     motivator: MotivationAgent;
     conversation: ConversationAgent;
     onboarding: OnboardingAgent;
+    runLogger: RunLoggerAgent;
   };
 
   constructor(tools: AgentTool) {
@@ -32,6 +33,7 @@ class HeadCoach {
       motivator: new MotivationAgent(tools),
       conversation: new ConversationAgent(tools),
       onboarding: new OnboardingAgent(tools),
+      runLogger: new RunLoggerAgent(tools),
     };
   }
 
@@ -39,10 +41,16 @@ class HeadCoach {
     let agentOutputs: string[] = [];
     let selectedAgentNames: string[] = [];
 
-    // 1. Retrieve conversation history and user profile
+    // 1. Retrieve conversation history, user profile, and semantic context
     const conversationHistory = await this.tools.chatBuffer.getConversationContext(context.userId);
     const [userProfile] = await this.tools.database.query.select().from(users).where(eq(users.id, context.userId)).limit(1);
-    const updatedContext = { ...context, conversationHistory, userProfile };
+    const semanticContext = await this.tools.vectorMemory.retrieveContext(
+      context.userId,
+      context.userMessage + " " + conversationHistory.map(msg => msg.content).join(" ")
+    );
+    this.tools.logger.info(`[HeadCoach] Retrieved semantic context: ${JSON.stringify(semanticContext)}`);
+
+    const updatedContext = { ...context, conversationHistory, userProfile, semanticContext };
 
     // 2. Prioritize OnboardingAgent if onboarding is not completed
     if (!updatedContext.userProfile?.onboardingCompleted) {
@@ -73,6 +81,7 @@ class HeadCoach {
       `PerformanceAnalystAgent: Role: ${this.agents.analyst.role}. Personality: ${this.agents.analyst.personality}. Task: Reviews completed workout data, identifies trends, and provides feedback. Keywords: completed, finished, run, workout, performance.`,
       `NutritionRecoveryAgent: Role: ${this.agents.nutrition.role}. Personality: ${this.agents.nutrition.personality}. Task: Advises on pre/post-run nutrition, hydration, and recovery techniques. Keywords: food, eat, drink, recover, nutrition, stretch, sleep.`,
       `MotivationAgent: Role: ${this.agents.motivator.role}. Personality: ${this.agents.motivator.personality}. Task: Provides encouragement, mental strategies, and motivational support. Keywords: motivate, encouragement, mental, discipline, tired, hard.`,
+      `RunLoggerAgent: Role: ${this.agents.runLogger.role}. Personality: ${this.agents.runLogger.personality}. Task: Extracts and logs running workout data from user messages. Keywords: ran, run, workout, logged, finished, km, miles, minutes.`,
     ];
 
     const selectionPrompt = `
@@ -82,9 +91,10 @@ class HeadCoach {
 
       User's message: ${updatedContext.userMessage}
       User's profile: ${JSON.stringify(updatedContext.userProfile)}
+      Relevant past memories: ${updatedContext.semanticContext.summary || 'None'}
       Conversation History: ${updatedContext.conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n")}
 
-      Based on the user's message, user profile, and conversation history, list the names of the agents that should be activated, separated by commas. If no specific agent is needed, activate only the MotivationAgent. Example: "TrainingPlannerAgent, MotivationAgent".
+      Based on the user's message, user profile, relevant past memories, and conversation history, list the names of the agents that should be activated, separated by commas. If no specific agent is needed, activate only the MotivationAgent. Example: "TrainingPlannerAgent, MotivationAgent".
     `;
 
     const selectedAgentsResponse = await this.tools.llmClient.generateResponse(selectionPrompt, undefined, "none") as string;
@@ -110,6 +120,9 @@ class HeadCoach {
           break;
         case "OnboardingAgent":
           agentOutputs.push(await this.agents.onboarding.run(updatedContext));
+          break;
+        case "RunLoggerAgent":
+          agentOutputs.push(await this.agents.runLogger.run(updatedContext));
           break;
         default:
           this.tools.logger.warn(`Unknown agent selected by HeadCoach: ${agentName}`);
