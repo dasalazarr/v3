@@ -103,7 +103,7 @@ describe('OnboardingAgent', () => {
     expect(response).toBe('Lo siento, no entendí tu meta de carrera. Por favor, elige entre 5k, 10k, media maraton o maraton.');
     expect(mockDatabase.query.update().set).not.toHaveBeenCalledWith(expect.objectContaining({ goalRace: expect.any(String) })); // Should not update goalRace
     expect(mockLlmClient.generateResponse).toHaveBeenCalledWith(
-      expect.stringContaining('The user's last response was invalid for the question: "onboarding:goal_race_prompt".'),
+      expect.stringContaining("The user's last response was invalid for the question: \"onboarding:goal_race_prompt\"."),
       undefined,
       "none"
     );
