@@ -186,10 +186,8 @@ async function initializeServices(config: Config) {
   );
   const progressSummaryService = new ProgressSummaryService(database, logger);
 
-  // Inicializar servicios de idioma
-  // Estos servicios ya deberían estar inicializados en el paquete shared
-  // y exportados como instancias singleton
-  const { languageDetector, i18nService, templateEngine } = await import('@running-coach/shared');
+  // Language services are initialized in the shared package and exported as
+  // singletons, so we can use the imported instances directly
 
   // Register services in DI container
   container.registerInstance('Database', database);

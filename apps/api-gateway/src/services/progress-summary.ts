@@ -1,9 +1,10 @@
 import { Database } from '@running-coach/database';
-import { users, runs, trainingPlans } from '@running-coach/database';
+import { users, runs, trainingPlans, progressSummaries } from '@running-coach/database';
 import { eq, sum, avg, sql } from 'drizzle-orm';
 import { VDOTCalculator } from '@running-coach/plan-generator';
 import { Logger } from 'pino';
 import { addDays, format } from 'date-fns';
+import type { Run } from '@running-coach/shared';
 
 // Placeholder for image generation library (e.g., node-canvas)
 // In a real scenario, you'd import and use it here.
@@ -40,7 +41,20 @@ export class ProgressSummaryService {
       const averageEffort = recentRuns.length > 0 ? recentRuns.reduce((sum, run) => sum + (run.perceivedEffort || 0), 0) / recentRuns.length : 0;
 
       // Estimate VDOT from recent runs
-      const vdotEstimate = VDOTCalculator.calculateFromRecentRuns(recentRuns.map(run => ({...run, distance: parseFloat(run.distance)})));
+      const runData: Run[] = recentRuns.map((run) => ({
+        id: run.id,
+        userId: run.userId,
+        date: run.date,
+        distance: parseFloat(run.distance as unknown as string),
+        duration: run.duration ?? 0,
+        perceivedEffort: run.perceivedEffort ?? 5,
+        mood: run.mood ?? undefined,
+        aches: (run.aches as any[] | undefined) ?? undefined,
+        notes: run.notes ?? undefined,
+        weather: run.weather ?? undefined,
+        route: run.route ?? undefined,
+      }));
+      const vdotEstimate = VDOTCalculator.calculateFromRecentRuns(runData);
 
       // Fetch active training plan
       const [activePlan] = await this.database.query.select().from(trainingPlans)
@@ -68,7 +82,7 @@ export class ProgressSummaryService {
         insights: insights as any, // Cast to any for jsonb
         imageUrl: dummyImageUrl,
         sent: false,
-      });
+      } as any);
 
       return dummyImageUrl;
     } catch (error) {
