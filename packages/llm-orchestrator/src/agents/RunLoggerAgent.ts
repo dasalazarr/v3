@@ -32,7 +32,7 @@ export class RunLoggerAgent extends BaseAgent {
         User's message: ${context.userMessage}
       `;
 
-      const extractedDataJson = await this.tools.llmClient.generateResponse(extractionPrompt, undefined, "json");
+      const extractedDataJson = await this.tools.llmClient.generateResponse(extractionPrompt, undefined, "none") as string;
       this.tools.logger.info(`[${this.name}] Extracted data: ${extractedDataJson}`);
 
       let extractedData: any;
@@ -57,9 +57,9 @@ export class RunLoggerAgent extends BaseAgent {
       // Store in database
       await this.tools.database.query.insert(runs).values({
         userId: context.userId,
-        distance,
-        duration,
-        perceivedEffort,
+        distance: distance.toString(),
+        duration: duration,
+        perceivedEffort: perceivedEffort,
         date: runDate,
         notes,
       });

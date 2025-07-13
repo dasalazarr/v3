@@ -6,6 +6,7 @@ import {
   MotivationAgent,
   ConversationAgent,
   OnboardingAgent,
+  RunLoggerAgent,
 } from "./agents/index.js";
 import { AgentTool, AgentContext } from "./agents/BaseAgent";
 import { users } from "@running-coach/database";

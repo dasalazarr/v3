@@ -4,6 +4,7 @@ import { LLMClient } from "../llm-client.js";
 import { Database } from "@running-coach/database";
 import { ChatBuffer } from "@running-coach/vector-memory"; // Assuming ChatBuffer is also in vector-memory
 import { Logger } from "pino";
+import { I18nService } from "@running-coach/shared";
 
 export interface AgentTool {
   vectorMemory: VectorMemory;
