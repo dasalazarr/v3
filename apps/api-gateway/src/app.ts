@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { container } from 'tsyringe';
 import cron from 'node-cron';
 import fetch from 'node-fetch';
+import logger from './services/logger-service.js';
 
 // Import services and configurations
 import { Database, users } from '@running-coach/database';
@@ -45,15 +46,15 @@ async function sendWhatsAppMessage(to: string, message: string, config: any) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ Failed to send WhatsApp message: ${response.status} - ${errorText}`);
+      logger.error(`❌ Failed to send WhatsApp message: ${response.status} - ${errorText}`);
       return false;
     }
 
     const result = await response.json();
-    console.log(`✅ WhatsApp message sent successfully:`, result);
+    logger.info(`✅ WhatsApp message sent successfully:`, result);
     return true;
   } catch (error) {
-    console.error('❌ Error sending WhatsApp message:', error);
+    logger.error('❌ Error sending WhatsApp message:', error);
     return false;
   }
 }
@@ -143,8 +144,7 @@ function loadConfig(): Config {
 
 // Initialize services
 async function initializeServices(config: Config) {
-  
-  console.log('🚀 Initializing Running Coach services...');
+  logger.info('🚀 Initializing Running Coach services...');
 
   // Parse database URL
   const dbUrl = new URL(config.DATABASE_URL);
@@ -160,7 +160,7 @@ async function initializeServices(config: Config) {
   // Initialize Database
   const database = Database.getInstance(databaseConfig);
   await database.healthCheck();
-  console.log('✅ Database connected');
+  logger.info('✅ Database connected');
 
   // Initialize Redis Chat Buffer
   const chatBuffer = ChatBuffer.getInstance({
@@ -169,7 +169,7 @@ async function initializeServices(config: Config) {
     password: config.REDIS_PASSWORD
   });
   await chatBuffer.healthCheck();
-  console.log('✅ Redis chat buffer connected');
+  logger.info('✅ Redis chat buffer connected');
 
   // Initialize Vector Memory
   const vectorMemory = VectorMemory.getInstance(
@@ -190,7 +190,7 @@ async function initializeServices(config: Config) {
     }
   );
   await vectorMemory.initialize();
-  console.log('✅ Vector memory initialized');
+  logger.info('✅ Vector memory initialized');
 
   
 
@@ -208,7 +208,7 @@ async function initializeServices(config: Config) {
     database,
     chatBuffer,
   });
-  console.log('✅ Head Coach initialized');
+  logger.info('✅ Head Coach initialized');
 
   // Initialize Analytics Service
   const analyticsService = new AnalyticsService(database);
@@ -252,32 +252,32 @@ async function initializeServices(config: Config) {
 
 // Setup scheduled tasks
 function setupScheduledTasks(services: any) {
-  console.log('⏰ Setting up scheduled tasks...');
+  logger.info('⏰ Setting up scheduled tasks...');
 
   // Generate weekly progress summaries every Sunday at 9 AM
   cron.schedule('0 9 * * 0', async () => {
-    console.log('📊 Running weekly progress summary generation...');
+    logger.info('📊 Running weekly progress summary generation...');
     try {
       // This would typically get all active users and generate summaries
       // For now, we'll implement a placeholder
-      console.log('Weekly progress summaries generated');
+      logger.info('Weekly progress summaries generated');
     } catch (error) {
-      console.error('Error generating weekly summaries:', error);
+      logger.error('Error generating weekly summaries:', error);
     }
   });
 
   // Daily VDOT recalculation at midnight
   cron.schedule('0 0 * * *', async () => {
-    console.log('🧮 Running daily VDOT recalculation...');
+    logger.info('🧮 Running daily VDOT recalculation...');
     try {
       // Recalculate VDOT for users with new runs
-      console.log('Daily VDOT recalculation completed');
+      logger.info('Daily VDOT recalculation completed');
     } catch (error) {
-      console.error('Error in daily VDOT recalculation:', error);
+      logger.error('Error in daily VDOT recalculation:', error);
     }
   });
 
-  console.log('✅ Scheduled tasks configured');
+  logger.info('✅ Scheduled tasks configured');
 }
 
 // Setup health endpoints
@@ -356,10 +356,10 @@ function setupGracefulShutdown(services: any) {
 // Main application
 async function main() {
   try {
-    console.log('🏃‍♂️ Starting Running Coach AI Assistant...');
+    logger.info('🏃‍♂️ Starting Running Coach AI Assistant...');
     
     const config = loadConfig();
-    console.log(`🌍 Environment: ${config.NODE_ENV}`);
+    logger.info(`🌍 Environment: ${config.NODE_ENV}`);
     
         const services = await initializeServices(config);
     
@@ -379,15 +379,15 @@ async function main() {
         // Check the mode and token sent is correct
         if (mode === 'subscribe' && token === config.VERIFY_TOKEN) {
           // Respond with the challenge token from the request
-          console.log('✅ WEBHOOK_VERIFIED');
+          logger.info('✅ WEBHOOK_VERIFIED');
           res.status(200).send(challenge);
         } else {
           // Respond with '403 Forbidden' if verify tokens do not match
-          console.log('❌ WEBHOOK_VERIFICATION_FAILED: Token mismatch');
+          logger.warn('❌ WEBHOOK_VERIFICATION_FAILED: Token mismatch');
           res.sendStatus(403);
         }
       } else {
-        console.log('❌ WEBHOOK_VERIFICATION_FAILED: Missing parameters');
+        logger.warn('❌ WEBHOOK_VERIFICATION_FAILED: Missing parameters');
         res.sendStatus(400);
       }
     });
@@ -400,11 +400,11 @@ async function main() {
       try {
         // Process the incoming webhook data
         const data = req.body;
-        console.log('💬 Received WhatsApp webhook:', JSON.stringify(data, null, 2));
+        logger.info('💬 Received WhatsApp webhook:', JSON.stringify(data, null, 2));
         
         // Process webhook data for WhatsApp Business API
         if (data && data.object === 'whatsapp_business_account') {
-          console.log('💬 Processing WhatsApp webhook data...');
+          logger.info('💬 Processing WhatsApp webhook data...');
           
           // Extract messages and process them
           if (data.entry && Array.isArray(data.entry)) {
@@ -412,7 +412,7 @@ async function main() {
               if (entry.changes && Array.isArray(entry.changes)) {
                 for (const change of entry.changes) {
                   if (change.value && change.value.messages && Array.isArray(change.value.messages)) {
-                    console.log(`📱 Found ${change.value.messages.length} messages to process`);
+                    logger.info(`📱 Found ${change.value.messages.length} messages to process`);
                     
                     // Process each message with AI Agent
                     for (const message of change.value.messages) {
@@ -421,7 +421,7 @@ async function main() {
                           const phone = message.from;
                           const messageText = message.text.body;
 
-                          console.log(`📩 Processing message from ${phone}: ${messageText}`);
+                          logger.info(`📩 Processing message from ${phone}: ${messageText}`);
 
                           // Get or create user
                           let [user] = await services.database.query
@@ -456,11 +456,11 @@ async function main() {
                           if (aiResponse && aiResponse.length > 0) {
                             // Send response back to WhatsApp
                             await sendWhatsAppMessage(phone, aiResponse, config);
-                            console.log(`✅ Sent AI response to ${phone}: ${aiResponse}`);
+                            logger.info(`✅ Sent AI response to ${phone}: ${aiResponse}`);
                           }
                         }
                       } catch (messageError) {
-                        console.error('❌ Error processing individual message:', messageError);
+                        logger.error('❌ Error processing individual message:', messageError);
                       }
                     }
                   }
@@ -470,7 +470,7 @@ async function main() {
           }
         }
       } catch (error) {
-        console.error('❌ Error processing webhook:', error);
+        logger.error('❌ Error processing webhook:', error);
       }
     });
 
@@ -481,26 +481,26 @@ async function main() {
     
     // Start HTTP server for health checks
     app.listen(config.PORT, () => {
-      console.log(`🌐 Health server running on port ${config.PORT}`);
+      logger.info(`🌐 Health server running on port ${config.PORT}`);
     });
     
-    console.log('🎉 Running Coach AI Assistant is ready!');
-    console.log('💬 Send a WhatsApp message to start coaching...');
+    logger.info('🎉 Running Coach AI Assistant is ready!');
+    logger.info('💬 Send a WhatsApp message to start coaching...');
     
   } catch (error) {
-    console.error('❌ Failed to start application:', error);
+    logger.error('❌ Failed to start application:', error);
     process.exit(1);
   }
 }
 
 // Handle uncaught errors
 process.on('uncaughtException', (error: Error) => {
-  console.error('💥 Uncaught Exception:', error);
+  logger.error('💥 Uncaught Exception:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
-  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
 

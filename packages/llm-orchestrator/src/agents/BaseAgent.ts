@@ -3,6 +3,7 @@ import { PlanBuilder } from "@running-coach/plan-generator";
 import { LLMClient } from "../llm-client.js";
 import { Database } from "@running-coach/database";
 import { ChatBuffer } from "@running-coach/vector-memory"; // Assuming ChatBuffer is also in vector-memory
+import { Logger } from "pino";
 
 export interface AgentTool {
   vectorMemory: VectorMemory;
@@ -10,6 +11,7 @@ export interface AgentTool {
   llmClient: LLMClient;
   database: Database;
   chatBuffer: ChatBuffer;
+  logger: Logger;
   // Future tools can be added here
 }
 

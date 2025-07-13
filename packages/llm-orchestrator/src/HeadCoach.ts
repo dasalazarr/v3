@@ -24,6 +24,7 @@ class HeadCoach {
 
   constructor(tools: AgentTool) {
     this.tools = tools;
+    this.tools.logger = tools.logger; // Explicitly assign logger
     this.agents = {
       planner: new TrainingPlannerAgent(tools),
       analyst: new PerformanceAnalystAgent(tools),
