@@ -5,6 +5,7 @@ import {
   NutritionRecoveryAgent,
   MotivationAgent,
   ConversationAgent,
+  OnboardingAgent,
 } from "./agents/index.js";
 import { AgentTool, AgentContext } from "./agents/BaseAgent";
 import { users } from "@running-coach/database";
@@ -18,6 +19,7 @@ class HeadCoach {
     nutrition: NutritionRecoveryAgent;
     motivator: MotivationAgent;
     conversation: ConversationAgent;
+    onboarding: OnboardingAgent;
   };
 
   constructor(tools: AgentTool) {
@@ -28,18 +30,45 @@ class HeadCoach {
       nutrition: new NutritionRecoveryAgent(tools),
       motivator: new MotivationAgent(tools),
       conversation: new ConversationAgent(tools),
+      onboarding: new OnboardingAgent(tools),
     };
   }
 
   async handleMessage(context: AgentContext): Promise<string> {
+    let agentOutputs: string[] = [];
+    let selectedAgentNames: string[] = [];
+
     // 1. Retrieve conversation history and user profile
     const conversationHistory = await this.tools.chatBuffer.getConversationContext(context.userId);
     const [userProfile] = await this.tools.database.query.select().from(users).where(eq(users.id, context.userId)).limit(1);
     const updatedContext = { ...context, conversationHistory, userProfile };
 
-    // 2. HeadCoach decides which agents to activate using LLM
+    // 2. Prioritize OnboardingAgent if onboarding is not completed
+    if (!updatedContext.userProfile?.onboardingCompleted) {
+      console.log(`[HeadCoach] Onboarding not completed. Activating OnboardingAgent.`);
+      agentOutputs.push(await this.agents.onboarding.run(updatedContext));
+      // If OnboardingAgent returns a response, it means it's still in progress or completed
+      if (agentOutputs[0] && agentOutputs[0] !== "") {
+        // If onboarding is completed by this turn, trigger planner
+        if (updatedContext.userProfile?.onboardingCompleted) {
+          console.log(`[HeadCoach] Onboarding completed. Triggering TrainingPlannerAgent.`);
+          agentOutputs.push(await this.agents.planner.run(updatedContext));
+        }
+        // If OnboardingAgent returned a message, it's the primary response
+        const finalResponse = await this.agents.conversation.run({
+          ...updatedContext,
+          agentOutputs,
+        });
+        await this.tools.chatBuffer.addMessage(context.userId, "user", context.userMessage);
+        await this.tools.chatBuffer.addMessage(context.userId, "assistant", finalResponse);
+        console.log(`[HeadCoach] Final synthesized response (Onboarding): ${finalResponse}`);
+        return finalResponse;
+      }
+    }
+
+    // 2. HeadCoach decides which agents to activate using LLM (if onboarding is complete or not handled by OnboardingAgent)
     const agentDescriptions = [
-      `TrainingPlannerAgent: Role: ${this.agents.planner.role}. Personality: ${this.agents.planner.personality}. Task: Creates, adjusts, and explains training plans. Keywords: plan, schedule, training, workout.`,
+      `OnboardingAgent: Role: ${this.agents.onboarding.role}. Personality: ${this.agents.onboarding.personality}. Task: Guides new users through initial setup and data collection. Keywords: start, hello, new user, register.`,
       `PerformanceAnalystAgent: Role: ${this.agents.analyst.role}. Personality: ${this.agents.analyst.personality}. Task: Reviews completed workout data, identifies trends, and provides feedback. Keywords: completed, finished, run, workout, performance.`,
       `NutritionRecoveryAgent: Role: ${this.agents.nutrition.role}. Personality: ${this.agents.nutrition.personality}. Task: Advises on pre/post-run nutrition, hydration, and recovery techniques. Keywords: food, eat, drink, recover, nutrition, stretch, sleep.`,
       `MotivationAgent: Role: ${this.agents.motivator.role}. Personality: ${this.agents.motivator.personality}. Task: Provides encouragement, mental strategies, and motivational support. Keywords: motivate, encouragement, mental, discipline, tired, hard.`,
@@ -59,9 +88,9 @@ class HeadCoach {
 
     const selectedAgentsResponse = await this.tools.llmClient.generateResponse(selectionPrompt, undefined, "none") as string;
     console.log(`[HeadCoach] Agent selection response: ${selectedAgentsResponse}`);
-    const selectedAgentNames = selectedAgentsResponse.split(",").map(name => name.trim());
+    selectedAgentNames = selectedAgentsResponse.split(",").map(name => name.trim());
 
-    const agentOutputs: string[] = [];
+    agentOutputs = [];
 
     // Execute selected agents
     for (const agentName of selectedAgentNames) {
@@ -77,6 +106,9 @@ class HeadCoach {
           break;
         case "MotivationAgent":
           agentOutputs.push(await this.agents.motivator.run(updatedContext));
+          break;
+        case "OnboardingAgent":
+          agentOutputs.push(await this.agents.onboarding.run(updatedContext));
           break;
         default:
           console.warn(`Unknown agent selected by HeadCoach: ${agentName}`);

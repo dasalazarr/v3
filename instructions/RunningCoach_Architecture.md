@@ -73,7 +73,9 @@ El `llm-orchestrator` ha evolucionado de un agente único a un equipo colaborati
 
 *   **Coach Principal (`HeadCoach`):** Actúa como el director del equipo. Es el único que interactúa directamente con el usuario (a través del webhook de WhatsApp). Interpreta la necesidad del usuario, delega tareas a los agentes especialistas y sintetiza sus respuestas para dar una recomendación unificada. Inspirado en el `orchestrator.py` de la arquitectura multi-agente v3.
 
-*   **Agente Planificador de Entrenamiento (`TrainingPlannerAgent`):** Experto en la ciencia del running. Su misión es crear, ajustar y explicar planes de entrenamiento, utilizando el `plan-generator` y el `vdot-calculator` existentes como sus herramientas principales.
+*   **Agente de Onboarding (`OnboardingAgent`):** Guía a los nuevos usuarios a través del proceso de registro inicial, recopilando datos críticos como metas, experiencia y frecuencia de entrenamiento. Tiene prioridad en la orquestación del `HeadCoach` para asegurar la captura de información esencial.
+
+*   **Agente Planificador de Entrenamiento (`TrainingPlannerAgent`):** Experto en la ciencia del running. Su misión es crear, ajustar y explicar planes de entrenamiento, utilizando el `plan-generator` y el `vdot-calculator` existentes como sus herramientas principales. Ahora, también es activado automáticamente al finalizar el onboarding.
 
 *   **Agente Analista de Rendimiento (`PerformanceAnalystAgent`):** Revisa los datos de los entrenamientos completados por el usuario, compara el rendimiento real con el planificado, identifica tendencias y proporciona retroalimentación crítica. Inspirado en el `reflexion_agent.py` de la arquitectura v3.
 
@@ -81,16 +83,27 @@ El `llm-orchestrator` ha evolucionado de un agente único a un equipo colaborati
 
 *   **Agente Motivador y Psicólogo Deportivo (`MotivationAgent`):** Gestiona el aspecto mental del entrenamiento, ofreciendo ánimo, estrategias para superar la falta de motivación y construir disciplina.
 
-*   **Agente de Conversación (`ConversationAgent`):** Responsable de la interfaz final con el usuario. Sintetiza las respuestas de los otros agentes en un mensaje claro, fluido y natural para el usuario.
+*   **Agente de Conversación (`ConversationAgent`):** Responsable de la interfaz final con el usuario. Sintetiza las respuestas de los otros agentes en un mensaje claro, fluido y natural para el usuario, adaptándose al canal de comunicación (ej. WhatsApp).
 
 ### Flujo de Interacción (Ejemplo):
 
-1.  El usuario envía un mensaje a WhatsApp (ej. "¡Terminé mi carrera de hoy!").
-2.  El webhook de `api-gateway` recibe el mensaje y lo envía al `HeadCoach`.
-3.  El `HeadCoach` delega la tarea al `PerformanceAnalystAgent` para revisar los datos del entrenamiento.
-4.  Simultáneamente, el `HeadCoach` puede activar al `MotivationAgent` y al `NutritionRecoveryAgent` para que aporten sus perspectivas.
-5.  El `ConversationAgent` recibe las respuestas de todos los agentes relevantes y las sintetiza en un mensaje coherente y amigable para el usuario.
-6.  La `api-gateway` envía la respuesta final al usuario a través de la API de Meta.
+1.  **Nuevo Usuario (Onboarding):**
+    *   El usuario envía un mensaje inicial (ej. "Hola").
+    *   El webhook de `api-gateway` recibe el mensaje y lo envía al `HeadCoach`.
+    *   El `HeadCoach` detecta que el usuario no ha completado el onboarding y **prioriza la activación del `OnboardingAgent`**.
+    *   El `OnboardingAgent` saluda al usuario y comienza el proceso de preguntas (meta, experiencia, frecuencia, etc.), validando y guardando cada dato en la base de datos.
+    *   Si el usuario se desvía o proporciona una respuesta inválida, el `OnboardingAgent` lo retoma y repregunta.
+    *   Una vez que todos los datos críticos son recopilados, el `OnboardingAgent` marca el onboarding como completado en el perfil del usuario y entrega un micro-hito motivador.
+    *   **Automáticamente, el `HeadCoach` activa el `TrainingPlannerAgent`** para generar el plan inicial basado en los datos recién recopilados.
+    *   El `ConversationAgent` sintetiza la respuesta (micro-hito + explicación del plan) y la `api-gateway` la envía al usuario.
+
+2.  **Usuario Existente (Interacción Continua):**
+    *   El usuario envía un mensaje (ej. "¡Terminé mi carrera de hoy!").
+    *   El webhook de `api-gateway` recibe el mensaje y lo envía al `HeadCoach`.
+    *   El `HeadCoach` (a través de su LLM) analiza el mensaje y el contexto, y delega la tarea a los agentes especializados relevantes (ej. `PerformanceAnalystAgent`, `MotivationAgent`, `NutritionRecoveryAgent`).
+    *   Los agentes procesan la información, interactúan con las herramientas (base de datos, memoria vectorial) y generan sus respuestas.
+    *   El `ConversationAgent` recibe las respuestas de todos los agentes relevantes y las sintetiza en un mensaje coherente y amigable para el usuario.
+    *   La `api-gateway` envía la respuesta final al usuario a través de la API de Meta.
 
 ---
 
