@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { container } from 'tsyringe';
 import { LanguageDetector, I18nService, TemplateEngine } from '@running-coach/shared';
-import { AIService } from '../src/services/aiservices';
+import { AIService } from '../archive/src/services/aiservices';
 
 // Mock de la base de datos
 const mockDatabase = {

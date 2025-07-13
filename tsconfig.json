@@ -16,7 +16,7 @@
     "incremental": true,
     "skipLibCheck": true,
     "paths": {
-      "~/*": ["./src/*"],
+      "~/*": ["./archive/src/*"],
       "@running-coach/shared": ["./packages/shared/src"],
       "@running-coach/shared/*": ["./packages/shared/src/*"],
       "@running-coach/database": ["./packages/database/src"],
