@@ -1,21 +1,27 @@
-# WhatsApp AI Assistant con Integración Google Sheets 🤖📊
+# Multi-Agent Running Coach 🏃‍♂️🤖
 
-Bot inteligente para WhatsApp que combina IA de OpenAI con almacenamiento estructurado en Google Sheets.
+This project contains a multi-agent running coach that interacts with runners over WhatsApp.  
+Agents powered by large language models generate personalised advice and maintain long-term context using vector memory.
 
-## Características Principales
-- 🧠 Respuestas inteligentes usando Asistentes de OpenAI
-- 📝 Registro de conversaciones en Google Sheets
-- 🔄 Manejo de threads de conversación persistentes
-- 📊 Clasificación de interacciones por usuario
-- 🚨 Sistema de manejo de errores robusto
-- 🔍 Auditoría completa de conversaciones
+## Key Features
+- 🧠 Orchestrates several agents with tool calling
+- 💬 Conversation history stored in Redis
+- 🔍 Context retrieval via Qdrant vector search
+- 📅 Generates VDOT based training plans
+- 📊 Logs workouts to Google Sheets
+- 🚨 Robust error handling and auditing
 
-## Tecnologías Clave
-- **BuilderBot**: Framework principal para el chatbot
-- **OpenAI API**: GPT-3.5-turbo y Asistentes personalizados
-- **Google Sheets API**: Almacenamiento de datos
-- **TypeScript**: Implementación del core
-- **Docker**: Empaquetado y despliegue
+## Technologies
+- **TypeScript** for all packages
+- **OpenAI & DeepSeek** language models
+- **Redis + Qdrant** for vector memory
+- **Docker** for containerised deployment
+
+## Packages
+- **api-gateway** (`apps/api-gateway`): Express API and WhatsApp integration.
+- **llm-orchestrator** (`packages/llm-orchestrator`): Coordinates agents and tool calls.
+- **vector-memory** (`packages/vector-memory`): Redis chat buffer with Qdrant search.
+- **plan-generator** (`packages/plan-generator`): Generates training plans using VDOT.
 
 ## Requisitos Previos
 - Node.js 18+
@@ -27,31 +33,38 @@ Bot inteligente para WhatsApp que combina IA de OpenAI con almacenamiento estruc
 ## Instalación
 ```bash
 git clone [repo-url]
-cd base-ts-meta-memory
+cd running-coach-workspace
 npm install
 cp .env.example .env
 ```
 
 ## Configuración (`.env`)
 ```ini
-# API Keys
-apiKey=sk-tu-key-openai
-assistant_id=asst_tu_id_asistente
+# DeepSeek LLM
+DEEPSEEK_API_KEY=YOUR_API_KEY_HERE
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
+
+# OpenAI Embeddings
+EMBEDDINGS_API_KEY=your_openai_api_key
+EMBEDDINGS_BASE_URL=https://api.openai.com/v1
+EMBEDDINGS_MODEL=text-embedding-ada-002
 
 # Meta WhatsApp API
-jwtToken=token_whatsapp
-numberId=id_numero_whatsapp
-verifyToken=tu_verify_token
+jwtToken=your_jwt_token
+numberId=your_number_id
+verifyToken=your_verify_token
 
-# Google API (importante para el servicio de citas)
-clientEmail=tu-service-account@project.iam.gserviceaccount.com
-privateKey="-----BEGIN PRIVATE KEY...\n...\n-----END PRIVATE KEY-----"
-spreadsheetId=id_google_sheet
-GOOGLE_CALENDAR_ID=primary  # O el ID específico de tu calendario
+# Google API
+clientEmail=your-service-account@google.com
+privateKey=-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----
+spreadsheetId=your_spreadsheet_id
+TRAINING_SPREADSHEET_ID=your_training_sheet_id
+GOOGLE_CALENDAR_ID=primary
 
 # Otros
+ASSISTANT_ID=asst_your_id
 PORT=3000
-Model=deepseek-chat
 ```
 
 ---
@@ -78,26 +91,16 @@ privateKey="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggS
 
 ## Estructura del Proyecto
 ```
-├── src
-│   ├── config/       # Configuración y variables de entorno
-│   ├── services/     # Lógica de negocio
-│   │   ├── aiServices.ts    # Integración OpenAI
-│   │   ├── sheetsServices.ts # Integración Google Sheets
-│   │   ├── expenseService.ts # Gestión de gastos
-│   │   ├── budgetService.ts  # Gestión de presupuestos
-│   │   ├── alertService.ts   # Sistema de alertas
-│   │   └── scheduledTasks.ts # Tareas programadas
-│   ├── templates/    # Flujos conversacionales
-│   │   ├── index.ts          # Punto de entrada de flujos
-│   │   ├── mainFlow.ts       # Flujo principal
-│   │   ├── registerFlow.ts   # Registro de usuarios
-│   │   ├── expenseFlow.ts    # Registro de gastos
-│   │   ├── budgetFlow.ts     # Gestión de presupuestos
-│   │   └── reportFlow.ts     # Generación de reportes
-│   ├── app.ts        # Punto de entrada de la aplicación
-│   └── provider/     # Configuración del proveedor de WhatsApp
-├── instructions/     # Documentación detallada
-└── assets/          # Recursos estáticos
+├── apps/
+│   └── api-gateway/       # API HTTP y webhook de WhatsApp
+├── packages/
+│   ├── llm-orchestrator/  # Coordinación de agentes y prompts
+│   ├── vector-memory/     # Memoria en Redis y Qdrant
+│   ├── plan-generator/    # Generador de planes de entrenamiento
+│   ├── database/          # Migraciones y adaptadores
+│   └── shared/            # Utilidades comunes
+├── src/                   # Servicios heredados
+└── instructions/          # Documentación
 ```
 
 ## Arquitectura del Sistema
