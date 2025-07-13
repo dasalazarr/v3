@@ -16,7 +16,7 @@ export class TrainingPlannerAgent extends BaseAgent {
   }
 
   async run(context: AgentContext): Promise<string> {
-    console.log(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
+    this.tools.logger.info(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
     try {
       const tools = [
         {
@@ -62,15 +62,16 @@ export class TrainingPlannerAgent extends BaseAgent {
         Conversation History: ${context.conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join("\n")}
       `;
 
-      console.log(`[${this.name}] Sending prompt to LLM for tool call.`);
+      this.tools.logger.info(`[${this.name}] Sending prompt to LLM.`);
       const llmResponse = await this.tools.llmClient.generateResponse(prompt, tools, "auto");
+      this.tools.logger.info(`[${this.name}] Received LLM response.`);
 
       if (typeof llmResponse === 'string') {
         // LLM did not call a tool, it's a direct response (e.g., asking for more info)
-        console.log(`[${this.name}] LLM did not call tool, direct response: ${llmResponse}`);
+        this.tools.logger.info(`[${this.name}] LLM did not call tool, direct response: ${llmResponse}`);
         return llmResponse;
       } else if (llmResponse.name === 'generatePlan') {
-        console.log(`[${this.name}] LLM called generatePlan with arguments: ${JSON.stringify(llmResponse.arguments)}`);
+        this.tools.logger.info(`[${this.name}] LLM called generatePlan with arguments: ${JSON.stringify(llmResponse.arguments)}`);
         const args = JSON.parse(llmResponse.arguments);
 
         const request = {
@@ -81,9 +82,9 @@ export class TrainingPlannerAgent extends BaseAgent {
           experienceLevel: args.experienceLevel as 'beginner' | 'intermediate' | 'advanced',
         };
 
-        console.log(`[${this.name}] Generating plan with request: ${JSON.stringify(request)}`);
+        this.tools.logger.info(`[${this.name}] Generating plan with request: ${JSON.stringify(request)}`);
         const trainingPlan = PlanBuilder.generatePlan(request);
-        console.log(`[${this.name}] Plan generated: ${JSON.stringify(trainingPlan)}`);
+        this.tools.logger.info(`[${this.name}] Plan generated: ${JSON.stringify(trainingPlan)}`);
 
         const explanationPrompt = `
           System: You are ${this.name}, a ${this.role}. Your personality is: ${this.personality}.
@@ -100,7 +101,7 @@ export class TrainingPlannerAgent extends BaseAgent {
       }
       return "Lo siento, no pude generar un plan de entrenamiento. ¿Podrías darme más detalles?";
     } catch (error) {
-      console.error(`[${this.name}] Error processing request for user ${context.userId}:`, error);
+      this.tools.logger.error(`[${this.name}] Error processing request for user ${context.userId}:`, error);
       return "Lo siento, no pude generar un plan de entrenamiento en este momento. Por favor, inténtalo de nuevo más tarde.";
     }
   }

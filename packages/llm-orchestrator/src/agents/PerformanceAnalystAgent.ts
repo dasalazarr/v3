@@ -17,16 +17,16 @@ export class PerformanceAnalystAgent extends BaseAgent {
   }
 
   async run(context: AgentContext): Promise<string> {
-    console.log(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
+    this.tools.logger.info(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
     try {
       // Fetch user data and workout history
-      console.log(`[${this.name}] Fetching user data for ${context.userId}`);
+      this.tools.logger.info(`[${this.name}] Fetching user data for ${context.userId}`);
       const [user] = await this.tools.database.query.select().from(users).where(eq(users.id, context.userId)).limit(1);
-      console.log(`[${this.name}] User data fetched: ${JSON.stringify(user)}`);
+      this.tools.logger.info(`[${this.name}] User data fetched: ${JSON.stringify(user)}`);
       
-      console.log(`[${this.name}] Fetching recent runs for user ${context.userId}`);
+      this.tools.logger.info(`[${this.name}] Fetching recent runs for user ${context.userId}`);
       const recentRuns = await this.tools.database.query.select().from(runs).where(eq(runs.userId, context.userId)).orderBy(runs.date).limit(5);
-      console.log(`[${this.name}] Recent runs fetched: ${JSON.stringify(recentRuns)}`);
+      this.tools.logger.info(`[${this.name}] Recent runs fetched: ${JSON.stringify(recentRuns)}`);
 
       const prompt = `
         System: You are ${this.name}, a ${this.role}. Your personality is: ${this.personality}.
@@ -37,12 +37,12 @@ export class PerformanceAnalystAgent extends BaseAgent {
 
         Analyze the provided workout data and user message. Compare it with any implied plan or previous performance. Identify trends (positive or negative) and provide actionable feedback for improvement. Be concise and insightful.
       `;
-      console.log(`[${this.name}] Sending prompt to LLM.`);
+      this.tools.logger.info(`[${this.name}] Sending prompt to LLM.`);
       const llmResponse = await this.tools.llmClient.generateResponse(prompt, undefined, "none") as string;
-      console.log(`[${this.name}] Received LLM response.`);
+      this.tools.logger.info(`[${this.name}] Received LLM response.`);
       return llmResponse;
     } catch (error) {
-      console.error(`[${this.name}] Error processing request for user ${context.userId}:`, error);
+      this.tools.logger.error(`[${this.name}] Error processing request for user ${context.userId}:`, error);
       return "Lo siento, no pude analizar tu rendimiento en este momento. Por favor, inténtalo de nuevo más tarde.";
     }
   }

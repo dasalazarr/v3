@@ -2,11 +2,15 @@
 
 import OpenAI from "openai";
 
+import { Logger } from "pino";
+
 export class LLMClient {
   private openai: OpenAI;
   private model: string;
+  private logger: Logger;
 
-  constructor() {
+  constructor(logger: Logger) {
+    this.logger = logger;
     this.openai = new OpenAI({
       apiKey: process.env.DEEPSEEK_API_KEY,
       baseURL: process.env.DEEPSEEK_BASE_URL,
@@ -35,7 +39,7 @@ export class LLMClient {
         return responseMessage?.content || "";
       }
     } catch (error) {
-      console.error("Error generating LLM response:", error);
+      this.logger.error("Error generating LLM response:", error);
       return "Lo siento, tuve un problema al procesar tu solicitud. Por favor, inténtalo de nuevo.";
     }
   }

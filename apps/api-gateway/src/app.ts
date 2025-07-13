@@ -195,7 +195,7 @@ async function initializeServices(config: Config) {
   
 
   // Initialize LLM Client
-  const llmClient = new LLMClient();
+  const llmClient = new LLMClient(logger);
 
   // Initialize Plan Builder
   const planBuilder = new PlanBuilder();
@@ -207,6 +207,7 @@ async function initializeServices(config: Config) {
     llmClient,
     database,
     chatBuffer,
+    logger,
   });
   logger.info('✅ Head Coach initialized');
 

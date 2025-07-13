@@ -15,13 +15,13 @@ export class NutritionRecoveryAgent extends BaseAgent {
   }
 
   async run(context: AgentContext): Promise<string> {
-    console.log(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
+    this.tools.logger.info(`[${this.name}] Running for user ${context.userId}. Message: "${context.userMessage}"`);
     try {
       // Search vector memory for relevant nutrition/recovery info
-      console.log(`[${this.name}] Searching vector memory for: "${context.userMessage}"`);
+      this.tools.logger.info(`[${this.name}] Searching vector memory for: "${context.userMessage}"`);
       const relevantInfo = await this.tools.vectorMemory.retrieveContext(context.userId, context.userMessage, 3);
       const infoText = relevantInfo.relevantMemories.map((item: { content: string }) => item.content).join("\n");
-      console.log(`[${this.name}] Relevant info from vector memory: ${infoText.substring(0, 100)}...`);
+      this.tools.logger.info(`[${this.name}] Relevant info from vector memory: ${infoText.substring(0, 100)}...`);
 
       const prompt = `
         System: You are ${this.name}, a ${this.role}. Your personality is: ${this.personality}.
@@ -32,9 +32,9 @@ export class NutritionRecoveryAgent extends BaseAgent {
 
         Provide concise advice on pre-run meals, post-run recovery nutrition, and hydration strategies based on the user's message and the provided knowledge.
       `;
-      console.log(`[${this.name}] Sending prompt to LLM.`);
+      this.tools.logger.info(`[${this.name}] Sending prompt to LLM.`);
       const llmResponse = await this.tools.llmClient.generateResponse(prompt, undefined, "none") as string;
-      console.log(`[${this.name}] Received LLM response.`);
+      this.tools.logger.info(`[${this.name}] Received LLM response.`);
       return llmResponse;
     } catch (error) {
       console.error(`[${this.name}] Error processing request for user ${context.userId}:`, error);

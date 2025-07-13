@@ -46,13 +46,13 @@ class HeadCoach {
 
     // 2. Prioritize OnboardingAgent if onboarding is not completed
     if (!updatedContext.userProfile?.onboardingCompleted) {
-      console.log(`[HeadCoach] Onboarding not completed. Activating OnboardingAgent.`);
+      this.tools.logger.info(`[HeadCoach] Onboarding not completed. Activating OnboardingAgent.`);
       agentOutputs.push(await this.agents.onboarding.run(updatedContext));
       // If OnboardingAgent returns a response, it means it's still in progress or completed
       if (agentOutputs[0] && agentOutputs[0] !== "") {
         // If onboarding is completed by this turn, trigger planner
         if (updatedContext.userProfile?.onboardingCompleted) {
-          console.log(`[HeadCoach] Onboarding completed. Triggering TrainingPlannerAgent.`);
+          this.tools.logger.info(`[HeadCoach] Onboarding completed. Triggering TrainingPlannerAgent.`);
           agentOutputs.push(await this.agents.planner.run(updatedContext));
         }
         // If OnboardingAgent returned a message, it's the primary response
@@ -62,7 +62,7 @@ class HeadCoach {
         });
         await this.tools.chatBuffer.addMessage(context.userId, "user", context.userMessage);
         await this.tools.chatBuffer.addMessage(context.userId, "assistant", finalResponse);
-        console.log(`[HeadCoach] Final synthesized response (Onboarding): ${finalResponse}`);
+        this.tools.logger.info(`[HeadCoach] Final synthesized response (Onboarding): ${finalResponse}`);
         return finalResponse;
       }
     }
@@ -88,7 +88,7 @@ class HeadCoach {
     `;
 
     const selectedAgentsResponse = await this.tools.llmClient.generateResponse(selectionPrompt, undefined, "none") as string;
-    console.log(`[HeadCoach] Agent selection response: ${selectedAgentsResponse}`);
+    this.tools.logger.info(`[HeadCoach] Agent selection response: ${selectedAgentsResponse}`);
     selectedAgentNames = selectedAgentsResponse.split(",").map(name => name.trim());
 
     agentOutputs = [];
@@ -112,7 +112,7 @@ class HeadCoach {
           agentOutputs.push(await this.agents.onboarding.run(updatedContext));
           break;
         default:
-          console.warn(`Unknown agent selected by HeadCoach: ${agentName}`);
+          this.tools.logger.warn(`Unknown agent selected by HeadCoach: ${agentName}`);
       }
     }
 
@@ -131,7 +131,7 @@ class HeadCoach {
     await this.tools.chatBuffer.addMessage(context.userId, "user", context.userMessage);
     await this.tools.chatBuffer.addMessage(context.userId, "assistant", finalResponse);
 
-    console.log(`[HeadCoach] Final synthesized response: ${finalResponse}`);
+    this.tools.logger.info(`[HeadCoach] Final synthesized response: ${finalResponse}`);
     return finalResponse;
   }
 }
