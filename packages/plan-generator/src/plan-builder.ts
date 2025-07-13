@@ -430,7 +430,7 @@ export class PlanBuilder {
     totalWeeks: number,
     request: PlanGenerationRequest
   ): WorkoutTemplate[] {
-    const selected: WorkoutTemplate[] = [];
+    let selected: WorkoutTemplate[] = [];
     
     // Always include easy runs as base
     const easyTemplate = templates.find(t => t.type === 'easy')!;
