@@ -148,13 +148,14 @@ export class OnboardingFlow {
             let parsedValue: any = answer;
 
             switch (previousQuestion.validation.type) {
-              case 'number':
+              case 'number': {
                 const num = parseInt(answer, 10);
                 if (!isNaN(num) && num >= previousQuestion.validation.range!.min && num <= previousQuestion.validation.range!.max) {
                   isValid = true;
                   parsedValue = num;
                 }
                 break;
+              }
               case 'choice':
                 for (const [value, keywords] of Object.entries(previousQuestion.validation.options!)) {
                   if (keywords.some(kw => answer.includes(kw))) {

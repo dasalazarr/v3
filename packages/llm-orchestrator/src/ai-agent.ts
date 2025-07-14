@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { franc } from 'franc';
+import { backOff } from 'exponential-backoff';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { UserProfile, ApiResponse } from '@running-coach/shared';
 import { ToolRegistry } from './tool-registry.js';
@@ -58,130 +59,143 @@ export class AIAgent {
   public async processMessage(request: ProcessMessageRequest): Promise<AgentResponse> {
     const { userId, message, userProfile, contextOverride } = request;
 
-    try {
-      // Store user message in chat buffer and vector memory
-      await this.chatBuffer.addMessage(userId, 'user', message);
-      await this.vectorMemory.storeConversation(userId, 'user', message);
+    return backOff(async () => {
+      try {
+        // Store user message in chat buffer and vector memory
+        await this.chatBuffer.addMessage(userId, 'user', message);
+        await this.vectorMemory.storeConversation(userId, 'user', message);
 
-      // Use preferred language from user profile or detect language
-      let language: 'en' | 'es' = 'es'; // Default to Spanish
-      
-      if (userProfile?.preferredLanguage && (userProfile.preferredLanguage === 'en' || userProfile.preferredLanguage === 'es')) {
-        language = userProfile.preferredLanguage;
-        console.log(`🌐 Using user's preferred language: ${language}`);
-      } else {
-        // Fallback to language detection
-        language = this.detectLanguage(message);
-        console.log(`🌐 Detected language: ${language}`);
-      }
+        // Use preferred language from user profile or detect language
+        let language: 'en' | 'es' = 'es'; // Default to Spanish
+        
+        if (userProfile?.preferredLanguage && (userProfile.preferredLanguage === 'en' || userProfile.preferredLanguage === 'es')) {
+          language = userProfile.preferredLanguage;
+          console.log(`🌐 Using user's preferred language: ${language}`);
+        } else {
+          // Fallback to language detection
+          language = this.detectLanguage(message);
+          console.log(`🌐 Detected language: ${language}`);
+        }
 
-      // Get conversation context
-      const conversationHistory = contextOverride || 
-        await this.chatBuffer.getConversationContext(userId);
+        // Get conversation context
+        const conversationHistory = contextOverride || 
+          await this.chatBuffer.getConversationContext(userId);
 
-      // Get relevant vector memory context
-      const memoryContext = await this.vectorMemory.retrieveContext(userId, message);
+        // Get relevant vector memory context
+        const memoryContext = await this.vectorMemory.retrieveContext(userId, message);
 
-      // Build system prompt
-      const systemPrompt = this.buildSystemPrompt(userProfile, memoryContext, language);
+        // Build system prompt
+        const systemPrompt = this.buildSystemPrompt(userProfile, memoryContext, language);
 
-      // Prepare messages for OpenAI
-      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        { role: 'system', content: systemPrompt },
-        ...conversationHistory.map((msg: { role: string; content: string }) => ({
-          role: msg.role as 'user' | 'assistant' | 'system',
-          content: msg.content
-        })),
-        { role: 'user', content: message }
-      ];
+        // Prepare messages for OpenAI
+        const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+          { role: 'system', content: systemPrompt },
+          ...conversationHistory.map((msg: { role: string; content: string }) => ({
+            role: msg.role as 'user' | 'assistant' | 'system',
+            content: msg.content
+          })),
+          { role: 'user', content: message }
+        ];
 
-      // Get available tools
-      const tools = this.toolRegistry.getOpenAITools();
+        // Get available tools
+        const tools = this.toolRegistry.getOpenAITools();
 
-      // Call OpenAI with function calling
-      const completion = await this.openai.chat.completions.create({
-        model: this.model,
-        messages,
-        tools: tools.length > 0 ? tools : undefined,
-        tool_choice: tools.length > 0 ? 'auto' : undefined,
-        temperature: 0.7,
-        max_tokens: 400,
-      });
+        // Call OpenAI with function calling
+        const completion = await this.openai.chat.completions.create({
+          model: this.model,
+          messages,
+          tools: tools.length > 0 ? tools : undefined,
+          tool_choice: tools.length > 0 ? 'auto' : undefined,
+          temperature: 0.7,
+          max_tokens: 400,
+        });
 
-      const choice = completion.choices[0];
-      let content = choice.message.content || '';
-      const toolCalls: any[] = [];
+        const choice = completion.choices[0];
+        let content = choice.message.content || '';
+        const toolCalls: any[] = [];
 
-      // Execute tool calls if any
-      if (choice.message.tool_calls) {
-        for (const toolCall of choice.message.tool_calls) {
-          try {
-            const result = await this.toolRegistry.execute({
-              name: toolCall.function.name,
-              parameters: { ...JSON.parse(toolCall.function.arguments), userId },
-            });
-            
-            // Handle validation errors by asking the user for more information
-            if (result.error === 'VALIDATION_FAILED') {
-              content = result.message; // Use the validation message as the response
-              toolCalls.pop(); // Remove the failed tool call
-              break; // Exit the loop and return the validation message
+        // Execute tool calls if any
+        if (choice.message.tool_calls) {
+          for (const toolCall of choice.message.tool_calls) {
+            try {
+              const result = await this.toolRegistry.execute({
+                name: toolCall.function.name,
+                parameters: { ...JSON.parse(toolCall.function.arguments), userId },
+              });
+              
+              // Handle validation errors by asking the user for more information
+              if (result.error === 'VALIDATION_FAILED') {
+                content = result.message; // Use the validation message as the response
+                toolCalls.pop(); // Remove the failed tool call
+                break; // Exit the loop and return the validation message
+              }
+
+              toolCalls.push({
+                name: toolCall.function.name,
+                parameters: JSON.parse(toolCall.function.arguments),
+                result,
+              });
+
+              // Add tool result to context for follow-up response
+              messages.push({
+                role: 'assistant',
+                content: null,
+                tool_calls: [toolCall],
+              });
+              messages.push({
+                role: 'tool',
+                content: JSON.stringify(result),
+                tool_call_id: toolCall.id,
+              });
+            } catch (error) {
+              console.error(`Tool execution failed: ${toolCall.function.name}`, error);
+              toolCalls.push({
+                name: toolCall.function.name,
+                parameters: JSON.parse(toolCall.function.arguments),
+                result: { error: error instanceof Error ? error.message : 'Unknown error' },
+              });
             }
+          }
 
-            toolCalls.push({
-              name: toolCall.function.name,
-              parameters: JSON.parse(toolCall.function.arguments),
-              result,
+          // Get final response after tool execution
+          if (toolCalls.length > 0) {
+            const followupCompletion = await this.openai.chat.completions.create({
+              model: this.model,
+              messages,
+              temperature: 0.7,
+              max_tokens: 400,
             });
-
-            // Add tool result to context for follow-up response
-            messages.push({
-              role: 'assistant',
-              content: null,
-              tool_calls: [toolCall],
-            });
-            messages.push({
-              role: 'tool',
-              content: JSON.stringify(result),
-              tool_call_id: toolCall.id,
-            });
-          } catch (error) {
-            console.error(`Tool execution failed: ${toolCall.function.name}`, error);
-            toolCalls.push({
-              name: toolCall.function.name,
-              parameters: JSON.parse(toolCall.function.arguments),
-              result: { error: error instanceof Error ? error.message : 'Unknown error' },
-            });
+            content = followupCompletion.choices[0].message.content || content;
           }
         }
 
-        // Get final response after tool execution
-        if (toolCalls.length > 0) {
-          const followupCompletion = await this.openai.chat.completions.create({
-            model: this.model,
-            messages,
-            temperature: 0.7,
-            max_tokens: 400,
-          });
-          content = followupCompletion.choices[0].message.content || content;
-        }
+        // Store assistant response
+        await this.chatBuffer.addMessage(userId, 'assistant', content);
+        await this.vectorMemory.storeConversation(userId, 'assistant', content);
+
+        return {
+          content,
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          language,
+          confidence: this.calculateConfidence(completion),
+        };
+
+      } catch (error) {
+        console.error(`❌ Error processing message for ${userId}:`, error);
+        throw error;
       }
-
-      // Store assistant response
-      await this.chatBuffer.addMessage(userId, 'assistant', content);
-      await this.vectorMemory.storeConversation(userId, 'assistant', content);
-
-      return {
-        content,
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        language,
-        confidence: this.calculateConfidence(completion),
-      };
-
-    } catch (error) {
-      console.error(`❌ Error processing message for ${userId}:`, error);
-      throw error;
-    }
+    }, {
+      numOfAttempts: 3, // Retry up to 3 times
+      startingDelay: 1000, // Start with a 1-second delay
+      retry: (e: any, attemptNumber: number) => {
+        // Retry only on 429 errors (Too Many Requests)
+        if (e.status === 429) {
+          console.log(`Rate limit exceeded. Retrying attempt ${attemptNumber}...`);
+          return true;
+        }
+        return false;
+      },
+    });
   }
 
   /**
