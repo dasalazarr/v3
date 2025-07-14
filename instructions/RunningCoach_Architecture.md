@@ -131,6 +131,13 @@ const response = await deepSeekAgent.process({
 * Integración de analítica avanzada (TimescaleDB). 
 * Soporte multi-dominio reutilizando `llm-orchestrator`.
 
+### Monitoring and Logs
+Railway muestra registros de build, despliegue y HTTP. Puedes filtrar eventos con:
+- Frases exactas entre comillas (`"error"`).
+- Agrupaciones con paréntesis `(db OR redis)`.
+- Operadores `AND` y `OR`.
+- Exclusiones anteponiendo `-`, por ejemplo `-debug`.
+
 ---
 
 > Documento generado automáticamente por Cascade para reflejar el estado arquitectónico al 27-Jun-2025.
