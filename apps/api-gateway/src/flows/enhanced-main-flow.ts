@@ -20,6 +20,20 @@ export class EnhancedMainFlow {
     @inject('MultiAgentServiceWrapper') private multiAgentService: MultiAgentServiceWrapper
   ) {}
 
+  private mapUserToUserProfile(user: typeof users.$inferSelect): UserProfile {
+    return {
+      ...user,
+      age: user.age ?? undefined,
+      goalRace: user.goalRace ?? undefined,
+      experienceLevel: user.experienceLevel ?? undefined,
+      injuryHistory: user.injuryHistory ?? undefined,
+      weeklyMileage: user.weeklyMileage !== null ? parseInt(user.weeklyMileage as string) : undefined,
+      timezone: user.timezone ?? undefined,
+      // Ensure all properties of UserProfile are covered, even if optional
+      // and handle potential nulls from DB by converting to undefined
+    } as UserProfile;
+  }
+
   private async handleConversation(ctx: any, flowDynamic: any, state: any) {
     let user: (typeof users.$inferSelect) | undefined;
     try {
@@ -37,6 +51,8 @@ export class EnhancedMainFlow {
         return;
       }
 
+      const userProfile = this.mapUserToUserProfile(user);
+
       const shouldUseMultiAgent = this.multiAgentService.shouldUseMultiAgent(message);
       let response: string;
 
@@ -45,7 +61,7 @@ export class EnhancedMainFlow {
         const result = await this.multiAgentService.processMessage(
           user.id,
           message,
-          user as UserProfile,
+          userProfile,
           user.preferredLanguage as 'en' | 'es'
         );
         response = result.content;
@@ -60,7 +76,7 @@ export class EnhancedMainFlow {
         const aiResponse = await this.aiAgent.processMessage({
           userId: user.id,
           message,
-          userProfile: user as UserProfile
+          userProfile: userProfile
         });
         response = aiResponse.content;
       }
