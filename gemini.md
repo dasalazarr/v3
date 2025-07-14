@@ -2,22 +2,72 @@
 
 ## 📊 Contexto y Estado Actual
 
+### Comandos Comunes de Desarrollo
+
+#### Desarrollo y Construcción
+- `npm run dev` - Inicia el servidor de desarrollo con verificación de lint y recarga en caliente usando nodemon
+- `npm run build` - Construye la aplicación usando Rollup
+- `npm start` - Ejecuta la aplicación construida desde dist/app.js
+- `npm run lint` - Ejecuta ESLint en todo el código base
+
+#### Pruebas
+- No hay comandos de prueba específicos configurados. Consultar con el usuario para el enfoque de pruebas si es necesario.
+
+
+
 ### Sistema Existente (Mantener 100%)
 - ✅ **API Gateway**: BuilderBot + WhatsApp funcional
 - ✅ **Base de Datos**: PostgreSQL con esquemas completos
 - ✅ **Memoria Vectorial**: Qdrant + Redis + PostgreSQL
 - ✅ **IA Básica**: DeepSeek con tool calling
-- ✅ **Paquetes**: 5 módulos bien estructurados
+- ✅ **Paquetes**: 5 módulos bien estructurados (database, llm-orchestrator, plan-generator, shared, vector-memory)
+- ✅ **Core Framework**: TypeScript WhatsApp AI assistant with multi-agent capabilities built with BuilderBot, OpenAI/DeepSeek API, PostgreSQL, Qdrant, Redis, Google Calendar API, tsyringe.
 
 ### Sistema Multiagente (Reutilizar)
 - ✅ **Arquitectura**: Orquestador + Agentes + Memoria
-- ✅ **Agentes**: Planner, Executor, Reflexion
+- ✅ **Agentes**: Planner, Executor, Reflexion, Training, Progress, Injury Prevention
 - ✅ **Memoria Avanzada**: Contexto semántico
 - ✅ **Resiliencia**: Manejo de errores y auto-corrección
+- ✅ **Dependency Injection System**: Centralized DI with tsyringe in `src/di/container.ts`
+- ✅ **Configuration Management**: Centralized environment variables in `src/config/index.ts`
+- ✅ **ESM Configuration**: Project uses ES modules (`"type": "module"` in package.json)
+
+### Arquitectura de Servicios Clave
+- **Multi-Agent Services**: MultiAgentService, VectorMemoryService, AdvancedMemoryManager, WorkflowManager, ReflexionService
+- **Core Services**: DatabaseService, AIService, VectorService, CacheService, AnalyticsService
+- **AppointmentService & AppointmentController**: Google Calendar integration for scheduling
+- **TranslationService**: Bilingual support (EN/ES) with automatic language detection
+
+### Estrategia de Almacenamiento de Datos
+- **Primary Storage**: PostgreSQL with comprehensive schemas
+- **Vector Storage**: Qdrant for semantic search and memory
+- **Cache Storage**: Redis for session and performance optimization
+- **User Data**: Structured user profiles and preferences
+- **Training Data**: Running plans, workouts, and progress tracking
+- **Conversations**: Vector-enhanced conversation history
+- **Appointments**: Integrated with Google Calendar
 
 ---
 
-## 🚀 Plan de Desarrollo Optimizado (6 Semanas)
+## 🏗️ Arquitectura del Proyecto
+
+### Package Architecture
+The project is structured as a monorepo with specialized packages:
+- `packages/multi-agent/` - Multi-agent system core
+- `packages/vector-memory/` - Advanced memory management
+- `packages/llm-orchestrator/` - LLM coordination
+- `packages/database/` - Database operations
+- `packages/cache/` - Caching layer
+- `apps/api-gateway/` - Main application entry point
+
+### Flow Architecture
+Conversational flows in `src/templates/`:
+- `mainFlow.ts` - Primary conversation handler
+- `appointmentFlow.ts` - Appointment scheduling
+- `faqFlow.ts` - FAQ handling
+- `trainingFlow.ts` - Training flow
+
+---
 
 ### Fase 1: Fundación Multiagente (Semana 1)
 
@@ -260,8 +310,21 @@ packages/multi-agent/
 
 ## 🔧 Configuración Técnica
 
-### Variables de Entorno Nuevas:
+### Variables de Entorno Clave:
 ```bash
+# Required variables
+apiKey
+jwtToken
+numberId
+verifyToken
+DATABASE_URL
+REDIS_URL
+QDRANT_URL
+QDRANT_API_KEY
+GOOGLE_CALENDAR_ID
+privateKey
+clientEmail
+
 # Multi-Agent Configuration
 MULTI_AGENT_ENABLED=true
 MULTI_AGENT_PERCENTAGE=10
