@@ -247,6 +247,16 @@ railway logs --filter error
 railway logs --follow
 ```
 
+### Log Filtering Syntax
+Railway's log viewer supports advanced filtering across Build, Deploy and HTTP logs:
+
+- Use quotes (`"error"`) for exact phrases.
+- Group expressions with parentheses, e.g. `(db OR redis)`.
+- Combine terms with `AND`/`OR`.
+- Exclude terms with a leading `-`, such as `-debug`.
+
+These filters make it easier to pinpoint relevant events.
+
 ## 📈 Scaling Considerations
 
 ### Horizontal Scaling

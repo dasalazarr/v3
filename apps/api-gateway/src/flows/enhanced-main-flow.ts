@@ -3,7 +3,7 @@ import { injectable, inject, container } from 'tsyringe';
 import { addKeyword, EVENTS } from '@builderbot/bot';
 import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
-import { LanguageDetector } from '@running-coach/shared';
+import { LanguageDetector, UserProfile } from '@running-coach/shared';
 import { AIAgent } from '@running-coach/llm-orchestrator';
 import { VectorMemory } from '@running-coach/vector-memory';
 import logger from '../services/logger-service.js';
@@ -101,7 +101,15 @@ export class EnhancedMainFlow {
             const aiResponse = await this.aiAgent.processMessage({
               userId: ctx.from,
               message,
-              userProfile: user
+              userProfile: {
+                ...user,
+                age: user.age ?? undefined,
+                goalRace: user.goalRace ?? undefined,
+                experienceLevel: user.experienceLevel ?? undefined,
+                injuryHistory: user.injuryHistory ?? undefined,
+                weeklyMileage: user.weeklyMileage ?? undefined,
+                timezone: user.timezone ?? undefined
+              } as UserProfile
             });
             
             response = aiResponse.content;
