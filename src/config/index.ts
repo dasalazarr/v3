@@ -33,15 +33,26 @@ const getEmbeddingsConfig = () => {
 
 // Validate Meta credentials
 const getMetaCredentials = () => {
-  const jwtToken = process.env.jwtToken;
-  const numberId = process.env.numberId;
-  const verifyToken = process.env.verifyToken;
+  const jwtToken = process.env.jwtToken || process.env.JWT_TOKEN;
+  const numberId = process.env.numberId || process.env.NUMBER_ID;
+  const verifyToken = process.env.verifyToken || process.env.VERIFY_TOKEN;
 
   if (!jwtToken || !numberId || !verifyToken) {
     console.error("⚠️ Faltan credenciales de Meta WhatsApp");
   }
 
   return { jwtToken, numberId, verifyToken };
+};
+
+// Multi-agent configuration
+const getMultiAgentConfig = () => {
+  return {
+    multiAgentEnabled: process.env.MULTI_AGENT_ENABLED === 'true',
+    multiAgentPercentage: parseInt(process.env.MULTI_AGENT_PERCENTAGE || '10'),
+    enableReflection: process.env.ENABLE_REFLECTION === 'true',
+    agentTimeout: parseInt(process.env.AGENT_TIMEOUT_MS || '30000'),
+    maxRetries: parseInt(process.env.MAX_WORKFLOW_RETRIES || '2')
+  };
 };
 
 // Definición de tipos para el objeto config
@@ -69,6 +80,12 @@ export interface Config {
   privateKey?: string;
   clientEmail?: string;
   calendarId?: string;
+  // Multi-agent configuration
+  multiAgentEnabled: boolean;
+  multiAgentPercentage: number;
+  enableReflection: boolean;
+  agentTimeout: number;
+  maxRetries: number;
 }
 
 export const config: Config = {
@@ -83,7 +100,8 @@ export const config: Config = {
   trainingSpreadsheetId: process.env.TRAINING_SPREADSHEET_ID,
   privateKey: process.env.privateKey,
   clientEmail: process.env.clientEmail,
-  calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary'
+  calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+  ...getMultiAgentConfig()
 };
 
 // Verificación de variables críticas

@@ -8,6 +8,7 @@ import { AIAgent } from '@running-coach/llm-orchestrator';
 import { VectorMemory } from '@running-coach/vector-memory';
 import logger from '../services/logger-service.js';
 import { OnboardingFlow } from './onboarding-flow.js';
+import { MultiAgentServiceWrapper } from '../services/multi-agent-service.js';
 
 @injectable()
 export class EnhancedMainFlow {
@@ -15,7 +16,8 @@ export class EnhancedMainFlow {
     @inject('AIAgent') private aiAgent: AIAgent,
     @inject('Database') private database: Database,
     @inject('VectorMemory') private vectorMemory: VectorMemory,
-    @inject('LanguageDetector') private languageDetector: LanguageDetector
+    @inject('LanguageDetector') private languageDetector: LanguageDetector,
+    @inject('MultiAgentServiceWrapper') private multiAgentService: MultiAgentServiceWrapper
   ) {}
 
   private async getOrCreateUser(phoneNumber: string, message: string) {
@@ -58,9 +60,66 @@ export class EnhancedMainFlow {
         logger.info({ userId: ctx.from }, '[ROUTER] User has completed onboarding, proceeding to main flow');
         // This is where the main conversation logic will go
       })
-      .addAnswer('This is the main flow. What can I help you with today?', { capture: true }, async (ctx, { flowDynamic }) => {
-        // Placeholder for intent detection and routing to sub-flows
-        await flowDynamic('I am ready to process your request.');
+      .addAnswer('', { capture: true }, async (ctx, { flowDynamic, state }) => {
+        try {
+          const user = await this.getOrCreateUser(ctx.from, ctx.body);
+          const message = ctx.body;
+          
+          // Check if we should use multi-agent system
+          const shouldUseMultiAgent = this.multiAgentService.shouldUseMultiAgent(message);
+          
+          let response: string;
+          
+          if (shouldUseMultiAgent) {
+            logger.info({ userId: ctx.from }, '[MULTI_AGENT] Using multi-agent system');
+            
+            // Get conversation history from chat buffer
+            const conversationHistory: any[] = [];
+            
+            // Process with multi-agent system
+            const result = await this.multiAgentService.processMessage(
+              ctx.from,
+              message,
+              user,
+              user.preferredLanguage as 'en' | 'es'
+            );
+            
+            response = result.content;
+            
+            // Log multi-agent metrics
+            logger.info({ 
+              userId: ctx.from, 
+              multiAgentUsed: result.multiAgentUsed,
+              executionTime: result.executionTime,
+              success: result.success 
+            }, '[MULTI_AGENT] Workflow completed');
+            
+          } else {
+            logger.info({ userId: ctx.from }, '[SINGLE_AGENT] Using single agent system');
+            
+            // Fallback to single agent
+            const aiResponse = await this.aiAgent.processMessage({
+              userId: ctx.from,
+              message,
+              userProfile: user
+            });
+            
+            response = aiResponse.content;
+          }
+          
+          await flowDynamic(response);
+          
+        } catch (error) {
+          logger.error({ userId: ctx.from, error }, '[MAIN_FLOW] Error processing message');
+          
+          // Fallback error response
+          const lang = (await state.get('lang')) as 'es' | 'en';
+          const errorMessage = lang === 'es' 
+            ? 'Disculpa, estoy teniendo algunos problemas técnicos. ¿Puedes intentarlo de nuevo?'
+            : 'Sorry, I\'m having some technical issues. Can you please try again?';
+          
+          await flowDynamic(errorMessage);
+        }
       });
   }
 }

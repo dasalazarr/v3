@@ -7,7 +7,12 @@
       "Bash(npm run build:*)",
       "Bash(pnpm install:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm install)",
+      "Bash(tsc)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm --filter multi-agent build)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

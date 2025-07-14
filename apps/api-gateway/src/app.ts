@@ -20,6 +20,7 @@ import { createPlanUpdaterTool } from './tools/plan-updater.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
+import { MultiAgentServiceWrapper } from './services/multi-agent-service.js';
 
 // Load environment variables
 dotenv.config();
@@ -93,6 +94,13 @@ interface Config {
   MESSAGE_LIMIT: number;
   GUMROAD_LINK: string;
   
+  // Multi-Agent Configuration
+  MULTI_AGENT_ENABLED: boolean;
+  MULTI_AGENT_PERCENTAGE: number;
+  ENABLE_REFLECTION: boolean;
+  AGENT_TIMEOUT_MS: number;
+  MAX_WORKFLOW_RETRIES: number;
+  
   // Application
   PORT: number;
   NODE_ENV: string;
@@ -138,6 +146,11 @@ function loadConfig(): Config {
     VERIFY_TOKEN: process.env.VERIFY_TOKEN!,
     MESSAGE_LIMIT: parseInt(process.env.MESSAGE_LIMIT || '40'),
     GUMROAD_LINK: process.env.GUMROAD_LINK!,
+    MULTI_AGENT_ENABLED: process.env.MULTI_AGENT_ENABLED === 'true',
+    MULTI_AGENT_PERCENTAGE: parseInt(process.env.MULTI_AGENT_PERCENTAGE || '10'),
+    ENABLE_REFLECTION: process.env.ENABLE_REFLECTION === 'true',
+    AGENT_TIMEOUT_MS: parseInt(process.env.AGENT_TIMEOUT_MS || '30000'),
+    MAX_WORKFLOW_RETRIES: parseInt(process.env.MAX_WORKFLOW_RETRIES || '2'),
     PORT: parseInt(process.env.PORT || '3000'),
     NODE_ENV: process.env.NODE_ENV || 'production'
   };
@@ -227,6 +240,16 @@ async function initializeServices(config: Config) {
   // y exportados como instancias singleton
   const { languageDetector, i18nService, templateEngine } = await import('@running-coach/shared');
 
+  // Initialize Multi-Agent Service
+  const multiAgentService = new MultiAgentServiceWrapper(aiAgent, vectorMemory, {
+    enabled: config.MULTI_AGENT_ENABLED,
+    percentage: config.MULTI_AGENT_PERCENTAGE,
+    enableReflection: config.ENABLE_REFLECTION,
+    agentTimeout: config.AGENT_TIMEOUT_MS,
+    maxRetries: config.MAX_WORKFLOW_RETRIES
+  });
+  console.log('✅ Multi-Agent Service initialized');
+
   // Register services in DI container
   container.registerInstance('Database', database);
   container.registerInstance('ChatBuffer', chatBuffer);
@@ -238,6 +261,7 @@ async function initializeServices(config: Config) {
   container.registerInstance('LanguageDetector', languageDetector);
   container.registerInstance('I18nService', i18nService);
   container.registerInstance('TemplateEngine', templateEngine);
+  container.registerInstance('MultiAgentServiceWrapper', multiAgentService);
 
   return {
     database,
@@ -249,7 +273,8 @@ async function initializeServices(config: Config) {
     toolRegistry,
     languageDetector,
     i18nService,
-    templateEngine
+    templateEngine,
+    multiAgentService
   };
 }
 
@@ -265,7 +290,7 @@ async function initializeBot(config: Config, services: any) {
   });
 
   // Initialize flows and register them in the container
-  const mainFlow = new EnhancedMainFlow(services.aiAgent, services.database, services.vectorMemory, services.languageDetector);
+  const mainFlow = new EnhancedMainFlow(services.aiAgent, services.database, services.vectorMemory, services.languageDetector, services.multiAgentService);
   container.registerInstance('EnhancedMainFlow', mainFlow);
 
   const onboardingFlow = new OnboardingFlow(services.database, services.templateEngine);
