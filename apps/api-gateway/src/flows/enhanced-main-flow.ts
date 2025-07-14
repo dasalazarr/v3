@@ -20,114 +20,90 @@ export class EnhancedMainFlow {
     @inject('MultiAgentServiceWrapper') private multiAgentService: MultiAgentServiceWrapper
   ) {}
 
-  private async getOrCreateUser(phoneNumber: string, message: string) {
-    const [user] = await this.database.query
-      .select()
-      .from(users)
-      .where(eq(users.phoneNumber, phoneNumber))
-      .limit(1);
+  private async handleConversation(ctx: any, flowDynamic: any, state: any) {
+    let user: (typeof users.$inferSelect) | undefined;
+    try {
+      [user] = await this.database.query
+        .select()
+        .from(users)
+        .where(eq(users.phoneNumber, ctx.from))
+        .limit(1);
+      const message = ctx.body;
 
-    if (user) {
-      logger.info({ userId: phoneNumber }, '[DB_FETCH] User found');
-      return user;
+      // Ensure user and language are available
+      if (!user || !user.preferredLanguage) {
+        logger.error({ userId: ctx.from }, '[MAIN_FLOW] User or language not found after onboarding');
+        await flowDynamic('I seem to be having trouble retrieving your profile. Please try again.');
+        return;
+      }
+
+      const shouldUseMultiAgent = this.multiAgentService.shouldUseMultiAgent(message);
+      let response: string;
+
+      if (shouldUseMultiAgent) {
+        logger.info({ userId: ctx.from }, '[MULTI_AGENT] Using multi-agent system');
+        const result = await this.multiAgentService.processMessage(
+          user.id,
+          message,
+          user as UserProfile,
+          user.preferredLanguage as 'en' | 'es'
+        );
+        response = result.content;
+        logger.info({ 
+          userId: ctx.from, 
+          multiAgentUsed: result.multiAgentUsed,
+          executionTime: result.executionTime,
+          success: result.success 
+        }, '[MULTI_AGENT] Workflow completed');
+      } else {
+        logger.info({ userId: ctx.from }, '[SINGLE_AGENT] Using single agent system');
+        const aiResponse = await this.aiAgent.processMessage({
+          userId: user.id,
+          message,
+          userProfile: user as UserProfile
+        });
+        response = aiResponse.content;
+      }
+
+      await flowDynamic(response);
+
+    } catch (error) {
+      logger.error({ userId: ctx.from, error }, '[MAIN_FLOW] Error processing message');
+      const lang = user?.preferredLanguage || 'en';
+      const errorMessage = lang === 'es' 
+        ? 'Disculpa, estoy teniendo algunos problemas técnicos. ¿Puedes intentarlo de nuevo?'
+        : 'Sorry, I\'m having some technical issues. Can you please try again?';
+      await flowDynamic(errorMessage);
     }
-
-    const lang = (await this.languageDetector.detect(message)) as 'es' | 'en';
-    logger.info({ userId: phoneNumber, lang }, '[DB_CREATE] New user, creating record');
-    const [newUser] = await this.database.query
-      .insert(users)
-      .values({ phoneNumber, preferredLanguage: lang })
-      .returning();
-    return newUser;
   }
 
   createFlow() {
     return addKeyword(EVENTS.WELCOME)
-      .addAction(async (ctx, { gotoFlow, state }) => {
-        const user = await this.getOrCreateUser(ctx.from, ctx.body);
-        
-        await state.update({ 
-          lang: user.preferredLanguage,
-          userId: user.id 
-        });
+      .addAction(async (ctx, { state, gotoFlow }) => {
+        // Step 1: Get or create user
+        const [user] = await this.database.query
+          .select()
+          .from(users)
+          .where(eq(users.phoneNumber, ctx.from))
+          .limit(1);
 
-        if (!user.onboardingCompleted) {
-          logger.info({ userId: ctx.from }, '[ROUTER] Onboarding not completed, redirecting to OnboardingFlow');
-          const onboardingFlow = container.resolve(OnboardingFlow);
-          return gotoFlow(onboardingFlow.createFlow());
+        if (user && user.onboardingCompleted) {
+          // User has completed onboarding, proceed to the main conversation handler
+          logger.info({ userId: ctx.from }, '[ROUTER] User has completed onboarding, proceeding to main flow');
+          return;
         }
-        
-        logger.info({ userId: ctx.from }, '[ROUTER] User has completed onboarding, proceeding to main flow');
-        // This is where the main conversation logic will go
+
+        // New user or onboarding not completed, redirect to OnboardingFlow
+        logger.info({ userId: ctx.from }, '[ROUTER] Onboarding not completed, redirecting to OnboardingFlow');
+        const onboardingFlow = container.resolve(OnboardingFlow);
+        return gotoFlow(onboardingFlow.createFlow());
       })
-      .addAnswer('', { capture: true }, async (ctx, { flowDynamic, state }) => {
-        try {
-          const user = await this.getOrCreateUser(ctx.from, ctx.body);
-          const message = ctx.body;
-          
-          // Check if we should use multi-agent system
-          const shouldUseMultiAgent = this.multiAgentService.shouldUseMultiAgent(message);
-          
-          let response: string;
-          
-          if (shouldUseMultiAgent) {
-            logger.info({ userId: ctx.from }, '[MULTI_AGENT] Using multi-agent system');
-            
-            // Get conversation history from chat buffer
-            const conversationHistory: any[] = [];
-            
-            // Process with multi-agent system
-            const result = await this.multiAgentService.processMessage(
-              ctx.from,
-              message,
-              user,
-              user.preferredLanguage as 'en' | 'es'
-            );
-            
-            response = result.content;
-            
-            // Log multi-agent metrics
-            logger.info({ 
-              userId: ctx.from, 
-              multiAgentUsed: result.multiAgentUsed,
-              executionTime: result.executionTime,
-              success: result.success 
-            }, '[MULTI_AGENT] Workflow completed');
-            
-          } else {
-            logger.info({ userId: ctx.from }, '[SINGLE_AGENT] Using single agent system');
-            
-            // Fallback to single agent
-            const aiResponse = await this.aiAgent.processMessage({
-              userId: ctx.from,
-              message,
-              userProfile: {
-                ...user,
-                age: user.age ?? undefined,
-                goalRace: user.goalRace ?? undefined,
-                experienceLevel: user.experienceLevel ?? undefined,
-                injuryHistory: user.injuryHistory ?? undefined,
-                weeklyMileage: user.weeklyMileage ?? undefined,
-                timezone: user.timezone ?? undefined
-              } as UserProfile
-            });
-            
-            response = aiResponse.content;
-          }
-          
-          await flowDynamic(response);
-          
-        } catch (error) {
-          logger.error({ userId: ctx.from, error }, '[MAIN_FLOW] Error processing message');
-          
-          // Fallback error response
-          const lang = (await state.get('lang')) as 'es' | 'en';
-          const errorMessage = lang === 'es' 
-            ? 'Disculpa, estoy teniendo algunos problemas técnicos. ¿Puedes intentarlo de nuevo?'
-            : 'Sorry, I\'m having some technical issues. Can you please try again?';
-          
-          await flowDynamic(errorMessage);
+      .addAnswer(
+        ' ', // This will capture any message from users who have completed onboarding
+        { capture: true },
+        async (ctx, { flowDynamic, state }) => {
+          await this.handleConversation(ctx, flowDynamic, state);
         }
-      });
+      );
   }
 }
