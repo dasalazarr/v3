@@ -46,7 +46,7 @@ export class ToolRegistry {
         }));
         return {
           error: 'VALIDATION_FAILED',
-          message: `I need more information to log your run. Please provide the following: ${missingFields.map((f: any) => f.field).join(', ')}`,
+          message: `It looks like I'm missing some key details to help you with that. Could you please provide the following: ${missingFields.map(f => f.field).join(', ')}?`,
           details: missingFields,
         };
       }

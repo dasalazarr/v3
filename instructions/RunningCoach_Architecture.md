@@ -69,7 +69,8 @@ CREATE TABLE runs (
 
 * Agente DeepSeek con capacidad de **tool-calling**.
 * Registro centralizado de herramientas (plan generator, data logger, etc.).
-* Prompt dinámico que incorpora historial, perfil y contexto semántico.
+* Prompt dinámico que incorpora historial, perfil **detallado del onboarding** y contexto semántico.
+* **Extracción de datos mejorada**: El sistema ahora acepta frases naturales para la extracción de datos y solicita de forma inteligente solo los campos faltantes para la ejecución de herramientas.
 
 ```ts
 const response = await deepSeekAgent.process({

@@ -29,7 +29,7 @@ MAX_WORKFLOW_RETRIES=2
 ```
 
 ### 4. Funcionamiento
-- **Detección automática:** El sistema detecta mensajes complejos ("plan", "analizar", "progreso", etc.) y activa el multiagente solo cuando es necesario.
+- **Detección automática:** El sistema detecta mensajes complejos (ej. "plan", "analizar", "progreso") de forma **insensible a mayúsculas/minúsculas** y activa el multiagente solo cuando es necesario.
 - **Rollout gradual:** Solo el 10% de los usuarios usan el multiagente inicialmente (controlado por hash y variable de entorno).
 - **Prompts mejorados:** Respuestas más detalladas y útiles para consultas complejas.
 - **Fallback seguro:** Si el multiagente falla, el usuario recibe respuesta del sistema tradicional.

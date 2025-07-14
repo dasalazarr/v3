@@ -70,7 +70,7 @@ Nuestro objetivo aspiracional —el “norte” que guía todo el proyecto— es
 ## 🚀 **Functional Requirements**
 
 ### **FR1: Intelligent Onboarding**
-- **Requirement**: Interactive button-driven onboarding that captures comprehensive user profile
+- **Requirement**: Interactive button-driven onboarding that captures comprehensive user profile, **triggered automatically for new users or those who haven't completed it, routed from the main conversation flow.**
 - **Components**: Age, goal race, weekly frequency, injury history, motivation, fitness level
 - **Acceptance Criteria**: 
   - 90%+ onboarding completion rate
@@ -94,12 +94,13 @@ Nuestro objetivo aspiracional —el “norte” que guía todo el proyecto— es
   - Progressive overload principles applied
 
 ### **FR4: Run Logging and Analysis**
-- **Requirement**: Natural language run logging with automatic data extraction
+- **Requirement**: Natural language run logging with automatic data extraction **and intelligent prompting for missing information.**
 - **Components**: NLP processing, structured data storage, trend analysis
 - **Acceptance Criteria**:
   - 95%+ accuracy in data extraction
   - Support for various input formats
   - Automatic pace/effort validation
+  - **System politely requests only missing required fields for tool execution.**
 
 ### **FR5: Injury Prevention System**
 - **Requirement**: Proactive injury monitoring and plan modifications

@@ -90,7 +90,7 @@ running-coach-bot/
 
 ### **1. Message Processing Flow**
 ```
-WhatsApp Message → Webhook → API Gateway → LLM Orchestrator → Tool Selection
+WhatsApp Message → Webhook → API Gateway (Onboarding Router) → LLM Orchestrator → Tool Selection
                                                     ↓
 Vector Memory ← Context Retrieval ← Memory Retriever ← Chat Buffer (Redis)
      ↓                                                      ↓
