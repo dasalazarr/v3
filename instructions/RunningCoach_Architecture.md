@@ -117,12 +117,12 @@ const response = await deepSeekAgent.process({
 
 ---
 
-## 9. Ruta de Migración
+## 9. Ruta de Migración (Completada)
 
-1. Desplegar schema PG en paralelo a Google Sheets.
-2. Scripts ETL para migrar y validar datos.
-3. Cambiar webhook de WhatsApp al nuevo API Gateway.
-4. Retirar integración Sheets.
+1. **Desplegar schema PG en paralelo a Google Sheets (Hecho)**.
+2. **Scripts ETL para migrar y validar datos (Hecho)**.
+3. **Cambiar webhook de WhatsApp al nuevo API Gateway (Hecho)**.
+4. **Retirar integración Sheets y código legacy (Hecho)**.
 
 ---
 

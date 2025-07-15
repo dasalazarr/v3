@@ -8,7 +8,7 @@ La visión era clara: crear un compañero de running que no solo dictara entrena
 
 ## Capítulo 2: De Prototipo a Promesa (La Evolución Técnica)
 
-Andes comenzó como un prototipo humilde, un bot de WhatsApp que registraba carreras en Google Sheets. Era funcional, pero Diego sabía que el verdadero potencial residía en la inteligencia y la memoria. La ambición creció, y con ella, la necesidad de una arquitectura robusta.
+Andes comenzó como un prototipo humilde, pero la visión siempre fue más grande. La migración de un simple sistema basado en Google Sheets a una arquitectura robusta y escalable fue el primer gran salto hacia la inteligencia.
 
 La migración de Google Sheets a una base de datos PostgreSQL marcó el primer gran salto. Luego, la integración de Redis para la memoria a corto plazo y Qdrant para la memoria semántica transformó a Andes de un bot reactivo a un compañero que "recordaba" y "entendía" el contexto de cada conversación.
 

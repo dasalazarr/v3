@@ -2,7 +2,7 @@ import { addDays, startOfWeek } from 'date-fns';
 import { TrainingPlan, Workout, UserProfile } from '@running-coach/shared';
 import { VDOTCalculator, VDOTPaces } from './vdot-calculator.js';
 
-export interface PlanGenerationRequest {
+interface PlanGenerationRequest {
   userId: string;
   currentVDOT: number;
   targetRace: '5k' | '10k' | 'half_marathon' | 'marathon';
@@ -22,7 +22,7 @@ export interface PlanGenerationRequest {
   };
 }
 
-export interface WorkoutTemplate {
+interface WorkoutTemplate {
   type: 'easy' | 'long' | 'tempo' | 'intervals' | 'recovery' | 'race';
   name: string;
   description: string;

@@ -3,25 +3,25 @@ import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
 import { MemoryContext, VECTOR_DIMENSION } from '@running-coach/shared';
 
-export interface QdrantConfig {
+interface QdrantConfig {
   url: string;
   apiKey?: string;
   collectionName: string;
 }
 
-export interface OpenAIConfig {
+interface OpenAIConfig {
   apiKey: string;
   model?: string;
   baseURL?: string;
 }
 
-export interface EmbeddingsConfig {
+interface EmbeddingsConfig {
   apiKey: string;
   model?: string;
   baseURL?: string;
 }
 
-export interface MemoryEntry {
+interface MemoryEntry {
   id: string;
   userId: string;
   content: string;

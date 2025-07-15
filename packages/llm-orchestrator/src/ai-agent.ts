@@ -5,13 +5,13 @@ import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { UserProfile, ApiResponse } from '@running-coach/shared';
 import { ToolRegistry } from './tool-registry.js';
 
-export interface OpenAIConfig {
+interface OpenAIConfig {
   apiKey: string;
   model?: string;
   baseURL?: string;
 }
 
-export interface AgentResponse {
+interface AgentResponse {
   content: string;
   toolCalls?: Array<{
     name: string;
@@ -22,7 +22,7 @@ export interface AgentResponse {
   confidence: number;
 }
 
-export interface ProcessMessageRequest {
+interface ProcessMessageRequest {
   userId: string;
   message: string;
   userProfile?: UserProfile;

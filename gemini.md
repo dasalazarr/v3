@@ -71,35 +71,23 @@ Conversational flows in `src/templates/`:
 
 ### Fase 1: Fundación Multiagente (Semana 1)
 
-#### 1.1 Crear Paquete Multi-Agent (2 días)
-```bash
-packages/multi-agent/
-├── src/
-│   ├── agents/
-│   │   ├── base-agent.ts          # Clase base reutilizable
-│   │   ├── planner-agent.ts       # Adaptar del sistema existente
-│   │   ├── executor-agent.ts      # Adaptar del sistema existente
-│   │   └── reflexion-agent.ts     # Adaptar del sistema existente
-│   ├── core/
-│   │   ├── orchestrator.ts        # Adaptar del sistema existente
-│   │   └── workflow-manager.ts    # Nuevo - gestión de flujos
-│   ├── memory/
-│   │   └── advanced-context.ts    # Extender vector-memory existente
-│   └── index.ts
-```
+#### 1.1 Integración del Sistema Multi-Agente (2 días)
+- El sistema multi-agente se ha integrado directamente en `apps/api-gateway/src/multi-agent/`.
+- Consiste en `types.ts`, `orchestrator.ts`, y `service.ts`.
+- Se ha asegurado la compatibilidad con el sistema existente y se ha implementado un fallback seguro.
 
 #### 1.2 Adaptar Agentes Existentes (3 días)
-- **BaseAgent**: Clase abstracta reutilizable
-- **PlannerAgent**: Descomposición de tareas para running coach
-- **ExecutorAgent**: Ejecución especializada
-- **ReflexionAgent**: Análisis y mejora
+- **BaseAgent**: Clase abstracta reutilizable (conceptual, no implementada como archivo separado).
+- **PlannerAgent**: Descomposición de tareas para running coach (conceptual, orquestado por el LLM).
+- **ExecutorAgent**: Ejecución especializada (conceptual, orquestado por el LLM).
+- **ReflexionAgent**: Análisis y mejora (conceptual, orquestado por el LLM).
 
 #### 1.3 Integrar con Configuración Existente (1 día)
-- Reutilizar configuración DeepSeek existente
-- Agregar configuraciones multiagente
-- Mantener compatibilidad total
+- Reutilización de la configuración DeepSeek existente.
+- Adición de configuraciones multiagente (controladas por variables de entorno).
+- Mantenimiento de compatibilidad total.
 
-**Código Nuevo**: ~200 líneas (principalmente adaptaciones)
+**Código Nuevo**: ~150 líneas (principalmente adaptaciones y orquestación).
 
 ---
 
@@ -349,11 +337,16 @@ MAX_WORKFLOW_RETRIES=3
 ## 📊 Métricas de Progreso
 
 ### Semana 1:
-- [ ] Paquete multi-agent creado
-- [ ] Agentes base implementados
-- [ ] Configuración integrada
+- [x] Paquete multi-agent creado (integrado en api-gateway)
+- [x] Agentes base implementados (conceptual, orquestado por LLM)
+- [x] Configuración integrada
+- [x] Lógica de enrutamiento de onboarding implementada en `enhanced-main-flow.ts`
+- [x] Mejoras en la extracción de datos y mensajes de error de validación.
+- [x] **Auditoría y limpieza de código legacy completada.**
+- [x] **Estructura del proyecto consolidada en `apps/` y `packages/`.**
 
 ### Semana 2:
+- [x] **Dependencias del proyecto corregidas y actualizadas.**
 - [ ] Memoria avanzada funcional
 - [ ] Búsqueda semántica optimizada
 - [ ] Integración con memoria existente

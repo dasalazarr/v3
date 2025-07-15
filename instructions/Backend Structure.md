@@ -25,63 +25,21 @@ The new backend architecture transforms from a monolithic Google Sheets-based sy
 ```
 running-coach-bot/
 ├── apps/
-│   ├── api-gateway/                 # Express + tRPC API Gateway
-│   │   ├── src/
-│   │   │   ├── index.ts            # Application entry point
-│   │   │   ├── context.ts          # tRPC context with DI
-│   │   │   ├── db/                 # Database layer
-│   │   │   │   ├── index.ts        # Database connection
-│   │   │   │   ├── schema.ts       # Drizzle schema definitions
-│   │   │   │   └── migrate.ts      # Migration runner
-│   │   │   ├── routers/            # tRPC route definitions
-│   │   │   │   ├── app.ts          # Main router
-│   │   │   │   ├── user.ts         # User management
-│   │   │   │   ├── run.ts          # Run logging
-│   │   │   │   ├── plan.ts         # Training plans
-│   │   │   │   └── analytics.ts    # Progress analytics
-│   │   │   ├── webhooks/           # External integrations
-│   │   │   │   └── whatsapp.ts     # WhatsApp webhook handler
-│   │   │   ├── services/           # Business logic services
-│   │   │   │   ├── whatsapp.ts     # WhatsApp API client
-│   │   │   │   ├── progress-summary.ts  # Progress card generation
-│   │   │   │   └── analytics.ts    # Monthly insights
-│   │   │   ├── jobs/               # Scheduled tasks
-│   │   │   │   └── scheduler.ts    # Cron job management
-│   │   │   └── redis.ts            # Redis client & chat buffer
-│   │   └── migrations/             # Database migrations
-│   └── web-dashboard/              # Future: Admin dashboard
+│   └── api-gateway/                 # Express + BuilderBot WhatsApp Gateway
+│       ├── src/
+│       │   ├── app.ts              # Application entry point
+│       │   ├── flows/              # Conversational flows
+│       │   ├── services/           # Business logic services
+│       │   ├── multi-agent/        # Multi-agent orchestration
+│       │   └── config/             # Environment configuration
+│       └── ...
 ├── packages/
 │   ├── llm-orchestrator/           # AI orchestration layer
-│   │   ├── src/
-│   │   │   ├── index.ts            # Main orchestrator
-│   │   │   ├── agents/             # AI agent implementations
-│   │   │   │   └── deepseek.ts     # DeepSeek LLM agent
-│   │   │   ├── tools/              # Tool calling registry
-│   │   │   │   └── registry.ts     # Tool management
-│   │   │   └── memory/             # Memory retrieval
-│   │   │       └── retriever.ts    # Context aggregation
 │   ├── vector-memory/              # Semantic memory system
-│   │   ├── src/
-│   │   │   ├── index.ts            # Vector memory interface
-│   │   │   ├── embeddings.ts       # Embedding generation
-│   │   │   └── search.ts           # Semantic search
-│   └── plan-generator/             # Training plan engine
-│       ├── src/
-│       │   ├── index.ts            # Plan generation interface
-│       │   ├── vdot-calculator.ts  # Jack Daniels VDOT logic
-│       │   └── plan-builder.ts     # Training plan construction
-├── infra/
-│   └── terraform/                  # Infrastructure as Code
-│       ├── main.tf                 # Main infrastructure
-│       ├── variables.tf            # Environment variables
-│       └── outputs.tf              # Connection strings
-├── __tests__/                      # Test suites
-│   ├── api-gateway/                # API integration tests
-│   ├── llm-orchestrator/           # AI logic tests
-│   └── plan-generator/             # Training algorithm tests
-└── docs/                           # Documentation
-    ├── api/                        # API documentation
-    └── deployment/                 # Deployment guides
+│   ├── plan-generator/             # Training plan engine
+│   ├── database/                   # Database connection and schema
+│   └── shared/                     # Shared types and utilities
+└── ...
 ```
 
 ---
@@ -270,31 +228,11 @@ export class TrainingPlanBuilder {
 
 ### **Dependency Injection**
 ```typescript
-// Container setup in api-gateway
-export const createContext = async (opts: CreateExpressContextOptions) => {
-  return {
-    db,
-    redis: redisClient,
-    llm: new LLMOrchestrator(),
-    vectorMemory: new VectorMemory(),
-    planGenerator: new PlanGenerator(),
-  };
-};
-```
-
-### **Event-Driven Communication**
-```typescript
-// Events for cross-package communication
-export interface RunLoggedEvent {
-  userId: string;
-  runData: RunData;
-  timestamp: Date;
-}
-
-// Event handlers
-vectorMemory.onRunLogged(async (event: RunLoggedEvent) => {
-  await vectorMemory.updateUserMemories(event.userId, event.runData);
-});
+// Container setup in api-gateway using tsyringe
+import 'reflect-metadata';
+import { container } from 'tsyringe';
+// ... register services
+const multiAgentService = container.resolve(MultiAgentService);
 ```
 
 ### **Error Handling Strategy**
@@ -520,14 +458,14 @@ export const config = {
 
 ---
 
-## 🔄 **Migration Strategy**
+## 🔄 **Migration Strategy (Completed)**
 
-### **From Current System**
-1. **Phase 1**: Deploy new infrastructure alongside existing system
-2. **Phase 2**: Implement data migration scripts for Google Sheets → PostgreSQL
-3. **Phase 3**: Dual-write period for data validation
-4. **Phase 4**: Switch webhook to new system with rollback capability
-5. **Phase 5**: Decommission Google Sheets integration
+### **From Previous System**
+1. **Phase 1 (Done)**: Deployed new infrastructure alongside the legacy system.
+2. **Phase 2 (Done)**: Implemented data migration scripts for Google Sheets → PostgreSQL.
+3. **Phase 3 (Done)**: Conducted a dual-write period for data validation.
+4. **Phase 4 (Done)**: Switched the WhatsApp webhook to the new system.
+5. **Phase 5 (Done)**: Decommissioned the Google Sheets integration and removed legacy code.
 
 ### **Data Migration Process**
 ```typescript

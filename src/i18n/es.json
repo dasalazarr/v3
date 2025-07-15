@@ -1,6 +1,0 @@
-{
-  "welcome_message": "¡Hola! Soy Andes, tu entrenador de running con IA. Estoy aquí para ayudarte a registrar tus entrenamientos y alcanzar tus metas. ¿Cómo puedo ayudarte hoy?",
-  "workout_logged": "¡Excelente! He registrado tu entrenamiento: {{distance}} en {{time}}. ¡Sigue así!",
-  "ask_for_feedback": "¿Cómo sentiste esa carrera? (ej., fácil, moderado, difícil)",
-  "error_message": "Lo siento, no entendí eso. ¿Podrías reformularlo, por favor?"
-}

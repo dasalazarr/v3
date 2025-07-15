@@ -33,7 +33,7 @@ The name "Andes" reflects the app's goal of helping users conquer their personal
 - **Node.js & TypeScript**: Core server logic
 - **BuilderBot**: Conversation flow management
 - **Docker**: Containerization and deployment
-- **Google Sheets API**: Primary data storage for user profiles and workout logs
+- **PostgreSQL, Redis, Qdrant**: Primary data storage and memory system
 - **Google Calendar API**: For scheduling training sessions and reminders
 
 ### AI/ML Components
@@ -160,10 +160,11 @@ The name "Andes" reflects the app's goal of helping users conquer their personal
 
 ## 10. Implementation Roadmap
 
-### Phase 1: MVP (Current)
-- Basic workout logging via WhatsApp
-- Simple training plan generation
-- Progress tracking
+### Phase 1: MVP (Completed)
+- Workout logging via WhatsApp with NLP
+- VDOT-based training plan generation
+- Multi-layer memory system (PostgreSQL, Redis, Qdrant)
+- Progress tracking and analytics foundation
 
 ### Phase 2: Enhanced Features
 - Advanced analytics dashboard

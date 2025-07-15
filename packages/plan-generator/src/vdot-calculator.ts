@@ -8,7 +8,7 @@ export interface VDOTPaces {
   repetition: number;  // seconds per mile
 }
 
-export interface RaceTime {
+interface RaceTime {
   distance: number;    // miles
   timeSeconds: number;
 }
