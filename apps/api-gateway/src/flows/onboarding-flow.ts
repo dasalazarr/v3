@@ -113,8 +113,8 @@ export class OnboardingFlow {
   private async updateUser(phone: string, data: Partial<typeof users.$inferInsert>) {
     logger.debug({ userId: phone, data }, '[DB_UPDATE] Updating user record');
     try {
-      await this.database
-        .update(users)
+      // Corrected: Access the 'update' method via 'this.database.query'
+      await this.database.query.update(users)
         .set({ ...data, updatedAt: new Date() })
         .where(eq(users.phoneNumber, phone));
       logger.info({ userId: phone, data }, '[DB_SUCCESS] User record updated');

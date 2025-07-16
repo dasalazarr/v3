@@ -96,21 +96,31 @@ export class EnhancedMainFlow {
   createFlow() {
     return addKeyword(EVENTS.WELCOME)
       .addAction(async (ctx, { state, gotoFlow }) => {
-        // Step 1: Get or create user
+        logger.info({ userId: ctx.from }, '[ROUTER_START] Evaluating user for onboarding');
+        
         const [user] = await this.database.query
           .select()
           .from(users)
           .where(eq(users.phoneNumber, ctx.from))
           .limit(1);
 
-        if (user && user.onboardingCompleted) {
-          // User has completed onboarding, proceed to the main conversation handler
-          logger.info({ userId: ctx.from }, '[ROUTER] User has completed onboarding, proceeding to main flow');
-          return;
+        if (!user) {
+          logger.info({ userId: ctx.from }, '[ROUTER] User not found. Redirecting to OnboardingFlow.');
+          const onboardingFlow = container.resolve(OnboardingFlow);
+          return gotoFlow(onboardingFlow.createFlow());
         }
 
-        // New user or onboarding not completed, redirect to OnboardingFlow
-        logger.info({ userId: ctx.from }, '[ROUTER] Onboarding not completed, redirecting to OnboardingFlow');
+        logger.info({ 
+          userId: ctx.from, 
+          onboardingCompleted: user.onboardingCompleted 
+        }, '[ROUTER] User found. Checking onboarding status.');
+
+        if (user.onboardingCompleted) {
+          logger.info({ userId: ctx.from }, '[ROUTER] Onboarding COMPLETED. Proceeding to main conversation.');
+          return; // Continue to the main conversation handler in this flow
+        }
+
+        logger.info({ userId: ctx.from }, '[ROUTER] Onboarding NOT COMPLETED. Redirecting to OnboardingFlow.');
         const onboardingFlow = container.resolve(OnboardingFlow);
         return gotoFlow(onboardingFlow.createFlow());
       })
