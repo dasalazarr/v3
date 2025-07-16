@@ -1,120 +1,50 @@
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject, container } from 'tsyringe';
 import { addKeyword, EVENTS } from '@builderbot/bot';
 import { Database, users } from '@running-coach/database';
-import { TemplateEngine } from '@running-coach/shared';
+import { TemplateEngine, UserProfile } from '@running-coach/shared';
+import { AIAgent } from '@running-coach/llm-orchestrator';
 import { eq } from 'drizzle-orm';
 import logger from '../services/logger-service.js';
-import { container } from 'tsyringe';
 import { EnhancedMainFlow } from './enhanced-main-flow.js';
+import z from 'zod';
 
-// Define the structure for a single question in the onboarding flow
-interface OnboardingQuestion {
-  key: keyof typeof users.$inferInsert;
-  prompt: string; // i18n key
-  validation: {
-    type: 'number' | 'text' | 'choice';
-    options?: { [key: string]: string[] }; // For 'choice' type
-    range?: { min: number; max: number }; // For 'number' type
-    error: string; // i18n key
-  };
-  // Optional condition to check before asking the question
-  condition?: (state: any) => boolean;
-}
+// Zod schema for validating extracted data
+const OnboardingDataSchema = z.object({
+  age: z.number().min(15).max(99).optional(),
+  gender: z.enum(['male', 'female', 'other']).optional(),
+  experienceLevel: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  onboardingGoal: z.enum(['first_race', 'improve_time', 'stay_fit']).optional(),
+  goalRace: z.enum(['5k', '10k', 'half_marathon', 'marathon', 'ultra']).optional(),
+  weeklyMileage: z.number().min(1).max(200).optional(),
+  injuryHistory: z.enum(['none', 'minor', 'recovery']).optional(),
+});
 
-// Centralized configuration for the onboarding questions
-const onboardingQuestions: OnboardingQuestion[] = [
-  {
-    key: 'age',
-    prompt: 't(onboarding:age.question)',
-    validation: { type: 'number', range: { min: 15, max: 99 }, error: 't(onboarding:age.error)' },
-  },
-  {
-    key: 'gender',
-    prompt: 't(onboarding:gender.question)',
-    validation: {
-      type: 'choice',
-      options: {
-        male: ['m', 'masc', 'male', 'hombre'],
-        female: ['f', 'fem', 'female', 'mujer'],
-        other: ['o', 'otro', 'other'],
-      },
-      error: 't(onboarding:gender.error)',
-    },
-  },
-  {
-    key: 'experienceLevel',
-    prompt: 't(onboarding:level.question)',
-    validation: {
-      type: 'choice',
-      options: {
-        beginner: ['principiante', 'beginner'],
-        intermediate: ['intermedio', 'intermediate'],
-        advanced: ['avanzado', 'advanced'],
-      },
-      error: 't(onboarding:level.error)',
-    },
-  },
-  {
-    key: 'onboardingGoal',
-    prompt: 't(onboarding:goal.question)',
-    validation: {
-      type: 'choice',
-      options: {
-        first_race: ['primera', 'first'],
-        improve_time: ['mejorar', 'improve'],
-        stay_fit: ['forma', 'fit'],
-      },
-      error: 't(onboarding:goal.error)',
-    },
-  },
-  {
-    key: 'goalRace',
-    prompt: 't(onboarding:goal_race.question)',
-    validation: {
-        type: 'choice',
-        options: {
-            '5k': ['5k'],
-            '10k': ['10k'],
-            'half_marathon': ['21k', 'media', 'half'],
-            'marathon': ['42k', 'maraton', 'marathon'],
-            'ultra': ['ultra'],
-        },
-        error: 't(onboarding:goal_race.error)',
-    },
-    condition: (state) => state.onboardingGoal === 'first_race' || state.onboardingGoal === 'improve_time',
-  },
-  {
-    key: 'weeklyMileage',
-    prompt: 't(onboarding:frequency.question)',
-    validation: { type: 'number', range: { min: 1, max: 200 }, error: 't(onboarding:frequency.error)' },
-  },
-  {
-    key: 'injuryHistory',
-    prompt: 't(onboarding:injury.question)',
-    validation: {
-        type: 'choice',
-        options: {
-            'none': ['no', 'ninguna', 'none'],
-            'minor': ['leves', 'minor'],
-            'recovery': ['recuperandome', 'recovering'],
-        },
-        error: 't(onboarding:injury.error)',
-    },
-  },
+type OnboardingData = z.infer<typeof OnboardingDataSchema>;
+
+// The questions are now simpler, just defining what we need.
+const onboardingFields: { key: keyof OnboardingData; prompt: string }[] = [
+  { key: 'age', prompt: 't(onboarding:age.question)' },
+  { key: 'gender', prompt: 't(onboarding:gender.question)' },
+  { key: 'experienceLevel', prompt: 't(onboarding:level.question)' },
+  { key: 'onboardingGoal', prompt: 't(onboarding:goal.question)' },
+  { key: 'goalRace', prompt: 't(onboarding:goal_race.question)' },
+  { key: 'weeklyMileage', prompt: 't(onboarding:frequency.question)' },
+  { key: 'injuryHistory', prompt: 't(onboarding:injury.question)' },
 ];
 
 @injectable()
 export class OnboardingFlow {
   constructor(
     @inject('Database') private database: Database,
-    @inject('TemplateEngine') private templateEngine: TemplateEngine
+    @inject('TemplateEngine') private templateEngine: TemplateEngine,
+    @inject('AIAgent') private aiAgent: AIAgent
   ) {}
 
-  private async updateUser(phone: string, data: Partial<typeof users.$inferInsert>) {
+  private async updateUser(phone: string, data: Partial<UserProfile>) {
     logger.debug({ userId: phone, data }, '[DB_UPDATE] Updating user record');
     try {
-      // Corrected: Access the 'update' method via 'this.database.query'
-      await this.database.query.update(users)
+      await this.database.query
+        .update(users)
         .set({ ...data, updatedAt: new Date() })
         .where(eq(users.phoneNumber, phone));
       logger.info({ userId: phone, data }, '[DB_SUCCESS] User record updated');
@@ -124,91 +54,106 @@ export class OnboardingFlow {
     }
   }
 
+  private createExtractionPrompt(userInput: string, missingFields: (keyof OnboardingData)[]): string {
+    return `
+      You are a data extraction assistant. Your task is to extract the following fields from the user's message: ${missingFields.join(', ')}.
+      The user said: "${userInput}"
+      
+      Return the extracted data as a valid JSON object. If a value is not found, omit the key.
+      Example: { "age": 30, "experienceLevel": "beginner" }
+      
+      JSON response:
+    `;
+  }
+
   createFlow() {
     return addKeyword(EVENTS.ACTION)
       .addAction(async (ctx, { state, flowDynamic }) => {
-        const lang = state.get('lang');
+        const lang = state.get('lang') || 'es';
         logger.info({ userId: ctx.from, lang }, '[ONBOARDING_START] Onboarding started');
         const welcomeMessage = this.templateEngine.process('t(onboarding:start.welcome)', {}, lang);
         await flowDynamic(welcomeMessage);
-        await state.update({ questionIndex: 0 });
+        
+        // Ask the first question right away
+        const firstQuestion = this.templateEngine.process(onboardingFields[0].prompt, {}, lang);
+        await flowDynamic(firstQuestion);
       })
       .addAnswer(
-        ' ', // Placeholder, the real question is asked in the action
+        ' ', // Capture all subsequent messages
         { capture: true },
-        async (ctx, { state, flowDynamic, fallBack, gotoFlow }) => {
-          const lang = state.get('lang');
-          let questionIndex = state.get('questionIndex') || 0;
+        async (ctx, { state, flowDynamic, gotoFlow }) => {
+          const lang = state.get('lang') || 'es';
+          const userInput = ctx.body;
+          const currentState = (state.get('onboardingData') || {}) as OnboardingData;
 
-          // Process the answer to the *previous* question
-          if (questionIndex > 0) {
-            const previousQuestion = onboardingQuestions[questionIndex - 1];
-            const answer = ctx.body.toLowerCase();
-            let isValid = false;
-            let parsedValue: any = answer;
-
-            switch (previousQuestion.validation.type) {
-              case 'number': {
-                const num = parseInt(answer, 10);
-                if (!isNaN(num) && num >= previousQuestion.validation.range!.min && num <= previousQuestion.validation.range!.max) {
-                  isValid = true;
-                  parsedValue = num;
-                }
-                break;
-              }
-              case 'choice':
-                for (const [value, keywords] of Object.entries(previousQuestion.validation.options!)) {
-                  if (keywords.some(kw => answer.includes(kw))) {
-                    isValid = true;
-                    parsedValue = value;
-                    break;
-                  }
-                }
-                break;
-              case 'text':
-              default:
-                isValid = true;
-                break;
-            }
-
-            if (!isValid) {
-              const errorMessage = this.templateEngine.process(previousQuestion.validation.error, {}, lang);
-              return fallBack(errorMessage);
-            }
-
-            await state.update({ [previousQuestion.key]: parsedValue });
-            logger.info({ userId: ctx.from, step: previousQuestion.key, value: parsedValue }, '[ONBOARDING_STEP] Step completed');
-          }
-
-          // Find the next question to ask
-          let nextQuestion = onboardingQuestions[questionIndex];
-          while (nextQuestion && nextQuestion.condition && !nextQuestion.condition((state as any).get())) {
-            questionIndex++;
-            nextQuestion = onboardingQuestions[questionIndex];
-          }
-
-          // If there are more questions, ask the next one
-          if (nextQuestion) {
-            await state.update({ questionIndex: questionIndex + 1 });
-            const questionPrompt = this.templateEngine.process(nextQuestion.prompt, {}, lang);
-            await flowDynamic(questionPrompt);
+          // 1. Determine which fields are still missing
+          const missingFields = onboardingFields.filter(f => !currentState[f.key]);
+          if (missingFields.length === 0) {
+            // Should not happen if logic is correct, but as a safeguard
             return;
           }
 
-          // If no more questions, complete the onboarding
-          const finalData = { ...(state as any).get() };
-          delete finalData.questionIndex;
-          finalData.onboardingCompleted = true;
+          // 2. Use AI to extract information from the user's message
+          const extractionPrompt = this.createExtractionPrompt(userInput, missingFields.map(f => f.key));
+          let extractedData: OnboardingData = {};
+          try {
+            const rawResponse = await this.aiAgent.generateResponse(extractionPrompt);
+            // Clean the response to ensure it's valid JSON
+            const jsonResponse = rawResponse.replace(/```json|```/g, '').trim();
+            extractedData = OnboardingDataSchema.parse(JSON.parse(jsonResponse));
+            logger.info({ userId: ctx.from, extracted: extractedData }, '[AI_EXTRACTION] Extracted data from user input');
+          } catch (error) {
+            logger.error({ userId: ctx.from, error }, '[AI_EXTRACTION_ERROR] Failed to extract or validate data');
+            // If extraction fails, we'll just ask the next question without updating the state
+          }
 
-          await this.updateUser(ctx.from, finalData);
-          logger.info({ userId: ctx.from, data: finalData }, '[ONBOARDING_COMPLETE] Onboarding finished');
+          // 3. Merge extracted data with current state
+          const updatedState = { ...currentState, ...extractedData };
+          await state.update({ onboardingData: updatedState });
 
-          const doneMsg = this.templateEngine.process('t(onboarding:completed.message)', {}, lang);
-          await flowDynamic(doneMsg);
+          // 4. Find the next missing field to ask about
+          const nextMissingField = onboardingFields.find(f => !updatedState[f.key]);
 
-          // Redirect to the main flow
-          const mainFlow = container.resolve(EnhancedMainFlow);
-          return gotoFlow(mainFlow.createFlow());
+          if (nextMissingField) {
+            // Ask the next question
+            const nextQuestionPrompt = this.templateEngine.process(nextMissingField.prompt, {}, lang);
+            await flowDynamic(nextQuestionPrompt);
+          } else {
+            // All fields are filled, complete the onboarding
+            const dataForDb: Partial<UserProfile> = {
+              onboardingCompleted: true,
+              age: updatedState.age,
+              gender: updatedState.gender,
+              experienceLevel: updatedState.experienceLevel,
+              onboardingGoal: updatedState.onboardingGoal,
+              goalRace: updatedState.goalRace,
+            };
+
+            // Transform weeklyMileage from number to string for DB
+            if (updatedState.weeklyMileage) {
+              dataForDb.weeklyMileage = String(updatedState.weeklyMileage);
+            }
+
+            // Transform injuryHistory from string to JSON object array for DB
+            if (updatedState.injuryHistory) {
+              dataForDb.injuryHistory = [{
+                type: updatedState.injuryHistory,
+                date: new Date().toISOString(),
+                severity: 'minor', // Default value
+                recovered: false // Default value
+              }];
+            }
+
+            await this.updateUser(ctx.from, dataForDb);
+            logger.info({ userId: ctx.from, data: dataForDb }, '[ONBOARDING_COMPLETE] Onboarding finished');
+
+            const doneMsg = this.templateEngine.process('t(onboarding:completed.message)', {}, lang);
+            await flowDynamic(doneMsg);
+
+            // Redirect to the main flow
+            const mainFlow = container.resolve(EnhancedMainFlow);
+            return gotoFlow(mainFlow.createFlow());
+          }
         }
       );
   }

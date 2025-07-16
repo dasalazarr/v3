@@ -293,7 +293,7 @@ async function initializeBot(config: Config, services: any) {
   const mainFlow = new EnhancedMainFlow(services.aiAgent, services.database, services.vectorMemory, services.languageDetector, services.multiAgentService);
   container.registerInstance('EnhancedMainFlow', mainFlow);
 
-  const onboardingFlow = new OnboardingFlow(services.database, services.templateEngine);
+  const onboardingFlow = new OnboardingFlow(services.database, services.templateEngine, services.aiAgent);
   container.registerInstance('OnboardingFlow', onboardingFlow);
 
   const faqFlow = new FaqFlow(services.aiAgent, services.languageDetector, services.templateEngine, services.database);
