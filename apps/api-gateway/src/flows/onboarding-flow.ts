@@ -142,8 +142,8 @@ export class OnboardingFlow {
               }];
             }
 
+            logger.info({ userId: ctx.from, data: dataForDb }, '[ONBOARDING_COMPLETE] Preparing to update user with final data.');
             await this.updateUser(ctx.from, dataForDb);
-            logger.info({ userId: ctx.from, data: dataForDb }, '[ONBOARDING_COMPLETE] Onboarding finished');
 
             const doneMsg = this.templateEngine.process('t(onboarding:completed.message)', {}, lang);
             await flowDynamic(doneMsg);
