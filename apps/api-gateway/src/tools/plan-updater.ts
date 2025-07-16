@@ -20,7 +20,7 @@ const UpdatePlanSchema = z.object({
   adjustments: z.object({
     reason: z.string(),
     modifications: z.array(z.string())
-  }).optional()
+  }).optional().default({ reason: 'ninguno', modifications: [] }).describe("¿Tienes alguna preferencia o ajuste especial para tu plan? (Por ejemplo: días que no puedes entrenar, lesiones, horarios, etc.). Si no, responde 'ningún ajuste'.")
 });
 
 export function createPlanUpdaterTool(
