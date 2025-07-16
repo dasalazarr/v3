@@ -1,7 +1,7 @@
 import { injectable, inject, container } from 'tsyringe';
 import { addKeyword, EVENTS } from '@builderbot/bot';
 import { Database, users } from '@running-coach/database';
-import { TemplateEngine, UserProfile } from '@running-coach/shared';
+import { TemplateEngine } from '@running-coach/shared';
 import { AIAgent } from '@running-coach/llm-orchestrator';
 import { eq } from 'drizzle-orm';
 import logger from '../services/logger-service.js';
@@ -40,7 +40,7 @@ export class OnboardingFlow {
     @inject('AIAgent') private aiAgent: AIAgent
   ) {}
 
-  private async updateUser(phone: string, data: Partial<UserProfile>) {
+  private async updateUser(phone: string, data: Partial<typeof users.$inferInsert>) {
     logger.debug({ userId: phone, data }, '[DB_UPDATE] Updating user record');
     try {
       await this.database.query
@@ -120,7 +120,7 @@ export class OnboardingFlow {
             await flowDynamic(nextQuestionPrompt);
           } else {
             // All fields are filled, complete the onboarding
-            const dataForDb: Partial<UserProfile> = {
+            const dataForDb: Partial<typeof users.$inferInsert> = {
               onboardingCompleted: true,
               age: updatedState.age,
               gender: updatedState.gender,
@@ -129,18 +129,16 @@ export class OnboardingFlow {
               goalRace: updatedState.goalRace,
             };
 
-            // Transform weeklyMileage from number to string for DB
             if (updatedState.weeklyMileage) {
               dataForDb.weeklyMileage = String(updatedState.weeklyMileage);
             }
 
-            // Transform injuryHistory from string to JSON object array for DB
             if (updatedState.injuryHistory) {
               dataForDb.injuryHistory = [{
                 type: updatedState.injuryHistory,
                 date: new Date().toISOString(),
-                severity: 'minor', // Default value
-                recovered: false // Default value
+                severity: 'minor',
+                recovered: false
               }];
             }
 
