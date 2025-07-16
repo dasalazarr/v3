@@ -27,7 +27,7 @@ export class EnhancedMainFlow {
       goalRace: user.goalRace ?? undefined,
       experienceLevel: user.experienceLevel ?? undefined,
       injuryHistory: user.injuryHistory ?? undefined,
-      weeklyMileage: user.weeklyMileage !== null ? parseInt(user.weeklyMileage as string) : undefined,
+      weeklyMileage: user.weeklyMileage ? parseFloat(user.weeklyMileage) : undefined,
       timezone: user.timezone ?? undefined,
       // Ensure all properties of UserProfile are covered, even if optional
       // and handle potential nulls from DB by converting to undefined

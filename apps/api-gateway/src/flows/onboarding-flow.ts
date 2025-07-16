@@ -113,7 +113,7 @@ export class OnboardingFlow {
   private async updateUser(phone: string, data: Partial<typeof users.$inferInsert>) {
     logger.debug({ userId: phone, data }, '[DB_UPDATE] Updating user record');
     try {
-      await this.database.query
+      await this.database
         .update(users)
         .set({ ...data, updatedAt: new Date() })
         .where(eq(users.phoneNumber, phone));
