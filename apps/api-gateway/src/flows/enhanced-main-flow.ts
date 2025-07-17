@@ -64,7 +64,7 @@ export class EnhancedMainFlow {
           userProfile,
           user.preferredLanguage as 'en' | 'es'
         );
-        response = result.content;
+        response = result.response;
         logger.info({ 
           userId: ctx.from, 
           multiAgentUsed: result.multiAgentUsed,

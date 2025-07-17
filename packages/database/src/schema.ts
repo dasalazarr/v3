@@ -28,8 +28,9 @@ export const runs = pgTable('runs', {
   date: timestamp('date').notNull(),
   distance: decimal('distance', { precision: 6, scale: 2 }).notNull(),
   duration: integer('duration'), // seconds
-  perceivedEffort: integer('perceived_effort'), // 1-10 scale
-  mood: text('mood', { enum: ['great', 'good', 'okay', 'tired', 'terrible'] }),
+  type: varchar('type', { length: 50 }), // e.g., 'run', 'treadmill', 'race'
+  effort: integer('effort'), // 1-10 scale
+  sensation: text('sensation'),
   aches: jsonb('aches'), // array of {location: string, severity: number}
   notes: text('notes'),
   weather: varchar('weather', { length: 100 }),
