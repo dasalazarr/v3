@@ -204,11 +204,11 @@ export class SheetsMigration {
           }
 
           // Parse perceived effort
-          let perceivedEffort = null;
+          let effort = null;
           if (training.perception && training.perception !== 'N/A') {
-            const effort = parseInt(training.perception);
-            if (!isNaN(effort) && effort >= 1 && effort <= 10) {
-              perceivedEffort = effort;
+            const parsedEffort = parseInt(training.perception);
+            if (!isNaN(parsedEffort) && parsedEffort >= 1 && parsedEffort <= 10) {
+              effort = parsedEffort;
             }
           }
 
@@ -217,7 +217,7 @@ export class SheetsMigration {
             date: new Date(training.timestamp),
             distance: distance.toString(),
             duration,
-            perceivedEffort,
+            effort,
             notes: training.notes !== 'N/A' ? training.notes : null,
             createdAt: new Date(training.timestamp)
           });
