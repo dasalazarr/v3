@@ -3,19 +3,13 @@ import { Database, runs } from '@running-coach/database';
 import { VectorMemory } from '@running-coach/vector-memory';
 import { ToolFunction } from '@running-coach/llm-orchestrator';
 import { VDOTCalculator } from '@running-coach/plan-generator';
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, sql, desc } from 'drizzle-orm';
 
-const LogRunSchema = z.object({
-  distance: z.number().min(0.1).max(200),
-  duration: z.number().min(60).max(50000).optional(), // seconds
-  perceivedEffort: z.number().min(1).max(10).optional(),
-  mood: z.enum(['great', 'good', 'okay', 'tired', 'terrible']).optional(),
-  notes: z.string().optional(),
-  aches: z.array(z.object({
-    location: z.string(),
-    severity: z.number().min(1).max(10)
-  })).optional(),
-  date: z.string().optional() // ISO date string
+const LogRunAndCommentSchema = z.object({
+  distance_km: z.number().optional().describe("La distancia de la carrera en kilómetros."),
+  duration_minutes: z.number().optional().describe("La duración de la carrera en minutos."),
+  perceived_effort: z.number().min(1).max(10).optional().describe("El esfuerzo percibido en una escala de 1 a 10."),
+  notes: z.string().optional().describe("Cualquier comentario, sensación o nota relevante del usuario (dolor, cansancio, motivación, clima, etc.)."),
 });
 
 export function createRunLoggerTool(
@@ -23,94 +17,93 @@ export function createRunLoggerTool(
   vectorMemory: VectorMemory
 ): ToolFunction {
   return {
-    name: 'log_run',
-    description: 'Log a completed run with distance, time, effort, and other details',
-    parameters: LogRunSchema,
-    execute: async (params: z.infer<typeof LogRunSchema> & { userId?: string }) => {
-      const { distance, duration, perceivedEffort, mood, notes, aches, date } = params;
-      
-      // Get user ID from context (this would be passed in during execution)
-      const userId = params.userId || 'unknown';
-      
+    name: 'log_run_and_comment',
+    description: 'Registra una actividad de carrera (trote, caminata) y/o un comentario, sensación o nota del usuario. Úsalo proactivamente cuando el usuario mencione una actividad o comparta un sentimiento relevante.',
+    parameters: LogRunAndCommentSchema,
+    execute: async (params: z.infer<typeof LogRunAndCommentSchema> & { userId?: string }) => {
+      const { distance_km, duration_minutes, perceived_effort, notes } = params;
+      const userId = params.userId;
+
+      if (!userId) {
+        throw new Error('User ID is required to log run or comment.');
+      }
+
+      const isRun = distance_km !== undefined || duration_minutes !== undefined;
+      const isComment = notes !== undefined;
+
+      if (!isRun && !isComment) {
+        return { success: false, error: 'No data provided to log.' };
+      }
+
       try {
-        // Parse date or use current date
-        const runDate = date ? new Date(date) : new Date();
-        
-        // Calculate pace if duration is provided
-        let pace: number | undefined;
-        if (duration) {
-          pace = Math.round(duration / distance); // seconds per mile
+        // Find a run for today to potentially update it
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const [todaysRun] = await db.query
+          .select()
+          .from(runs)
+          .where(and(
+            eq(runs.userId, userId),
+            sql`date >= ${todayStart.toISOString()}`,
+            sql`date <= ${todayEnd.toISOString()}`
+          ))
+          .limit(1);
+
+        let runId: string;
+        let message: string = '';
+
+        if (isRun) {
+          const runData = {
+            userId,
+            date: new Date(),
+            distance: String(distance_km || 0),
+            duration: duration_minutes ? duration_minutes * 60 : undefined,
+            perceivedEffort: perceived_effort,
+            notes: notes,
+          };
+
+          const [newRun] = await db.query.insert(runs).values(runData).returning();
+          runId = newRun.id;
+          message = `¡Entendido! He registrado tu carrera de ${distance_km || 'hoy'}.`;
+
+        } else if (isComment) {
+          if (todaysRun) {
+            // Append comment to today's run
+            const updatedNotes = todaysRun.notes ? `${todaysRun.notes}\n${notes}` : notes;
+            await db.query.update(runs).set({ notes: updatedNotes }).where(eq(runs.id, todaysRun.id));
+            runId = todaysRun.id;
+            message = '¡Anotado! He añadido tu comentario a la actividad de hoy.';
+          } else {
+            // Create a new "comment-only" run
+            const [newCommentRun] = await db.query.insert(runs).values({
+              userId,
+              date: new Date(),
+              distance: '0.00', // Schema requires distance, so we use 0 for comment-only entries
+              notes: notes,
+            }).returning();
+            runId = newCommentRun.id;
+            message = '¡Anotado! He guardado tu comentario de hoy.';
+          }
         }
 
-        // Insert run into database
-        const newRun = await db.query.insert(runs).values({
-          userId,
-          date: runDate,
-          distance: distance.toString(),
-          duration,
-          perceivedEffort,
-          mood,
-          notes,
-          aches,
-          createdAt: new Date()
-        }).returning();
+        // Store context in vector memory
+        const summary = `User logged: ${isRun ? `run of ${distance_km}km` : ''}${isRun && isComment ? ' and ' : ''}${isComment ? `comment: \'${notes}\'` : ''}`;
+        await vectorMemory.storeRunData(userId, summary, params);
 
-        // Store in vector memory
-        const runSummary = generateRunSummary(distance, duration, perceivedEffort, mood, notes);
-        await vectorMemory.storeRunData(userId, runSummary, {
-          distance,
-          duration,
-          pace,
-          perceivedEffort,
-          mood,
-          date: runDate.toISOString()
-        });
-
-        // Calculate current VDOT estimate
-        const recentRuns = await getRecentRuns(db, userId);
-        const vdotEstimate = VDOTCalculator.calculateFromRecentRuns(
-          recentRuns
-            .map(run => ({
-              ...run,
-              id: run.id!,
-              date: run.date!,
-              userId: run.userId!,
-              distance: run.distance ? parseFloat(run.distance) : 0,
-              duration: run.duration || 0,
-              perceivedEffort: run.perceivedEffort || 0,
-              mood: run.mood || undefined,
-              aches: run.aches ? (Array.isArray(run.aches) ? run.aches : []) : undefined,
-              notes: run.notes || undefined,
-              weather: run.weather || undefined,
-              route: run.route || undefined,
-            }))
-            .filter(run => run.duration > 0 && run.distance > 0)
-        );
-
-        const response = {
+        return {
           success: true,
-          runId: newRun[0].id,
-          message: `Run logged successfully! ${distance} miles`,
-          stats: {
-            distance,
-            pace: pace ? formatPace(pace) : undefined,
-            effort: perceivedEffort,
-            estimatedVDOT: vdotEstimate
-          }
+          message,
+          runId: runId!,
         };
 
-        // Generate motivational message based on the run
-        const motivation = generateMotivationalMessage(distance, perceivedEffort, mood);
-        if (motivation) {
-          response.message += ` ${motivation}`;
-        }
-
-        return response;
       } catch (error) {
-        console.error('Error logging run:', error);
+        console.error('Error logging run/comment:', error);
         return {
           success: false,
-          error: 'Failed to log run. Please try again.',
+          error: 'Failed to log run or comment. Please try again.',
           details: error instanceof Error ? error.message : 'Unknown error'
         };
       }
