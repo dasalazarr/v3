@@ -88,67 +88,54 @@ export class OnboardingFlow {
 
           // 1. Determine which fields are still missing
           const missingFields = onboardingFields.filter(f => !currentState[f.key]);
-          if (missingFields.length === 0) {
-            // Should not happen if logic is correct, but as a safeguard
-            return;
-          }
 
           // 2. Use AI to extract information from the user's message
           const extractionPrompt = this.createExtractionPrompt(userInput, missingFields.map(f => f.key));
           let extractedData: OnboardingData = {};
           try {
             const rawResponse = await this.aiAgent.generateResponse(extractionPrompt);
-            // Clean the response to ensure it's valid JSON
             const jsonResponse = rawResponse.replace(/```json|```/g, '').trim();
             extractedData = OnboardingDataSchema.parse(JSON.parse(jsonResponse));
             logger.info({ userId: ctx.from, extracted: extractedData }, '[AI_EXTRACTION] Extracted data from user input');
           } catch (error) {
             logger.error({ userId: ctx.from, error }, '[AI_EXTRACTION_ERROR] Failed to extract or validate data');
-            // If extraction fails, we'll just ask the next question without updating the state
           }
 
-          // 3. Merge extracted data with current state
+          // 3. If new data was extracted, update the database
+          if (Object.keys(extractedData).length > 0) {
+            const dataForDb: Partial<typeof users.$inferInsert> = {};
+            if (extractedData.age) dataForDb.age = extractedData.age;
+            if (extractedData.gender) dataForDb.gender = extractedData.gender;
+            if (extractedData.experienceLevel) dataForDb.experienceLevel = extractedData.experienceLevel;
+            if (extractedData.onboardingGoal) dataForDb.onboardingGoal = extractedData.onboardingGoal;
+            if (extractedData.goalRace) dataForDb.goalRace = extractedData.goalRace;
+            if (extractedData.weeklyMileage) dataForDb.weeklyMileage = String(extractedData.weeklyMileage);
+            if (extractedData.injuryHistory) {
+              dataForDb.injuryHistory = [{ type: extractedData.injuryHistory, date: new Date().toISOString(), severity: 'minor', recovered: false }];
+            }
+
+            logger.info({ userId: ctx.from, data: dataForDb }, '[ONBOARDING_STEP] Saving partial user data to DB.');
+            await this.updateUser(ctx.from, dataForDb);
+          }
+
+          // 4. Merge extracted data with current state for the next turn
           const updatedState = { ...currentState, ...extractedData };
           await state.update({ onboardingData: updatedState });
 
-          // 4. Find the next missing field to ask about
+          // 5. Find the next missing field to ask about
           const nextMissingField = onboardingFields.find(f => !updatedState[f.key]);
 
           if (nextMissingField) {
-            // Ask the next question
             const nextQuestionPrompt = this.templateEngine.process(nextMissingField.prompt, {}, lang);
             await flowDynamic(nextQuestionPrompt);
           } else {
-            // All fields are filled, complete the onboarding
-            const dataForDb: Partial<typeof users.$inferInsert> = {
-              onboardingCompleted: true,
-              age: updatedState.age,
-              gender: updatedState.gender,
-              experienceLevel: updatedState.experienceLevel,
-              onboardingGoal: updatedState.onboardingGoal,
-              goalRace: updatedState.goalRace,
-            };
-
-            if (updatedState.weeklyMileage) {
-              dataForDb.weeklyMileage = String(updatedState.weeklyMileage);
-            }
-
-            if (updatedState.injuryHistory) {
-              dataForDb.injuryHistory = [{
-                type: updatedState.injuryHistory,
-                date: new Date().toISOString(),
-                severity: 'minor',
-                recovered: false
-              }];
-            }
-
-            logger.info({ userId: ctx.from, data: dataForDb }, '[ONBOARDING_COMPLETE] Preparing to update user with final data.');
-            await this.updateUser(ctx.from, dataForDb);
+            // 6. All fields are filled, complete the onboarding
+            logger.info({ userId: ctx.from, data: updatedState }, '[ONBOARDING_COMPLETE] All data collected. Finalizing onboarding.');
+            await this.updateUser(ctx.from, { onboardingCompleted: true });
 
             const doneMsg = this.templateEngine.process('t(onboarding:completed.message)', {}, lang);
             await flowDynamic(doneMsg);
 
-            // Redirect to the main flow
             const mainFlow = container.resolve(EnhancedMainFlow);
             return gotoFlow(mainFlow.createFlow());
           }
