@@ -56,7 +56,7 @@ export class AnalyticsService {
       const totalDistance = weekRuns.reduce((sum, run) => sum + parseFloat(run.distance), 0);
       const totalDuration = weekRuns.reduce((sum, run) => sum + (run.duration || 0), 0);
       const averagePace = totalDuration / totalDistance; // seconds per mile
-      const averageEffort = weekRuns.reduce((sum, run) => sum + (run.perceivedEffort || 5), 0) / weekRuns.length;
+      const averageEffort = weekRuns.reduce((sum, run) => sum + (run.effort || 5), 0) / weekRuns.length;
       const longestRun = Math.max(...weekRuns.map(run => parseFloat(run.distance)));
 
       // Estimate current VDOT

@@ -9,6 +9,7 @@ import logger from './logger-service.js';
 
 export class MultiAgentServiceWrapper {
   private multiAgentService: MultiAgentService;
+  private runLoggerTool: ReturnType<typeof createRunLoggerTool>;
 
   constructor(
     private aiAgent: any,
@@ -41,13 +42,15 @@ export class MultiAgentServiceWrapper {
       logger.info({ userId, parsedResult }, '[MULTI_AGENT] Parsed extraction result');
 
       // 3. Based on the extracted intent, call the appropriate tool or handle the message
+      const startTime = Date.now();
       switch (parsedResult.intent) {
-        case 'log_activity':
+        case 'log_activity': {
           const activityData = { ...parsedResult.data, userId };
           const logResult = await this.runLoggerTool.execute(activityData);
 
+          // Generate synthesis response
+          let synthesisText = '';
           if (logResult.success) {
-            // Generate synthesis response
             const synthesisPromptPath = './assets/prompts/prompt_synthesis.txt';
             const synthesisPromptTemplate = await fs.readFile(synthesisPromptPath, 'utf-8');
             const synthesisInput = JSON.stringify({
@@ -55,40 +58,44 @@ export class MultiAgentServiceWrapper {
               log_result: logResult,
             });
             const synthesisPrompt = synthesisPromptTemplate.replace('{{INPUT_JSON}}', synthesisInput);
-
             const synthesisResponse = await this.aiAgent.chat(synthesisPrompt);
-
-            return {
-              response: synthesisResponse.text,
-              toolExecuted: true,
-              toolName: this.runLoggerTool.name,
-              toolOutput: logResult,
-            };
-          } else {
-            return {
-              response: logResult.error || 'Error al registrar la actividad.',
-              toolExecuted: true,
-              toolName: this.runLoggerTool.name,
-              toolOutput: logResult,
-            };
+            synthesisText = synthesisResponse.text;
           }
 
-        case 'add_note':
-          // TODO: Implement a tool or service to add general notes
+          return {
+            response: logResult.success ? synthesisText : (logResult.error || 'Error al registrar la actividad.'),
+            toolExecuted: true,
+            toolName: this.runLoggerTool.name,
+            toolOutput: logResult,
+            multiAgentUsed: true,
+            executionTime: Date.now() - startTime,
+            success: !!logResult.success
+          };
+        }
+        case 'add_note': {
           return {
             response: 'Gracias, he tomado nota de tu comentario.',
             toolExecuted: false,
+            toolName: undefined,
+            toolOutput: undefined,
+            multiAgentUsed: true,
+            executionTime: Date.now() - startTime,
+            success: true
           };
-
-        case 'question':
-          // TODO: Implement a tool or service to answer questions
+        }
+        case 'question': {
           return {
             response: 'Gracias por tu pregunta. Estoy procesando la información para darte una respuesta.',
             toolExecuted: false,
+            toolName: undefined,
+            toolOutput: undefined,
+            multiAgentUsed: true,
+            executionTime: Date.now() - startTime,
+            success: true
           };
-
+        }
         case 'other':
-        default:
+        default: {
           // If no specific intent, pass to the general multi-agent service
           const context: WorkflowContext = {
             userId,
@@ -97,9 +104,17 @@ export class MultiAgentServiceWrapper {
             language
           };
           const result = await this.multiAgentService.processMessage(context);
-          return result;
+          return {
+            response: result.content,
+            toolExecuted: false,
+            toolName: undefined,
+            toolOutput: undefined,
+            multiAgentUsed: result.multiAgentUsed,
+            executionTime: result.executionTime,
+            success: result.success
+          };
+        }
       }
-
     } catch (error) {
       logger.error({ userId, error }, '[MULTI_AGENT] Error processing message');
       throw error;

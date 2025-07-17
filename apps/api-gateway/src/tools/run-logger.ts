@@ -47,7 +47,7 @@ export function createRunLoggerTool(
           type: type,
         };
 
-        const [newRun] = await db.insert(runs).values(runData).returning();
+        const [newRun] = await db.query.insert(runs).values(runData).returning();
         const runId = newRun.id;
 
         // Store context in vector memory
@@ -83,7 +83,7 @@ type Run = typeof runs.$inferSelect;
 
 async function getRecentRuns(db: Database, userId: string): Promise<Partial<Run>[]> {
   try {
-    const recentRuns = await db.select()
+    const recentRuns = await db.query.select()
       .from(runs)
       .where(eq(runs.userId, userId))
       .orderBy(desc(runs.date))
