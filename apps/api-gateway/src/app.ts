@@ -241,13 +241,18 @@ async function initializeServices(config: Config) {
   const { languageDetector, i18nService, templateEngine } = await import('@running-coach/shared');
 
   // Initialize Multi-Agent Service
-  const multiAgentService = new MultiAgentServiceWrapper(aiAgent, vectorMemory, {
-    enabled: config.MULTI_AGENT_ENABLED,
-    percentage: config.MULTI_AGENT_PERCENTAGE,
-    enableReflection: config.ENABLE_REFLECTION,
-    agentTimeout: config.AGENT_TIMEOUT_MS,
-    maxRetries: config.MAX_WORKFLOW_RETRIES
-  });
+  const multiAgentService = new MultiAgentServiceWrapper(
+    aiAgent,
+    database,
+    vectorMemory,
+    {
+      enabled: config.MULTI_AGENT_ENABLED,
+      percentage: config.MULTI_AGENT_PERCENTAGE,
+      enableReflection: config.ENABLE_REFLECTION,
+      agentTimeout: config.AGENT_TIMEOUT_MS,
+      maxRetries: config.MAX_WORKFLOW_RETRIES
+    }
+  );
   console.log('✅ Multi-Agent Service initialized');
 
   // Register services in DI container
