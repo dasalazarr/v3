@@ -15,11 +15,13 @@ import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
 import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
 import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
+import { PaymentService } from './services/payment-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
+import { handleGumroadWebhook } from './flows/payment-flow.js';
 import { MultiAgentServiceWrapper } from './services/multi-agent-service.js';
 
 // Load environment variables
@@ -94,6 +96,11 @@ interface Config {
   MESSAGE_LIMIT: number;
   GUMROAD_LINK: string;
   
+  // Gumroad
+  GUMROAD_PRODUCT_ID_ES: string;
+  GUMROAD_PRODUCT_ID_EN: string;
+  GUMROAD_WEBHOOK_SECRET: string;
+
   // Multi-Agent Configuration
   MULTI_AGENT_ENABLED: boolean;
   MULTI_AGENT_PERCENTAGE: number;
@@ -118,7 +125,10 @@ function loadConfig(): Config {
     'NUMBER_ID',
     'VERIFY_TOKEN',
     'MESSAGE_LIMIT',
-    'GUMROAD_LINK'
+    'GUMROAD_LINK',
+    'GUMROAD_PRODUCT_ID_ES',
+    'GUMROAD_PRODUCT_ID_EN',
+    'GUMROAD_WEBHOOK_SECRET'
   ];
 
   for (const envVar of requiredEnvVars) {
@@ -146,6 +156,9 @@ function loadConfig(): Config {
     VERIFY_TOKEN: process.env.VERIFY_TOKEN!,
     MESSAGE_LIMIT: parseInt(process.env.MESSAGE_LIMIT || '40'),
     GUMROAD_LINK: process.env.GUMROAD_LINK!,
+    GUMROAD_PRODUCT_ID_ES: process.env.GUMROAD_PRODUCT_ID_ES!,
+    GUMROAD_PRODUCT_ID_EN: process.env.GUMROAD_PRODUCT_ID_EN!,
+    GUMROAD_WEBHOOK_SECRET: process.env.GUMROAD_WEBHOOK_SECRET!,
     MULTI_AGENT_ENABLED: process.env.MULTI_AGENT_ENABLED === 'true',
     MULTI_AGENT_PERCENTAGE: parseInt(process.env.MULTI_AGENT_PERCENTAGE || '10'),
     ENABLE_REFLECTION: process.env.ENABLE_REFLECTION === 'true',
@@ -229,10 +242,11 @@ async function initializeServices(config: Config) {
 
   // Initialize Analytics Service
   const analyticsService = new AnalyticsService(database);
+  const paymentService = new PaymentService();
   const freemiumService = new FreemiumService(
     chatBuffer,
     config.MESSAGE_LIMIT,
-    config.GUMROAD_LINK
+    paymentService
   );
 
   // Inicializar servicios de idioma
@@ -263,6 +277,7 @@ async function initializeServices(config: Config) {
   container.registerInstance('VectorMemory', vectorMemory);
   container.registerInstance('AIAgent', aiAgent);
   container.registerInstance('AnalyticsService', analyticsService);
+  container.registerInstance('PaymentService', paymentService);
   container.registerInstance('FreemiumService', freemiumService);
   container.registerInstance('ToolRegistry', toolRegistry);
   container.registerInstance('LanguageDetector', languageDetector);
@@ -542,6 +557,8 @@ async function main() {
     });
 
     
+    app.post('/webhook/gumroad', handleGumroadWebhook);
+
     setupHealthEndpoints(app, services);
     setupScheduledTasks(services);
     setupGracefulShutdown(services);

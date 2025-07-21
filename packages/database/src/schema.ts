@@ -13,7 +13,7 @@ export const users = pgTable('users', {
   injuryHistory: jsonb('injury_history'),
   weeklyMileage: decimal('weekly_mileage', { precision: 5, scale: 2 }),
   weeklyMessageCount: integer('weekly_message_count').default(0),
-  subscriptionStatus: text('subscription_status', { enum: ['none', 'active', 'past_due', 'canceled'] }).default('none'),
+  paymentStatus: text('payment_status', { enum: ['free', 'pending_payment', 'premium', 'past_due', 'canceled'] }).default('free'),
   preferredLanguage: text('preferred_language', { enum: ['en', 'es'] }).default('en').notNull(),
   timezone: varchar('timezone', { length: 50 }),
   onboardingCompleted: boolean('onboarding_completed').default(false),

@@ -120,4 +120,3 @@ export async function checkBillingStatus(req, res, next) {
 5. Personalizar checkout con logo y cupones de prueba **(SHOULD)**.
 6. Cron diario para validar suscripciones con la API de Gumroad **(SHOULD)**.
 7. Portal de gestión de suscripción y paquete prepago de 200 mensajes **(COULD)**.
-
