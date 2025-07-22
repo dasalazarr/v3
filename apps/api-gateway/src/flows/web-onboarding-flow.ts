@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import { container } from 'tsyringe';
-import { DatabaseService } from '../../../../packages/database/src/index';
-import { users } from '../../../../packages/database/src/schema';
+import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
-import { PaymentService } from '../services/payment-service';
+import { FreemiumService } from '../services/freemium-service.js';
 
 export const handleWebOnboardingPremium = async (req: Request, res: Response) => {
   const { phoneNumber, language } = req.body;
@@ -13,21 +12,27 @@ export const handleWebOnboardingPremium = async (req: Request, res: Response) =>
   }
 
   try {
-    const db = container.resolve(DatabaseService);
-    let user = await db.query.users.findFirst({
+    const db = container.resolve<Database>('Database');
+    const dbClient = db.query as any;
+    let user = await dbClient.users.findFirst({
       where: eq(users.phoneNumber, phoneNumber),
     });
 
     if (!user) {
-      [user] = await db.insert(users).values({
-        phoneNumber,
-        preferredLanguage: language,
-        paymentStatus: 'pending_payment',
-      }).returning();
+      [user] = await dbClient.insert(users)
+        .values({
+          phoneNumber,
+          preferredLanguage: language,
+          paymentStatus: 'pending_payment',
+        })
+        .returning();
     } else {
       // Update existing user to pending_payment if they are free
       if (user.paymentStatus === 'free') {
-        await db.updateUser(user.id, { paymentStatus: 'pending_payment' });
+        await db.query
+          .update(users)
+          .set({ paymentStatus: 'pending_payment', updatedAt: new Date() })
+          .where(eq(users.id, user.id));
         user.paymentStatus = 'pending_payment'; // Update local user object for consistency
       }
     }
@@ -36,7 +41,7 @@ export const handleWebOnboardingPremium = async (req: Request, res: Response) =>
       throw new Error('Failed to create or retrieve user');
     }
 
-    const paymentService = container.resolve(PaymentService);
+    const paymentService = container.resolve<FreemiumService>('FreemiumService');
     const gumroadUrl = paymentService.generatePaymentLink(user);
 
     return res.status(200).json({ gumroadUrl });
@@ -54,17 +59,20 @@ export const handleWebOnboardingFree = async (req: Request, res: Response) => {
   }
 
   try {
-    const db = container.resolve(DatabaseService);
-    let user = await db.query.users.findFirst({
+    const db = container.resolve<Database>('Database');
+    const dbClient = db.query as any;
+    let user = await dbClient.users.findFirst({
       where: eq(users.phoneNumber, phoneNumber),
     });
 
     if (!user) {
-      [user] = await db.insert(users).values({
+      [user] = await dbClient.insert(users)
+        .values({
         phoneNumber,
         preferredLanguage: language,
         paymentStatus: 'free',
-      }).returning();
+        })
+        .returning();
     }
     
     // For free users, we just need to ensure they exist and can be redirected to WhatsApp

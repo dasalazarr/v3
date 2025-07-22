@@ -9,7 +9,9 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "types": ["node"],
+    "lib": ["es2022"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -1,5 +1,7 @@
 import { ChatBuffer } from '@running-coach/vector-memory';
-import { User } from '@running-coach/database';
+import { users } from '@running-coach/database';
+
+type User = typeof users.$inferSelect;
 
 export class FreemiumService {
   constructor(

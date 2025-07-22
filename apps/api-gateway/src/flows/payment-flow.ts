@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
 import { container } from 'tsyringe';
-import { Database } from '@running-coach/database';
+import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
-import { users } from '@running-coach/database';
 import crypto from 'crypto';
 
 export const handleGumroadWebhook = async (req: Request, res: Response) => {
@@ -13,7 +12,7 @@ export const handleGumroadWebhook = async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'No signature provided' });
   }
 
-  const computedSignature = crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex');
+  const computedSignature = crypto.createHmac('sha256', secret).update((req as any).rawBody).digest('hex');
 
   if (computedSignature !== sentSignature) {
     return res.status(401).json({ error: 'Invalid signature' });
@@ -34,14 +33,15 @@ export const handleGumroadWebhook = async (req: Request, res: Response) => {
   }
 
   try {
-    const db = container.resolve(Database);
-    const [user] = await db.query.users.findMany({ where: eq(users.phoneNumber, phoneNumber) });
+    const db = container.resolve<Database>('Database');
+    const dbClient = db.query as any;
+    const user = await dbClient.users.findFirst({ where: eq(users.phoneNumber, phoneNumber) });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    await db.update(users).set({
+    await dbClient.update(users).set({
       paymentStatus: 'premium',
       premiumActivatedAt: new Date(),
     }).where(eq(users.id, user.id));
