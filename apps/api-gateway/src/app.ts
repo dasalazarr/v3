@@ -22,6 +22,7 @@ import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
 import { handleWebOnboardingPremium, handleWebOnboardingFree } from './flows/web-onboarding-flow.js';
+import { handleGumroadWebhook } from './flows/payment-flow.js';
 
 // Load environment variables
 dotenv.config();

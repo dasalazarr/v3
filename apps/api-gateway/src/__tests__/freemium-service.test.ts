@@ -6,24 +6,24 @@ describe('FreemiumService', () => {
   let chatBufferMock: Mocked<ChatBuffer>;
   let freemiumService: FreemiumService;
   const MESSAGE_LIMIT = 10;
-  const PAYWALL_LINK = 'https://example.com/paywall';
+  const PAYWALL_LINK = 'https://gumroad.com';
 
   beforeEach(() => {
     chatBufferMock = {
       incrementKey: vi.fn(),
     } as any;
-    freemiumService = new FreemiumService(chatBufferMock, MESSAGE_LIMIT, PAYWALL_LINK);
+    freemiumService = new FreemiumService(chatBufferMock, MESSAGE_LIMIT, 'en', 'es');
   });
 
   it('should allow messages for active subscription users', async () => {
-    const user = { id: 'user-1', subscriptionStatus: 'active' };
+    const user = { id: 'user-1', paymentStatus: 'premium' } as any;
     const result = await freemiumService.checkMessageAllowance(user);
     expect(result.allowed).toBe(true);
     expect(chatBufferMock.incrementKey).not.toHaveBeenCalled();
   });
 
   it('should allow messages for non-active users under the limit', async () => {
-    const user = { id: 'user-2', subscriptionStatus: 'inactive' };
+    const user = { id: 'user-2', paymentStatus: 'free' } as any;
     chatBufferMock.incrementKey.mockResolvedValue(5);
     const result = await freemiumService.checkMessageAllowance(user);
     expect(result.allowed).toBe(true);
@@ -31,16 +31,16 @@ describe('FreemiumService', () => {
   });
 
   it('should deny messages for non-active users over the limit', async () => {
-    const user = { id: 'user-3', subscriptionStatus: 'inactive' };
+    const user = { id: 'user-3', paymentStatus: 'free' } as any;
     chatBufferMock.incrementKey.mockResolvedValue(11);
     const result = await freemiumService.checkMessageAllowance(user);
     expect(result.allowed).toBe(false);
-    expect(result.link).toBe(PAYWALL_LINK);
+    expect(result.link).toContain(PAYWALL_LINK);
     expect(chatBufferMock.incrementKey).toHaveBeenCalled();
   });
 
   it('should calculate the correct TTL for the end of the month', async () => {
-    const user = { id: 'user-4', subscriptionStatus: 'inactive' };
+    const user = { id: 'user-4', paymentStatus: 'free' } as any;
     const now = new Date();
     const year = now.getUTCFullYear();
     const month = now.getUTCMonth();
