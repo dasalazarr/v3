@@ -13,13 +13,10 @@ export const handleWebOnboardingPremium = async (req: Request, res: Response) =>
 
   try {
     const db = container.resolve<Database>('Database');
-    const dbClient = db.query as any;
-    let user = await dbClient.users.findFirst({
-      where: eq(users.phoneNumber, phoneNumber),
-    });
+    let [user] = await db.query.select().from(users).where(eq(users.phoneNumber, phoneNumber)).limit(1);
 
     if (!user) {
-      [user] = await dbClient.insert(users)
+      [user] = await db.query.insert(users)
         .values({
           phoneNumber,
           preferredLanguage: language,
@@ -41,8 +38,8 @@ export const handleWebOnboardingPremium = async (req: Request, res: Response) =>
       throw new Error('Failed to create or retrieve user');
     }
 
-    const paymentService = container.resolve<FreemiumService>('FreemiumService');
-    const gumroadUrl = paymentService.generatePaymentLink(user);
+    const freemiumService = container.resolve<FreemiumService>('FreemiumService');
+    const gumroadUrl = freemiumService.generatePaymentLink(user);
 
     return res.status(200).json({ gumroadUrl });
   } catch (error) {
@@ -60,13 +57,10 @@ export const handleWebOnboardingFree = async (req: Request, res: Response) => {
 
   try {
     const db = container.resolve<Database>('Database');
-    const dbClient = db.query as any;
-    let user = await dbClient.users.findFirst({
-      where: eq(users.phoneNumber, phoneNumber),
-    });
+    let [user] = await db.query.select().from(users).where(eq(users.phoneNumber, phoneNumber)).limit(1);
 
     if (!user) {
-      [user] = await dbClient.insert(users)
+      [user] = await db.query.insert(users)
         .values({
         phoneNumber,
         preferredLanguage: language,
