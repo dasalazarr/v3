@@ -1,4 +1,4 @@
-'''import 'reflect-metadata';
+import 'reflect-metadata';
 import { createBot, createFlow, createProvider, MemoryDB } from '@builderbot/bot';
 import { MetaProvider } from '@builderbot/provider-meta';
 import express from 'express';
@@ -9,7 +9,7 @@ import cron from 'node-cron';
 import fetch from 'node-fetch';
 
 // Import services and configurations
-import { Database, users, User } from '@running-coach/database';
+import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
@@ -21,7 +21,6 @@ import { createPlanUpdaterTool } from './tools/plan-updater.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
-import { handleGumroadWebhook } from './flows/payment-flow.js';
 import { handleWebOnboardingPremium, handleWebOnboardingFree } from './flows/web-onboarding-flow.js';
 
 // Load environment variables
@@ -94,8 +93,7 @@ interface Config {
   VERIFY_TOKEN: string;
 
   MESSAGE_LIMIT: number;
-  
-  // Gumroad
+  GUMROAD_LINK: string;
   GUMROAD_PRODUCT_ID_EN: string;
   GUMROAD_PRODUCT_ID_ES: string;
   GUMROAD_WEBHOOK_SECRET: string;
@@ -117,6 +115,7 @@ function loadConfig(): Config {
     'NUMBER_ID',
     'VERIFY_TOKEN',
     'MESSAGE_LIMIT',
+    'GUMROAD_LINK',
     'GUMROAD_PRODUCT_ID_EN',
     'GUMROAD_PRODUCT_ID_ES',
     'GUMROAD_WEBHOOK_SECRET'
@@ -146,6 +145,7 @@ function loadConfig(): Config {
     NUMBER_ID: process.env.NUMBER_ID!,
     VERIFY_TOKEN: process.env.VERIFY_TOKEN!,
     MESSAGE_LIMIT: parseInt(process.env.MESSAGE_LIMIT || '40'),
+    GUMROAD_LINK: process.env.GUMROAD_LINK!,
     GUMROAD_PRODUCT_ID_EN: process.env.GUMROAD_PRODUCT_ID_EN!,
     GUMROAD_PRODUCT_ID_ES: process.env.GUMROAD_PRODUCT_ID_ES!,
     GUMROAD_WEBHOOK_SECRET: process.env.GUMROAD_WEBHOOK_SECRET!,
@@ -235,6 +235,8 @@ async function initializeServices(config: Config) {
   );
 
   // Inicializar servicios de idioma
+  // Estos servicios ya deberían estar inicializados en el paquete shared
+  // y exportados como instancias singleton
   const { languageDetector, i18nService, templateEngine } = await import('@running-coach/shared');
 
   // Register services in DI container
@@ -370,7 +372,8 @@ function setupHealthEndpoints(app: express.Application, services: any) {
 
   app.get('/metrics', (req, res) => {
     // Placeholder for Prometheus metrics
-    res.type('text/plain').send(`# HELP running_coach_requests_total Total number of requests
+    res.type('text/plain').send(`
+# HELP running_coach_requests_total Total number of requests
 # TYPE running_coach_requests_total counter
 running_coach_requests_total 0
 
@@ -566,4 +569,3 @@ process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) =>
 if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
-''
