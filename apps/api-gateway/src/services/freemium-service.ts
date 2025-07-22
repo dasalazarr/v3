@@ -1,10 +1,12 @@
 import { ChatBuffer } from '@running-coach/vector-memory';
+import { User } from '@running-coach/database';
 
 export class FreemiumService {
   constructor(
     private chatBuffer: ChatBuffer,
     private messageLimit: number,
-    private paywallLink: string
+    private gumroadProductIdEn: string,
+    private gumroadProductIdEs: string,
   ) {}
 
   private getMonthKey(userId: string): { key: string; ttl: number } {
@@ -12,25 +14,30 @@ export class FreemiumService {
     const year = now.getUTCFullYear();
     const month = now.getUTCMonth();
     
-    // Calculate the first day of the next month
     const firstDayOfNextMonth = new Date(Date.UTC(year, month + 1, 1));
-    
-    // Calculate the remaining seconds in the current month
     const ttl = Math.floor((firstDayOfNextMonth.getTime() - now.getTime()) / 1000);
     
     const key = `msg:${userId}:${year}-${month + 1}`
     return { key, ttl };
   }
 
-  public async checkMessageAllowance(user: any): Promise<{ allowed: boolean; link?: string }> {
-    if (user.subscriptionStatus === 'active') {
+  public async checkMessageAllowance(user: User): Promise<{ allowed: boolean; link?: string }> {
+    if (user.paymentStatus === 'premium') {
       return { allowed: true };
     }
     const { key, ttl } = this.getMonthKey(user.id);
     const count = await this.chatBuffer.incrementKey(key, ttl);
     if (count > this.messageLimit) {
-      return { allowed: false, link: this.paywallLink };
+      const link = this.generatePaymentLink(user);
+      return { allowed: false, link };
     }
     return { allowed: true };
+  }
+
+  public generatePaymentLink(user: User): string {
+    const productId = user.preferredLanguage === 'es' ? this.gumroadProductIdEs : this.gumroadProductIdEn;
+    const url = `https://gumroad.com/l/${productId}`;
+    // Pass the user's phone number in the `custom_fields` to identify them in the webhook
+    return `${url}?custom_fields[phone_number]=${encodeURIComponent(user.phoneNumber)}`;
   }
 }

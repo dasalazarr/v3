@@ -11,17 +11,27 @@ The name "Andes" reflects the app's goal of helping users conquer their personal
 
 ## 2. User Flow
 
-1. **First Contact**: Users message the Andes WhatsApp number and receive an automated welcome message with basic instructions and an option to set up their profile.
+Andes now supports multiple entry points to ensure a seamless user experience and accurate tracking.
 
-2. **Onboarding**: The system guides new users through a brief setup process to understand their fitness level, goals, and availability.
+1.  **Web Onboarding (New)**: Users can initiate their journey from the Andes landing page (`andesrc.com`).
+    *   **Action**: User clicks "Start Free" or "Buy Premium" on the landing page.
+    *   **Capture**: User is directed to a dedicated page (`andesrc.com/start`) to provide their WhatsApp number.
+    *   **Backend Integration**: The provided number is sent to the `v3` backend (`/onboarding/free` or `/onboarding/premium`).
+    *   **Redirection**: The backend creates/identifies the user and redirects them to WhatsApp (for free users) or to Gumroad (for premium users with a unique, user-ID-embedded link).
+    *   **First Contact (WhatsApp)**: Upon first interaction via WhatsApp, the user receives an automated welcome message.
 
-3. **Daily Interaction**: Users can log workouts through natural language (e.g., "Just ran 5K in 25 minutes, felt great!") or receive scheduled training prompts.
+2.  **Direct WhatsApp Contact**: Users can still directly message the Andes WhatsApp number.
+    *   **First Contact**: Users message the Andes WhatsApp number and receive an automated welcome message with basic instructions and an option to set up their profile.
 
-4. **Workout Processing**: The system analyzes workout data, provides immediate feedback, and adjusts training plans accordingly.
+3.  **Onboarding (In-Chat)**: The system guides new users through a brief setup process to understand their fitness level, goals, and availability.
 
-5. **Progress Tracking**: Users can request progress reports, view statistics, and receive insights about their performance trends.
+4.  **Daily Interaction**: Users can log workouts through natural language (e.g., "Just ran 5K in 25 minutes, felt great!") or receive scheduled training prompts.
 
-6. **Motivational Support**: Andes sends personalized encouragement, training tips, and celebrates achievements.
+5.  **Workout Processing**: The system analyzes workout data, provides immediate feedback, and adjusts training plans accordingly.
+
+6.  **Progress Tracking**: Users can request progress reports, view statistics, and receive insights about their performance trends.
+
+7.  **Motivational Support**: Andes sends personalized encouragement, training tips, and celebrates achievements.
 
 ## 3. Tech Stack & APIs
 

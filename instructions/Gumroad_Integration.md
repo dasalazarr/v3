@@ -6,7 +6,9 @@
 **Title:** "Entrena al máximo con Andes"
 **Subtitle:** "Planes inteligentes de running y seguimiento por WhatsApp"
 
-CTA Button: **"Empieza tu entrenamiento premium por USD 9,99/mes"**
+CTA Buttons:
+- **"Empieza Gratis"** (dirige a `/start?flow=free`)
+- **"Empieza tu entrenamiento premium por USD 9,99/mes"** (dirige a `/start?flow=premium`)
 
 ### Beneficios
 - Planes adaptados a tu ritmo y objetivos
@@ -48,7 +50,7 @@ Ambos mensajes deben ir acompañados de un botón "Volver a WhatsApp" para facil
 
 ### Producto en Gumroad
 - Crear producto **"Andes Premium"** (membership de USD 9,99/mes).
-- Copiar la URL de checkout y usarla en la landing y los mensajes de upsell.
+- La URL de checkout se generará dinámicamente por el backend (`v3`) incluyendo el `user_id` del usuario, y la landing page redirigirá al usuario a esta URL.
 
 ### Webhook Endpoint
 - **Route:** `POST /gumroad/webhook`

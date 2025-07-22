@@ -70,12 +70,15 @@ Nuestro objetivo aspiracional —el “norte” que guía todo el proyecto— es
 ## 🚀 **Functional Requirements**
 
 ### **FR1: Intelligent Onboarding**
-- **Requirement**: Interactive button-driven onboarding that captures comprehensive user profile
-- **Components**: Age, goal race, weekly frequency, injury history, motivation, fitness level
-- **Acceptance Criteria**: 
-  - 90%+ onboarding completion rate
-  - Data validation with error handling
-  - Bilingual support (ES/EN)
+- **Requirement**: Comprehensive user onboarding via WhatsApp or Web, capturing user profile and preferences.
+- **Components**:
+  - **WhatsApp Onboarding**: Interactive, button-driven flow within WhatsApp for new users or those who haven't completed it.
+  - **Web Onboarding (New)**: Users initiate from `andesrc.com` (landing page) and are directed to a dedicated page (`andesrc.com/start`) to provide their WhatsApp number. This number is sent to the `v3` backend (`/onboarding/free` or `/onboarding/premium`) which then redirects the user to WhatsApp or Gumroad with a unique, user-ID-embedded link.
+- **Acceptance Criteria**:
+  - 90%+ onboarding completion rate across all channels.
+  - Data validation with error handling for all input methods.
+  - Seamless bilingual support (ES/EN) throughout the onboarding process.
+  - All web-initiated users are correctly registered in the backend with their `phoneNumber` and `paymentStatus` before redirection to WhatsApp or Gumroad.
 
 ### **FR2: Memory-Driven Conversations**
 - **Requirement**: AI that remembers and references previous interactions
@@ -94,12 +97,13 @@ Nuestro objetivo aspiracional —el “norte” que guía todo el proyecto— es
   - Progressive overload principles applied
 
 ### **FR4: Run Logging and Analysis**
-- **Requirement**: Natural language run logging with automatic data extraction
+- **Requirement**: Natural language run logging with automatic data extraction **and intelligent prompting for missing information.**
 - **Components**: NLP processing, structured data storage, trend analysis
 - **Acceptance Criteria**:
   - 95%+ accuracy in data extraction
   - Support for various input formats
   - Automatic pace/effort validation
+  - **System politely requests only missing required fields for tool execution.**
 
 ### **FR5: Injury Prevention System**
 - **Requirement**: Proactive injury monitoring and plan modifications
@@ -217,18 +221,18 @@ PRO TIER ($49.99/month):
 
 ## 🛣️ **Development Roadmap**
 
-### **Phase 1: Foundation (Weeks 1-4)**
-- [ ] Mono-repo setup with pnpm workspaces
-- [ ] PostgreSQL schema implementation
-- [ ] Basic AI orchestration with DeepSeek
-- [ ] WhatsApp webhook integration
-- [ ] User onboarding flow
+### **Phase 1: Foundation (Completed)**
+- [x] Mono-repo setup with pnpm workspaces
+- [x] PostgreSQL schema implementation
+- [x] Basic AI orchestration with DeepSeek
+- [x] WhatsApp webhook integration
+- [x] User onboarding flow
 
-### **Phase 2: Intelligence (Weeks 5-8)**
-- [ ] Vector memory implementation
-- [ ] Context-aware conversations
+### **Phase 2: Intelligence (In Progress)**
+- [x] Vector memory implementation
+- [x] Context-aware conversations
 - [ ] Training plan generation
-- [ ] Run logging with NLP
+- [x] Run logging with NLP
 - [ ] Basic analytics
 
 ### **Phase 3: Advanced Features (Weeks 9-12)**
