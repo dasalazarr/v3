@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 /**
  * Simplified onboarding endpoint that generates WhatsApp links with intent parameters
  * This replaces the complex web onboarding flow with a direct WhatsApp integration
+ * Updated: 2024-07-23 - Fixed WhatsApp number resolution
  */
 export const handleSimplifiedOnboarding = async (req: Request, res: Response) => {
   const { intent, language = 'en' } = req.body;
