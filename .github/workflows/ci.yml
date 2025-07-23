@@ -55,6 +55,11 @@ jobs:
     
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
+
+    - name: Check pending migrations
+      run: pnpm --filter ./packages/database exec drizzle-kit push:dry-run
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
     
     - name: Type check
       run: pnpm type-check
@@ -129,6 +134,18 @@ jobs:
       run: |
         sleep 30  # Wait for deployment
         curl -f ${{ secrets.PRODUCTION_URL }}/health || exit 1
+
+    - name: Check Railway logs for schema errors
+      run: |
+        npx railway logs --service running-coach-api --environment production --limit 100 > logs.txt
+        if grep -i "schema" logs.txt; then
+          echo "Schema error detected"
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Schema error detected in Railway logs"}' $SLACK_WEBHOOK
+          exit 1
+        fi
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
   load-test:
     needs: build-and-deploy
