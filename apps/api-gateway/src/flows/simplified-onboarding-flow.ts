@@ -25,18 +25,18 @@ export const handleSimplifiedOnboarding = async (req: Request, res: Response) =>
   }
 
   try {
-    // Get WhatsApp number from environment
-    const whatsappNumber = container.resolve<string>('WHATSAPP_NUMBER_ID');
+    // Get WhatsApp number - using the actual number from your system
+    const whatsappNumber = '593987644414';
     
     // Create pre-filled message based on intent and language
     const intentMessages = {
       free: {
         en: 'Hi! I want to start free training with Andes 🏃‍♂️',
-        es: '¡Hola! Quiero comenzar entrenamiento gratuito con Andes 🏃‍♂️'
+        es: '¡Hola! Quiero comenzar mi entrenamiento gratuito de running con Andes 🏃‍♂️'
       },
       premium: {
         en: 'Hi! I want to upgrade to Andes Premium 🏃‍♂️💎',
-        es: '¡Hola! Quiero actualizar a Andes Premium 🏃‍♂️💎'
+        es: '¡Hola! Quiero comenzar con Andes Premium ($9.99/mes) para mi entrenamiento de running 🏃‍♂️💎'
       }
     };
 
@@ -93,7 +93,7 @@ export const handleLegacyWebOnboardingFree = async (req: Request, res: Response)
  */
 export const handleOnboardingHealth = async (req: Request, res: Response) => {
   try {
-    const whatsappNumber = container.resolve<string>('WHATSAPP_NUMBER_ID');
+    const whatsappNumber = '593987644414';
     
     return res.status(200).json({
       status: 'healthy',
