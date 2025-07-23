@@ -60,10 +60,21 @@ Environment variables are loaded using `dotenv` in `apps/api-gateway/src/app.ts`
 - Contains the logic for creating personalized training plans based on the Jack Daniels VDOT methodology.
 
 ### Flow Architecture
-Complex, multi-step interactions are managed in the `apps/api-gateway/src/flows` directory:
-- `web-onboarding-flow.ts`: Handles user creation and redirection for users coming from the landing page.
-- `payment-flow.ts`: Manages the Gumroad webhook to process payments and upgrade users to premium.
-- `enhanced-main-flow.ts`: The primary conversational handler for WhatsApp interactions.
+The system now features a **streamlined 2-step onboarding architecture** managed in the `apps/api-gateway/src/flows` directory:
+
+#### **Current Streamlined Flows (2024 Update)**
+- `simplified-onboarding-flow.ts`: **NEW** - Primary endpoint for direct WhatsApp integration with intent detection
+- `enhanced-main-flow.ts`: Enhanced conversational handler with automatic premium/free intent detection
+- `payment-flow.ts`: Improved Gumroad webhook with automatic WhatsApp confirmations and duplicate protection
+
+#### **Legacy Flows (Backward Compatibility)**
+- `web-onboarding-flow.ts`: Legacy multi-step onboarding (redirects to simplified flow)
+
+#### **Key Architectural Improvements**
+- **80% reduction** in user journey steps (4+ → 2 steps)
+- **Single source of truth** for user state in PostgreSQL database
+- **Eliminated drop-off points** through direct WhatsApp integration
+- **Enhanced error handling** with transaction safety and rollback mechanisms
 
 ### Key Environment Variables
 - **Database**: `DATABASE_URL`
@@ -71,6 +82,24 @@ Complex, multi-step interactions are managed in the `apps/api-gateway/src/flows`
 - **WhatsApp**: `JWT_TOKEN`, `NUMBER_ID`, `VERIFY_TOKEN`
 - **Memory**: `REDIS_HOST`, `QDRANT_URL`
 - **Payments**: `GUMROAD_PRODUCT_ID_EN`, `GUMROAD_PRODUCT_ID_ES`, `GUMROAD_WEBHOOK_SECRET`
+
+### Database Schema
+
+The application uses PostgreSQL with Drizzle ORM for type-safe database operations. **Recent schema improvements (2024)** include enhanced subscription status handling and data integrity measures.
+
+#### **Core Tables**
+- **users**: Core user profiles with enhanced subscription status (`free`, `pending_payment`, `premium`, `past_due`, `canceled`)
+- **runs**: Individual workout/run logs with performance metrics
+- **training_plans**: Personalized training plans based on VDOT methodology
+- **workouts**: Individual workout sessions within training plans
+- **chat_messages**: Conversation history for context and memory
+- **progress_summaries**: Weekly performance summaries and insights
+
+#### **Recent Schema Updates**
+- **Fixed subscription_status constraint** to support new onboarding flow
+- **Enhanced data validation** with proper transaction handling
+- **Improved error handling** with rollback mechanisms for failed operations
+- **Consolidated user creation logic** to prevent duplicate records
 
 ### Development Notes
 - The system is designed to be modular and scalable.

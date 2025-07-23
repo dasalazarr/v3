@@ -22,7 +22,7 @@ async function runMigrations() {
 
   try {
     console.log('Running migrations...');
-    await migrate(db, { migrationsFolder: join(__dirname, '../migrations') });
+    await migrate(db, { migrationsFolder: join(__dirname, '../drizzle') });
     console.log('Migrations completed successfully');
   } catch (error) {
     console.error('Migration failed:', error);

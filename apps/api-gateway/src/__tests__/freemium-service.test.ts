@@ -16,14 +16,14 @@ describe('FreemiumService', () => {
   });
 
   it('should allow messages for active subscription users', async () => {
-    const user = { id: 'user-1', paymentStatus: 'premium' } as any;
+    const user = { id: 'user-1', subscriptionStatus: 'premium' } as any;
     const result = await freemiumService.checkMessageAllowance(user);
     expect(result.allowed).toBe(true);
     expect(chatBufferMock.incrementKey).not.toHaveBeenCalled();
   });
 
   it('should allow messages for non-active users under the limit', async () => {
-    const user = { id: 'user-2', paymentStatus: 'free' } as any;
+    const user = { id: 'user-2', subscriptionStatus: 'free' } as any;
     chatBufferMock.incrementKey.mockResolvedValue(5);
     const result = await freemiumService.checkMessageAllowance(user);
     expect(result.allowed).toBe(true);
@@ -31,7 +31,7 @@ describe('FreemiumService', () => {
   });
 
   it('should deny messages for non-active users over the limit', async () => {
-    const user = { id: 'user-3', paymentStatus: 'free' } as any;
+    const user = { id: 'user-3', subscriptionStatus: 'free' } as any;
     chatBufferMock.incrementKey.mockResolvedValue(11);
     const result = await freemiumService.checkMessageAllowance(user);
     expect(result.allowed).toBe(false);
@@ -40,7 +40,7 @@ describe('FreemiumService', () => {
   });
 
   it('should calculate the correct TTL for the end of the month', async () => {
-    const user = { id: 'user-4', paymentStatus: 'free' } as any;
+    const user = { id: 'user-4', subscriptionStatus: 'free' } as any;
     const now = new Date();
     const year = now.getUTCFullYear();
     const month = now.getUTCMonth();

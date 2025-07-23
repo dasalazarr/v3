@@ -22,6 +22,12 @@ import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
 import { handleWebOnboardingPremium, handleWebOnboardingFree } from './flows/web-onboarding-flow.js';
+import {
+  handleSimplifiedOnboarding,
+  handleLegacyWebOnboardingPremium,
+  handleLegacyWebOnboardingFree,
+  handleOnboardingHealth
+} from './flows/simplified-onboarding-flow.js';
 import { handleGumroadWebhook } from './flows/payment-flow.js';
 
 // Load environment variables
@@ -425,9 +431,13 @@ async function main() {
     app.use('/webhook/gumroad', express.raw({type: 'application/json'}));
     app.use(express.json());
 
-    // Web Onboarding Endpoints
-    app.post('/onboarding/premium', handleWebOnboardingPremium);
-    app.post('/onboarding/free', handleWebOnboardingFree);
+    // Simplified Onboarding Endpoints (New)
+    app.post('/onboarding/start', handleSimplifiedOnboarding);
+    app.get('/onboarding/health', handleOnboardingHealth);
+
+    // Legacy Web Onboarding Endpoints (Backward Compatibility)
+    app.post('/onboarding/premium', handleLegacyWebOnboardingPremium);
+    app.post('/onboarding/free', handleLegacyWebOnboardingFree);
 
     // Gumroad Webhook
     app.post('/webhook/gumroad', handleGumroadWebhook);

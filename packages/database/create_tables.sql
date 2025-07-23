@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   injury_history JSONB,
   weekly_mileage DECIMAL(5,2),
   weekly_message_count INTEGER DEFAULT 0,
-  subscription_status TEXT CHECK (subscription_status IN ('none', 'active', 'past_due', 'canceled')) DEFAULT 'none',
+  subscription_status TEXT CHECK (subscription_status IN ('free', 'pending_payment', 'premium', 'past_due', 'canceled')) DEFAULT 'free',
   preferred_language TEXT CHECK (preferred_language IN ('en', 'es')) DEFAULT 'en' NOT NULL,
   timezone VARCHAR(50),
   onboarding_completed BOOLEAN DEFAULT FALSE,

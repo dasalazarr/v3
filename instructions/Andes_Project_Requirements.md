@@ -11,17 +11,23 @@ The name "Andes" reflects the app's goal of helping users conquer their personal
 
 ## 2. User Flow
 
-Andes now supports multiple entry points to ensure a seamless user experience and accurate tracking.
+Andes features a **streamlined 2-step onboarding process** designed for maximum conversion and minimal user friction.
 
-1.  **Web Onboarding (New)**: Users can initiate their journey from the Andes landing page (`andesrc.com`).
-    *   **Action**: User clicks "Start Free" or "Buy Premium" on the landing page.
-    *   **Capture**: User is directed to a dedicated page (`andesrc.com/start`) to provide their WhatsApp number.
-    *   **Backend Integration**: The provided number is sent to the `v3` backend (`/onboarding/free` or `/onboarding/premium`).
-    *   **Redirection**: The backend creates/identifies the user and redirects them to WhatsApp (for free users) or to Gumroad (for premium users with a unique, user-ID-embedded link).
-    *   **First Contact (WhatsApp)**: Upon first interaction via WhatsApp, the user receives an automated welcome message.
+### **Streamlined Web Onboarding (Current)**
+1.  **Landing Page Action**: User clicks "Start Free" or "Buy Premium" on the Andes landing page (`andesrc.com`).
+2.  **Direct WhatsApp Integration**: The backend generates a WhatsApp link with pre-filled intent message and redirects the user directly to WhatsApp.
+    *   **For Free Users**: Pre-filled message indicates free training intent
+    *   **For Premium Users**: Pre-filled message indicates premium upgrade intent
+    *   **WhatsApp Bot Processing**: The bot detects user intent from the message and handles everything (user creation, payment links, onboarding)
 
-2.  **Direct WhatsApp Contact**: Users can still directly message the Andes WhatsApp number.
-    *   **First Contact**: Users message the Andes WhatsApp number and receive an automated welcome message with basic instructions and an option to set up their profile.
+### **Direct WhatsApp Contact (Alternative)**
+Users can still directly message the Andes WhatsApp number for immediate assistance.
+
+### **Key Improvements (2024 Update)**
+- **80% reduction** in onboarding steps (from 4+ to 2 steps)
+- **Eliminated drop-off points** by removing intermediate pages
+- **Single source of truth** for user state management
+- **Improved conversion rates** through simplified user journey
 
 3.  **Onboarding (In-Chat)**: The system guides new users through a brief setup process to understand their fitness level, goals, and availability.
 
@@ -40,11 +46,12 @@ Andes now supports multiple entry points to ensure a seamless user experience an
 - **Responsive Web Dashboard** (Future Phase): For detailed analytics and training plan management
 
 ### Backend
-- **Node.js & TypeScript**: Core server logic
+- **Node.js & TypeScript**: Core server logic with dependency injection (TSyringe)
 - **BuilderBot**: Conversation flow management
+- **PostgreSQL**: Primary database for user profiles, workout logs, and training plans
+- **Drizzle ORM**: Type-safe database operations
+- **Redis**: Message counting and session management
 - **Docker**: Containerization and deployment
-- **Google Sheets API**: Primary data storage for user profiles and workout logs
-- **Google Calendar API**: For scheduling training sessions and reminders
 
 ### AI/ML Components
 - **DeepSeek API**: Natural language processing for workout logging

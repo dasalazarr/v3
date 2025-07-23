@@ -69,13 +69,16 @@ Nuestro objetivo aspiracional —el “norte” que guía todo el proyecto— es
 
 ## 🚀 **Functional Requirements**
 
-### **FR1: Intelligent Onboarding**
-- **Requirement**: Comprehensive user onboarding via WhatsApp or Web, capturing user profile and preferences.
+### **FR1: Streamlined Intelligent Onboarding**
+- **Requirement**: Simplified 2-step user onboarding that maximizes conversion while capturing essential user profile and preferences.
 - **Components**:
-  - **WhatsApp Onboarding**: Interactive, button-driven flow within WhatsApp for new users or those who haven't completed it.
-  - **Web Onboarding (New)**: Users initiate from `andesrc.com` (landing page) and are directed to a dedicated page (`andesrc.com/start`) to provide their WhatsApp number. This number is sent to the `v3` backend (`/onboarding/free` or `/onboarding/premium`) which then redirects the user to WhatsApp or Gumroad with a unique, user-ID-embedded link.
+  - **Streamlined Web Integration**: Users click "Start Free" or "Buy Premium" on `andesrc.com` and are redirected directly to WhatsApp with pre-filled intent messages.
+  - **WhatsApp Bot Intelligence**: Bot detects user intent from pre-filled messages and handles user creation, payment processing, and onboarding automatically.
+  - **Legacy Compatibility**: Maintains backward compatibility with existing endpoints during transition period.
 - **Acceptance Criteria**:
-  - 90%+ onboarding completion rate across all channels.
+  - 95%+ conversion rate from landing page to WhatsApp (improved from previous multi-step flow)
+  - 90%+ onboarding completion rate within WhatsApp
+  - Zero data loss during migration from legacy system
   - Data validation with error handling for all input methods.
   - Seamless bilingual support (ES/EN) throughout the onboarding process.
   - All web-initiated users are correctly registered in the backend with their `phoneNumber` and `paymentStatus` before redirection to WhatsApp or Gumroad.
