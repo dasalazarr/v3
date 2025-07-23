@@ -43,11 +43,7 @@ const createTestUser = async () => {
         onboardingCompleted: true,
         age: 30,
         gender: 'male',
-        experienceLevel: 'intermediate',
-        goalRace: 'marathon',
-        onboardingGoal: 'improve_time',
-        weeklyMileage: 25.5,
-        timezone: 'America/Guayaquil'
+        onboardingGoal: 'improve_time'
       })
       .returning();
 

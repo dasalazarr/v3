@@ -60,7 +60,8 @@ const listAllUsers = async () => {
 
     // Show summary by subscription status
     const statusCounts = allUsers.reduce((acc, user) => {
-      acc[user.subscriptionStatus] = (acc[user.subscriptionStatus] || 0) + 1;
+      const status = user.subscriptionStatus || 'unknown';
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
