@@ -1,20 +1,22 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1753224595480,
-      "tag": "0000_narrow_cobalt_man",
-      "breakpoints": true
+      "version": "20240723000000",
+      "when": 1721692800000,
+      "tag": "0000_narrow_cobalt_man"
     },
     {
       "idx": 1,
-      "version": "7",
-      "when": 1753224626000,
-      "tag": "0001_add_payment_status",
-      "breakpoints": true
+      "version": "20240723000001",
+      "when": 1721692801000,
+      "tag": "0001_add_payment_status"
+    },
+    {
+      "idx": 2,
+      "version": "20240723000002",
+      "when": 1721692802000,
+      "tag": "0002_rename_payment_status"
     }
   ]
 }

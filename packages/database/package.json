@@ -12,8 +12,8 @@
     "type-check": "tsc --noEmit",
     "migrate": "tsx src/migrate.ts",
     "seed": "tsx src/seed.ts",
-    "verify": "tsx src/verify-migration.ts"
-  },
+    "verify": "tsx src/verify-migration.ts",
+    },
   "dependencies": {
     "@running-coach/shared": "workspace:*",
     "drizzle-kit": "^0.31.4",

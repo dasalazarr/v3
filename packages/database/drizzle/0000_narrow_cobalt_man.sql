@@ -88,14 +88,15 @@ CREATE TABLE "users" (
 	"injury_history" jsonb,
 	"weekly_mileage" numeric(5, 2),
 	"weekly_message_count" integer DEFAULT 0,
-	"payment_status" text DEFAULT 'free',
+	"subscription_status" text DEFAULT 'free',
 	"premium_activated_at" timestamp,
 	"preferred_language" text DEFAULT 'en' NOT NULL,
 	"timezone" varchar(50),
 	"onboarding_completed" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "users_phone_number_unique" UNIQUE("phone_number")
+	CONSTRAINT "users_phone_number_unique" UNIQUE("phone_number"),
+	CONSTRAINT "users_subscription_status_check" CHECK ("subscription_status" IN ('free', 'pending_payment', 'premium', 'past_due', 'canceled'))
 );
 --> statement-breakpoint
 CREATE TABLE "workouts" (
