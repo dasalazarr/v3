@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1753224595480,
+      "tag": "0000_narrow_cobalt_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1753224626000,
+      "tag": "0001_add_payment_status",
+      "breakpoints": true
+    }
+  ]
+}
