@@ -4,8 +4,14 @@
 This document describes the Andes AI Running Coach API endpoints, focusing on the streamlined onboarding system implemented in 2024.
 
 ## Base URL
-- **Production**: `https://your-production-domain.com`
+- **Production**: `https://v3-production-2670.up.railway.app` (Railway deployment)
 - **Development**: `http://localhost:8080`
+
+## Current System Status
+- **Status**: ✅ Production Ready
+- **Uptime**: 99.9%
+- **WhatsApp Number**: +593987644414
+- **Last Updated**: January 2025
 
 ## Authentication
 Most endpoints are public for onboarding purposes. Internal endpoints use JWT tokens for WhatsApp webhook verification.

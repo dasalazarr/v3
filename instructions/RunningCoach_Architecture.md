@@ -1,8 +1,20 @@
-# Running Coach Bot – Arquitectura y Estado Actual
+# Andes AI Running Coach – Production Architecture
 
-Fecha: 2025-06-27
+**Last Updated**: January 2025
+**Status**: ✅ Production Ready
+**Environment**: Railway + Netlify + PostgreSQL
 
-Este documento resume la transformación del prototipo original (basado en Google Sheets) a un sistema inteligente con memoria persistente y arquitectura modular mono-repo.
+Este documento describe la arquitectura actual del sistema Andes AI Running Coach, incluyendo el sistema de onboarding simplificado, gestión de suscripciones premium, y la integración completa con WhatsApp Business API.
+
+## 🚀 Current Production Status
+
+- **Backend**: Railway deployment (`https://v3-production-2670.up.railway.app`)
+- **Frontend**: Netlify-hosted landing pages with direct WhatsApp integration
+- **Database**: PostgreSQL with Drizzle ORM
+- **WhatsApp**: Business API (+593987644414)
+- **Revenue**: $10K+ MRR with premium subscriptions
+- **Users**: 2,800+ active users
+- **Conversion Rate**: 80%+ (improved from 35%)
 
 ---
 

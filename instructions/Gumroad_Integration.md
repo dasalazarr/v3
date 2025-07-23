@@ -108,9 +108,180 @@ export async function checkBillingStatus(req, res, next) {
 }
 ```
 
-### Cron de Validación
-- Job diario que llama a la API de Gumroad para confirmar suscripciones activas.
-- Si una subscripción se marca como cancelada o con pago fallido, actualizar `billing_status` a `PAST_DUE` o `CANCELLED`.
+### Cron de Validación (IMPLEMENTACIÓN CRÍTICA)
+
+**⚠️ ACTUALIZACIÓN CRÍTICA:** El sistema actual tiene gaps que permiten acceso premium indefinido después del primer pago.
+
+#### Implementación Requerida
+
+```typescript
+// apps/api-gateway/src/services/subscription-service.ts
+import cron from 'node-cron';
+import { Database } from '@running-coach/database';
+import { users, subscriptionEvents } from '@running-coach/database';
+import { eq, and, lt, gt } from 'drizzle-orm';
+
+export class SubscriptionService {
+  constructor(private database: Database) {}
+
+  setupCronJobs() {
+    // CRÍTICO: Validación diaria de suscripciones a las 2 AM
+    cron.schedule('0 2 * * *', async () => {
+      console.log('🔍 Running daily subscription validation...');
+      try {
+        await this.validateExpiredSubscriptions();
+        await this.processGracePeriodExpired();
+        await this.sendExpirationWarnings();
+        console.log('✅ Daily subscription validation completed');
+      } catch (error) {
+        console.error('❌ Daily subscription validation failed:', error);
+        // Send alert to monitoring system
+      }
+    });
+
+    // Validación horaria para pagos fallidos
+    cron.schedule('0 * * * *', async () => {
+      console.log('🔄 Processing payment failures...');
+      await this.processPaymentRetries();
+    });
+  }
+
+  async validateExpiredSubscriptions() {
+    // Encontrar suscripciones expiradas
+    const expiredUsers = await this.database.query
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.subscriptionStatus, 'premium'),
+          lt(users.subscriptionExpiresAt, new Date())
+        )
+      );
+
+    console.log(`Found ${expiredUsers.length} expired subscriptions`);
+
+    for (const user of expiredUsers) {
+      // Revocar acceso premium
+      await this.database.query
+        .update(users)
+        .set({
+          subscriptionStatus: 'free',
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, user.id));
+
+      // Log del evento
+      await this.logSubscriptionEvent(user.id, 'subscription_expired', {
+        expiredAt: user.subscriptionExpiresAt,
+        lastPayment: user.lastPaymentDate
+      });
+
+      // Notificar al usuario
+      await this.sendSubscriptionExpiredNotification(user);
+
+      console.log(`⏰ Revoked premium access for expired user ${user.id}`);
+    }
+  }
+
+  async processGracePeriodExpired() {
+    // Usuarios cuyo período de gracia ha expirado
+    const gracePeriodExpired = await this.database.query
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.subscriptionStatus, 'past_due'),
+          lt(users.gracePeriodEndsAt, new Date())
+        )
+      );
+
+    for (const user of gracePeriodExpired) {
+      await this.database.query
+        .update(users)
+        .set({
+          subscriptionStatus: 'free',
+          gracePeriodEndsAt: null,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, user.id));
+
+      await this.logSubscriptionEvent(user.id, 'grace_period_expired', {});
+      await this.sendGracePeriodExpiredNotification(user);
+    }
+  }
+
+  async sendExpirationWarnings() {
+    // Avisar 3 días antes de expiración
+    const warningDate = new Date();
+    warningDate.setDate(warningDate.getDate() + 3);
+
+    const expiringUsers = await this.database.query
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.subscriptionStatus, 'premium'),
+          lt(users.subscriptionExpiresAt, warningDate),
+          gt(users.subscriptionExpiresAt, new Date())
+        )
+      );
+
+    for (const user of expiringUsers) {
+      const daysLeft = Math.ceil(
+        (user.subscriptionExpiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      const message = user.preferredLanguage === 'es'
+        ? `⚠️ Tu suscripción Andes Premium expira en ${daysLeft} días. Renueva aquí: ${this.generateRenewalLink(user)}`
+        : `⚠️ Your Andes Premium subscription expires in ${daysLeft} days. Renew here: ${this.generateRenewalLink(user)}`;
+
+      await this.sendWhatsAppMessage(user.phoneNumber, message);
+    }
+  }
+}
+```
+
+#### Integración en app.ts
+
+```typescript
+// apps/api-gateway/src/app.ts
+import { SubscriptionService } from './services/subscription-service';
+
+// En setupScheduledTasks()
+function setupScheduledTasks(services: any) {
+  console.log('⏰ Setting up scheduled tasks...');
+
+  // NUEVO: Servicio crítico de suscripciones
+  const subscriptionService = new SubscriptionService(services.database);
+  subscriptionService.setupCronJobs();
+
+  // Existing cron jobs...
+  cron.schedule('0 9 * * 0', async () => {
+    // Weekly progress summaries
+  });
+}
+```
+
+#### Monitoreo y Alertas
+
+```typescript
+// Alertas críticas para fallos del sistema
+async validateExpiredSubscriptions() {
+  try {
+    // ... lógica de validación
+  } catch (error) {
+    // CRÍTICO: Enviar alerta inmediata
+    await this.sendCriticalAlert('Subscription validation failed', error);
+    throw error;
+  }
+}
+
+async sendCriticalAlert(message: string, error: any) {
+  // Enviar a Slack, email, o sistema de monitoreo
+  console.error(`🚨 CRITICAL ALERT: ${message}`, error);
+  // TODO: Integrar con sistema de alertas
+}
+```
 
 ---
 

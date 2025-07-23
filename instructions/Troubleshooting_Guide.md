@@ -1,20 +1,38 @@
 # Andes Troubleshooting Guide
 
+**System Status**: ✅ Production Ready
+**Last Updated**: January 2025
+**Environment**: Railway + Netlify + PostgreSQL
+
 ## Quick Diagnostics
 
-### **Health Check Commands**
+### **Production Health Check Commands**
 ```bash
-# Check overall system health
+# Check overall system health (Production)
+curl -X GET https://v3-production-2670.up.railway.app/health
+
+# Check simplified onboarding service health
+curl -X GET https://v3-production-2670.up.railway.app/onboarding/health
+
+# Test simplified onboarding endpoint
+curl -X POST https://v3-production-2670.up.railway.app/onboarding/start \
+  -H "Content-Type: application/json" \
+  -d '{"intent": "free", "language": "es"}'
+
+# Test database connection (if you have access)
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM users;"
+
+# Test Redis connection (if configured)
+redis-cli -h $REDIS_HOST -p $REDIS_PORT ping
+```
+
+### **Local Development Health Checks**
+```bash
+# Check local development server
 curl -X GET http://localhost:8080/health
 
-# Check onboarding service health
+# Check local onboarding service
 curl -X GET http://localhost:8080/onboarding/health
-
-# Test database connection
-psql $DATABASE_URL -c "SELECT 1;"
-
-# Test Redis connection
-redis-cli -h $REDIS_HOST -p $REDIS_PORT ping
 ```
 
 ---

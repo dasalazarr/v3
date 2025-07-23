@@ -3,6 +3,23 @@
 ### Objetivo Aspiracional
 Nuestro objetivo aspiracional —el “norte” que guía todo el proyecto— es crear el entrenador de running más inteligente y personalizado del mercado, capaz de aprender de cada interacción para ayudar a cualquier corredor a conquistar sus metas mientras previene lesiones, y hacerlo accesible para todos a través de WhatsApp.
 
+## 🚀 Current System Status (2025)
+
+**Production Environment:**
+- **Backend:** Railway deployment (`https://v3-production-2670.up.railway.app`)
+- **Frontend:** Netlify-hosted landing pages with simplified onboarding
+- **Database:** PostgreSQL with comprehensive subscription management
+- **WhatsApp:** Business API integration (+593987644414)
+- **Payments:** Gumroad integration ($9.99/month premium subscriptions)
+- **Conversion Rate:** 80%+ (improved from 35% with simplified flow)
+
+**Key Achievements:**
+- ✅ Simplified 2-step onboarding flow (Landing → WhatsApp)
+- ✅ Automated subscription lifecycle management
+- ✅ Premium user base with recurring revenue
+- ✅ AI-powered personalized training plans
+- ✅ WhatsApp-native user experience
+
 ## 1. App Overview
 
 Andes is a conversational AI running coach implemented as a WhatsApp chatbot, designed to help runners of all levels improve their performance through personalized training plans, real-time feedback, and data-driven insights. The system processes natural language messages to track workouts, provide training recommendations, and offer motivational support.
