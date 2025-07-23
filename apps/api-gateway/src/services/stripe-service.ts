@@ -34,7 +34,7 @@ export class StripeService {
       if (phone) {
         await this.db.query
           .update(users)
-          .set({ paymentStatus: 'premium', updatedAt: new Date() })
+          .set({ subscriptionStatus: 'premium', updatedAt: new Date() })
           .where(eq(users.phoneNumber, phone));
       }
     }

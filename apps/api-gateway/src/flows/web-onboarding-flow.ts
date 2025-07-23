@@ -20,17 +20,17 @@ export const handleWebOnboardingPremium = async (req: Request, res: Response) =>
         .values({
           phoneNumber,
           preferredLanguage: language,
-          paymentStatus: 'pending_payment',
+          subscriptionStatus: 'pending_payment',
         })
         .returning();
     } else {
       // Update existing user to pending_payment if they are free
-      if (user.paymentStatus === 'free') {
+      if (user.subscriptionStatus === 'free') {
         await db.query
           .update(users)
-          .set({ paymentStatus: 'pending_payment', updatedAt: new Date() })
+          .set({ subscriptionStatus: 'pending_payment', updatedAt: new Date() })
           .where(eq(users.id, user.id));
-        user.paymentStatus = 'pending_payment'; // Update local user object for consistency
+        user.subscriptionStatus = 'pending_payment'; // Update local user object for consistency
       }
     }
 
@@ -64,7 +64,7 @@ export const handleWebOnboardingFree = async (req: Request, res: Response) => {
         .values({
         phoneNumber,
         preferredLanguage: language,
-        paymentStatus: 'free',
+        subscriptionStatus: 'free',
         })
         .returning();
     }

@@ -43,12 +43,12 @@ const checkUserStatus = async (phoneNumber: string) => {
 
     console.log('✅ User found:');
     console.log(`  Phone Number: ${user.phoneNumber}`);
-    console.log(`  Payment Status: ${user.paymentStatus}`);
+    console.log(`  Subscription Status: ${user.subscriptionStatus}`);
     console.log(`  Preferred Language: ${user.preferredLanguage}`);
     console.log(`  Onboarding Completed: ${user.onboardingCompleted}`);
     console.log(`  Created At: ${user.createdAt}`);
 
-    if (user.paymentStatus === 'premium' && user.premiumActivatedAt) {
+    if (user.subscriptionStatus === 'premium' && user.premiumActivatedAt) {
       const activationDate = new Date(user.premiumActivatedAt);
       console.log(`  Premium Activated At: ${activationDate.toISOString()}`);
     }

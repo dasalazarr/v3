@@ -24,7 +24,7 @@ export class FreemiumService {
   }
 
   public async checkMessageAllowance(user: User): Promise<{ allowed: boolean; link?: string }> {
-    if (user.paymentStatus === 'premium') {
+    if (user.subscriptionStatus === 'premium') {
       return { allowed: true };
     }
     const { key, ttl } = this.getMonthKey(user.id);
