@@ -470,15 +470,16 @@ async function main() {
     app.post('/webhook', async (req, res) => {
       // Always respond with 200 OK to WhatsApp as required
       res.status(200).send('OK');
-      
+
       try {
         // Process the incoming webhook data
         const data = req.body;
-        console.log('💬 Received WhatsApp webhook:', JSON.stringify(data).substring(0, 100) + '...');
-        
+        console.log('🔥 [WEBHOOK] Received WhatsApp webhook at:', new Date().toISOString());
+        console.log('🔥 [WEBHOOK] Full webhook data:', JSON.stringify(data, null, 2));
+
         // Process webhook data for WhatsApp Business API
         if (data && data.object === 'whatsapp_business_account') {
-          console.log('💬 Processing WhatsApp webhook data...');
+          console.log('🔥 [WEBHOOK] Processing WhatsApp Business API webhook...');
           
           // Extract messages and process them
           if (data.entry && Array.isArray(data.entry)) {
@@ -491,25 +492,79 @@ async function main() {
                     // Process each message with AI Agent
                     for (const message of change.value.messages) {
                       try {
+                        console.log('🔥 [MESSAGE] Processing message:', JSON.stringify(message, null, 2));
+
                         if (message.type === 'text' && message.text && message.text.body) {
                           const phone = message.from;
                           const messageText = message.text.body;
 
-                          console.log(`📩 Processing message from ${phone}: ${messageText.substring(0, 50)}...`);
+                          console.log(`🔥 [MESSAGE] Text message from ${phone}: "${messageText}"`);
+                          console.log(`🔥 [MESSAGE] Message length: ${messageText.length} characters`);
 
                           // Get or create user
+                          console.log(`🔥 [DATABASE] Looking for user with phone: ${phone}`);
                           let [user] = await services.database.query
                             .select()
                             .from(users)
                             .where(eq(users.phoneNumber, phone))
                             .limit(1);
+
                           if (!user) {
+                            console.log(`🔥 [DATABASE] User not found, creating new user for phone: ${phone}`);
                             [user] = await services.database.query
                               .insert(users)
                               .values({ phoneNumber: phone, preferredLanguage: 'es' })
                               .returning();
+                            console.log(`🔥 [DATABASE] New user created:`, JSON.stringify(user, null, 2));
+                          } else {
+                            console.log(`🔥 [DATABASE] Existing user found:`, JSON.stringify(user, null, 2));
                           }
 
+                          // 🔥 PREMIUM INTENT DETECTION
+                          const lowerMessage = messageText.toLowerCase();
+                          const isPremiumIntent = lowerMessage.includes('premium') || lowerMessage.includes('upgrade') || lowerMessage.includes('paid') || lowerMessage.includes('💎');
+
+                          console.log(`🔥 [INTENT] Analyzing message for premium intent: "${messageText}"`);
+                          console.log(`🔥 [INTENT] Premium intent detected: ${isPremiumIntent}`);
+                          console.log(`🔥 [INTENT] User subscription status: ${user.subscriptionStatus}`);
+
+                          // Handle premium intent FIRST, before freemium check
+                          if (isPremiumIntent && (user.subscriptionStatus === 'free' || user.subscriptionStatus === 'canceled')) {
+                            console.log(`🔥 [PREMIUM] Processing premium upgrade for user ${phone}`);
+
+                            try {
+                              // Update user status to pending_payment
+                              const [updatedUser] = await services.database.query
+                                .update(users)
+                                .set({
+                                  subscriptionStatus: 'pending_payment',
+                                  updatedAt: new Date()
+                                })
+                                .where(eq(users.id, user.id))
+                                .returning();
+
+                              // Generate Gumroad payment link
+                              const gumroadUrl = services.freemiumService.generatePaymentLink(updatedUser);
+                              console.log(`🔥 [PREMIUM] Generated Gumroad URL: ${gumroadUrl}`);
+
+                              const premiumMessage = user.preferredLanguage === 'es'
+                                ? `¡Perfecto! 🏃‍♂️ Para acceder a Andes Premium, completa tu pago aquí: ${gumroadUrl}\n\nUna vez completado el pago, regresa aquí para comenzar tu entrenamiento personalizado.`
+                                : `Perfect! 🏃‍♂️ To access Andes Premium, complete your payment here: ${gumroadUrl}\n\nOnce payment is complete, return here to start your personalized training.`;
+
+                              await sendWhatsAppMessage(phone, premiumMessage, config);
+                              console.log(`🔥 [PREMIUM] Payment link sent successfully to ${phone}`);
+                              continue; // Skip AI processing for premium intent
+                            } catch (error) {
+                              console.error(`🔥 [PREMIUM] Error processing premium upgrade for ${phone}:`, error);
+                              const errorMessage = user.preferredLanguage === 'es'
+                                ? 'Lo siento, hubo un error procesando tu solicitud premium. Por favor intenta de nuevo.'
+                                : 'Sorry, there was an error processing your premium request. Please try again.';
+                              await sendWhatsAppMessage(phone, errorMessage, config);
+                              continue;
+                            }
+                          }
+
+                          // Check message allowance for non-premium intents
                           const allowance = await services.freemiumService.checkMessageAllowance(user);
                           if (!allowance.allowed) {
                             const upsell = user.preferredLanguage === 'en'

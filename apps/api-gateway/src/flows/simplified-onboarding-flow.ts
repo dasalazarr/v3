@@ -41,11 +41,18 @@ export const handleSimplifiedOnboarding = async (req: Request, res: Response) =>
       }
     };
 
+    console.log(`🔥 [ONBOARDING] Intent: ${intent}, Language: ${language}`);
+
     const prefilledMessage = intentMessages[intent as 'free' | 'premium'][language as 'en' | 'es'];
     const encodedMessage = encodeURIComponent(prefilledMessage);
-    
+
+    console.log(`🔥 [ONBOARDING] Pre-filled message: "${prefilledMessage}"`);
+    console.log(`🔥 [ONBOARDING] Encoded message: "${encodedMessage}"`);
+
     // Generate WhatsApp link with pre-filled message
     const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+
+    console.log(`🔥 [ONBOARDING] Generated WhatsApp link: ${whatsappLink}`);
 
     // Return the WhatsApp link for immediate redirection
     return res.status(200).json({ 
