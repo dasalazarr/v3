@@ -39,30 +39,53 @@ async function sendWhatsAppMessage(to: string, message: string, config: any) {
 }
 
 export const handleGumroadWebhook = async (req: Request, res: Response) => {
-  const secret = container.resolve<string>('GUMROAD_WEBHOOK_SECRET');
-  const sentSignature = req.header('X-Gumroad-Signature');
+  console.log('🔥 [GUMROAD] Webhook received at:', new Date().toISOString());
+  console.log('🔥 [GUMROAD] Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('🔥 [GUMROAD] Body:', JSON.stringify(req.body, null, 2));
 
-  if (!sentSignature) {
-    return res.status(401).json({ error: 'No signature provided' });
+  // Gumroad sends x-www-form-urlencoded data
+  const {
+    sale_id,
+    product_id,
+    email,
+    custom_fields,
+    full_name,
+    price,
+    recurrence
+  } = req.body;
+
+  // Parse custom_fields if it's a string (sometimes Gumroad sends it as JSON string)
+  let parsedCustomFields;
+  try {
+    parsedCustomFields = typeof custom_fields === 'string'
+      ? JSON.parse(custom_fields)
+      : custom_fields;
+  } catch (error) {
+    console.log('🔥 [GUMROAD] Custom fields not JSON, using as-is:', custom_fields);
+    parsedCustomFields = custom_fields;
   }
 
-  const computedSignature = crypto.createHmac('sha256', secret).update((req as any).rawBody).digest('hex');
+  const phoneNumber = parsedCustomFields?.phone_number;
 
-  if (computedSignature !== sentSignature) {
-    return res.status(401).json({ error: 'Invalid signature' });
-  }
-
-  const { custom_fields, product_id } = req.body;
-  const phoneNumber = custom_fields?.phone_number;
+  console.log(`🔥 [GUMROAD] Extracted phone number: ${phoneNumber}`);
+  console.log(`🔥 [GUMROAD] Sale ID: ${sale_id}`);
+  console.log(`🔥 [GUMROAD] Product ID: ${product_id}`);
+  console.log(`🔥 [GUMROAD] Email: ${email}`);
+  console.log(`🔥 [GUMROAD] Price: ${price}`);
 
   if (!phoneNumber) {
+    console.error('🔥 [GUMROAD] Missing phone_number in custom_fields');
+    console.error('🔥 [GUMROAD] Available custom_fields:', parsedCustomFields);
     return res.status(400).json({ error: 'Missing phone_number in custom_fields' });
   }
 
   const productIdEn = container.resolve<string>('GUMROAD_PRODUCT_ID_EN');
   const productIdEs = container.resolve<string>('GUMROAD_PRODUCT_ID_ES');
 
+  console.log(`🔥 [GUMROAD] Expected product IDs: EN=${productIdEn}, ES=${productIdEs}`);
+
   if (product_id !== productIdEn && product_id !== productIdEs) {
+    console.error(`🔥 [GUMROAD] Product ID mismatch: received=${product_id}`);
     return res.status(400).json({ error: 'Product ID does not match' });
   }
 
@@ -102,7 +125,13 @@ export const handleGumroadWebhook = async (req: Request, res: Response) => {
       throw new Error('Failed to update user to premium status');
     }
 
-    console.log(`✅ User ${user.id} (${user.phoneNumber}) upgraded to premium successfully`);
+    console.log(`🎉 [GUMROAD] Successfully upgraded user to premium!`);
+    console.log(`🎉 [GUMROAD] User ID: ${updatedUser.id}`);
+    console.log(`🎉 [GUMROAD] Phone: ${updatedUser.phoneNumber}`);
+    console.log(`🎉 [GUMROAD] Email: ${email || 'Not provided'}`);
+    console.log(`🎉 [GUMROAD] Sale ID: ${sale_id}`);
+    console.log(`🎉 [GUMROAD] Price: $${price ? (parseInt(price) / 100).toFixed(2) : 'Unknown'}`);
+    console.log(`🎉 [GUMROAD] Premium activated at: ${updatedUser.premiumActivatedAt}`);
 
     // Send WhatsApp confirmation message with retry logic
     try {

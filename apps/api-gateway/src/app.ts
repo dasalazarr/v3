@@ -427,8 +427,8 @@ async function main() {
     const app = express();
     app.use(cors()); // Enable CORS for all routes
 
-    // Use express.raw({type: 'application/json'}) to get the raw body for signature verification
-    app.use('/webhook/gumroad', express.raw({type: 'application/json'}));
+    // Use express.urlencoded for Gumroad webhooks (they send x-www-form-urlencoded)
+    app.use('/webhook/gumroad', express.urlencoded({ extended: true }));
     app.use(express.json());
 
     // Simplified Onboarding Endpoints (New)
