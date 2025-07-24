@@ -552,6 +552,10 @@ async function main() {
                           const lowerMessage = messageText.toLowerCase();
                           const isPremiumIntent = lowerMessage.includes('premium') || lowerMessage.includes('upgrade') || lowerMessage.includes('paid') || lowerMessage.includes('💎');
 
+                          // Detect language from current message
+                          const detectedLanguage = await services.languageDetector.detect(messageText);
+                          console.log(`🔥 [LANGUAGE] Detected language: ${detectedLanguage} from message: "${messageText}"`);
+
                           console.log(`🔥 [INTENT] Analyzing message for premium intent: "${messageText}"`);
                           console.log(`🔥 [INTENT] Premium intent detected: ${isPremiumIntent}`);
                           console.log(`🔥 [INTENT] User subscription status: ${user.subscriptionStatus}`);
@@ -562,11 +566,12 @@ async function main() {
                             console.log(`🔥 [PREMIUM] Processing premium upgrade for user ${phone}`);
 
                             try {
-                              // Update user status to pending_payment
+                              // Update user status to pending_payment and language
                               const [updatedUser] = await services.database.query
                                 .update(users)
                                 .set({
                                   subscriptionStatus: 'pending_payment',
+                                  preferredLanguage: detectedLanguage as 'es' | 'en',
                                   updatedAt: new Date()
                                 })
                                 .where(eq(users.id, user.id))
@@ -576,7 +581,7 @@ async function main() {
                               const gumroadUrl = services.freemiumService.generatePaymentLink(updatedUser);
                               console.log(`🔥 [PREMIUM] Generated Gumroad URL: ${gumroadUrl}`);
 
-                              const premiumMessage = user.preferredLanguage === 'es'
+                              const premiumMessage = detectedLanguage === 'es'
                                 ? `¡Perfecto! 🏃‍♂️ Para acceder a Andes Premium, completa tu pago aquí: ${gumroadUrl}\n\nUna vez completado el pago, regresa aquí para comenzar tu entrenamiento personalizado.`
                                 : `Perfect! 🏃‍♂️ To access Andes Premium, complete your payment here: ${gumroadUrl}\n\nOnce payment is complete, return here to start your personalized training.`;
 
@@ -585,7 +590,7 @@ async function main() {
                               continue; // Skip AI processing for premium intent
                             } catch (error) {
                               console.error(`🔥 [PREMIUM] Error processing premium upgrade for ${phone}:`, error);
-                              const errorMessage = user.preferredLanguage === 'es'
+                              const errorMessage = detectedLanguage === 'es'
                                 ? 'Lo siento, hubo un error procesando tu solicitud premium. Por favor intenta de nuevo.'
                                 : 'Sorry, there was an error processing your premium request. Please try again.';
                               await sendWhatsAppMessage(phone, errorMessage, config);
