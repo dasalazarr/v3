@@ -549,7 +549,8 @@ async function main() {
                           console.log(`🔥 [INTENT] User subscription status: ${user.subscriptionStatus}`);
 
                           // Handle premium intent FIRST, before freemium check
-                          if (isPremiumIntent && (user.subscriptionStatus === 'free' || user.subscriptionStatus === 'canceled')) {
+                          const canUpgradeToPremium = user.subscriptionStatus !== 'premium' && user.subscriptionStatus !== 'pending_payment';
+                          if (isPremiumIntent && canUpgradeToPremium) {
                             console.log(`🔥 [PREMIUM] Processing premium upgrade for user ${phone}`);
 
                             try {
