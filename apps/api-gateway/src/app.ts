@@ -533,7 +533,15 @@ async function main() {
                             console.log(`🔥 [DATABASE] User not found, creating new user for phone: ${phone}`);
                             [user] = await services.database.query
                               .insert(users)
-                              .values({ phoneNumber: phone, preferredLanguage: 'es' })
+                              .values({
+                                phoneNumber: phone,
+                                preferredLanguage: 'es',
+                                subscriptionStatus: 'free',
+                                weeklyMessageCount: 0,
+                                onboardingCompleted: false,
+                                createdAt: new Date(),
+                                updatedAt: new Date()
+                              })
                               .returning();
                             console.log(`🔥 [DATABASE] New user created:`, JSON.stringify(user, null, 2));
                           } else {
