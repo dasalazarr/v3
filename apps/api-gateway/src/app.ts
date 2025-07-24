@@ -543,7 +543,7 @@ async function main() {
                                 updatedAt: new Date()
                               })
                               .returning();
-                            console.log(`🔥 [DATABASE] New user created:`, JSON.stringify(user, null, 2));
+                            console.log(`🔥 [DATABASE] New user created with VALID status:`, JSON.stringify(user, null, 2));
                           } else {
                             console.log(`🔥 [DATABASE] Existing user found:`, JSON.stringify(user, null, 2));
                           }
