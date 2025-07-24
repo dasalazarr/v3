@@ -640,7 +640,7 @@ async function main() {
       console.log(`🌐 Health server running on port ${config.PORT}`);
     });
     
-    console.log('🎉 Running Coach AI Assistant is ready!');
+    console.log('🎉 Running Coach AI Assistant is ready! [v2.1 - Fixed User Creation]');
     console.log('💬 Send a WhatsApp message to start coaching...');
     
   } catch (error) {
