@@ -435,6 +435,26 @@ async function main() {
     app.post('/onboarding/start', handleSimplifiedOnboarding);
     app.get('/onboarding/health', handleOnboardingHealth);
 
+    // Debug endpoint to check webhook configuration
+    app.get('/debug/webhook', (req, res) => {
+      res.json({
+        status: 'webhook_endpoint_ready',
+        webhook_url: 'https://v3-production-2670.up.railway.app/webhook',
+        verify_token_configured: !!config.VERIFY_TOKEN,
+        jwt_token_configured: !!config.JWT_TOKEN,
+        number_id_configured: !!config.NUMBER_ID,
+        timestamp: new Date().toISOString(),
+        instructions: {
+          step1: 'Go to https://developers.facebook.com/apps/',
+          step2: 'Select your WhatsApp app → Configuration',
+          step3: 'Set Webhook URL to: https://v3-production-2670.up.railway.app/webhook',
+          step4: 'Set Verify Token to match your VERIFY_TOKEN environment variable',
+          step5: 'Subscribe to "messages" field',
+          step6: 'Test webhook from Meta Business dashboard'
+        }
+      });
+    });
+
     // Legacy Web Onboarding Endpoints (Backward Compatibility)
     app.post('/onboarding/premium', handleLegacyWebOnboardingPremium);
     app.post('/onboarding/free', handleLegacyWebOnboardingFree);
