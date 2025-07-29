@@ -44,7 +44,7 @@ export class IntentClassifier {
       return {
         intent: 'onboarding_required',
         confidence: 1.0,
-        reasoning: 'User has not completed mandatory onboarding',
+        reasoning: 'User has not completed mandatory onboarding - will use specialized onboarding prompt and tools',
         recommendedModel: userProfile?.subscriptionStatus === 'premium' ? 'gpt4o-mini' : 'deepseek',
         requiresPremium: false
       };

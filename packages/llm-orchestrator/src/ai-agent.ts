@@ -26,6 +26,7 @@ export interface ProcessMessageRequest {
   message: string;
   userProfile?: UserProfile;
   contextOverride?: Array<{role: string, content: string}>;
+  systemPrompt?: string; // Custom system prompt for specialized flows
 }
 
 export class AIAgent {
@@ -56,7 +57,7 @@ export class AIAgent {
    * Process a user message with full context and tool calling
    */
   public async processMessage(request: ProcessMessageRequest): Promise<AgentResponse> {
-    const { userId, message, userProfile, contextOverride } = request;
+    const { userId, message, userProfile, contextOverride, systemPrompt } = request;
 
     try {
       // Store user message in chat buffer and vector memory
@@ -82,12 +83,16 @@ export class AIAgent {
       // Get relevant vector memory context
       const memoryContext = await this.vectorMemory.retrieveContext(userId, message);
 
-      // Build system prompt
-      const systemPrompt = this.buildSystemPrompt(userProfile, memoryContext, language);
+      // Build system prompt (use custom if provided, otherwise build default)
+      const finalSystemPrompt = systemPrompt || this.buildSystemPrompt(userProfile, memoryContext, language);
+
+      if (systemPrompt) {
+        console.log(`🎯 [AI_AGENT] Using custom system prompt for specialized flow`);
+      }
 
       // Prepare messages for OpenAI
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: finalSystemPrompt },
         ...conversationHistory.map((msg: { role: string; content: string }) => ({
           role: msg.role as 'user' | 'assistant' | 'system',
           content: msg.content

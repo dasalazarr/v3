@@ -18,6 +18,7 @@ import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
+import { createOnboardingCompleterTool, createOnboardingStatusChecker } from './tools/onboarding-completer.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
@@ -217,7 +218,9 @@ async function initializeServices(config: Config) {
   // Register tools
   toolRegistry.register(createRunLoggerTool(database, vectorMemory));
   toolRegistry.register(createPlanUpdaterTool(database, vectorMemory));
-  console.log('✅ Tools registered');
+  toolRegistry.register(createOnboardingCompleterTool());
+  toolRegistry.register(createOnboardingStatusChecker());
+  console.log('✅ Tools registered (including onboarding tools)');
 
   // Initialize Hybrid AI Agent with both DeepSeek and GPT-4o Mini
   const hybridAiAgent = new HybridAIAgent(

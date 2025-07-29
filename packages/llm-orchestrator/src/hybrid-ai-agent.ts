@@ -4,6 +4,7 @@ import { UserProfile, ApiResponse } from '@running-coach/shared';
 import { ToolRegistry } from './tool-registry.js';
 import { IntentClassifier, IntentClassification } from './intent-classifier.js';
 import { AIAgent, AgentResponse, ProcessMessageRequest } from './ai-agent.js';
+import { getOnboardingSystemPrompt } from './onboarding-prompts.js';
 
 export interface HybridAIConfig {
   deepseek: {
@@ -119,7 +120,25 @@ export class HybridAIAgent {
       }
 
       // Process message with selected agent
-      const response = await selectedAgent.processMessage(request);
+      let response: AgentResponse;
+
+      // Use specialized onboarding prompt if needed
+      if (classification.intent === 'onboarding_required') {
+        const userLanguage = (userProfile as any)?.preferredLanguage || 'es';
+        const onboardingPrompt = getOnboardingSystemPrompt(userLanguage as 'es' | 'en');
+
+        console.log(`🎯 [HYBRID_AI] Using specialized onboarding prompt for ${userLanguage}`);
+
+        // Create modified request with onboarding system prompt
+        const onboardingRequest = {
+          ...request,
+          systemPrompt: onboardingPrompt
+        };
+
+        response = await selectedAgent.processMessage(onboardingRequest);
+      } else {
+        response = await selectedAgent.processMessage(request);
+      }
 
       // Add premium upsell if needed
       let finalContent = response.content;
