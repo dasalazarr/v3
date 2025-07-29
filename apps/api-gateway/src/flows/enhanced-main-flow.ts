@@ -49,18 +49,29 @@ export class EnhancedMainFlow {
           userId: user.id 
         });
 
-        if (!user.onboardingCompleted) {
-          logger.info({ userId: ctx.from }, '[ROUTER] Onboarding not completed, redirecting to OnboardingFlow');
-          const onboardingFlow = container.resolve(OnboardingFlow);
-          return gotoFlow(onboardingFlow.createFlow());
+        // Use AI Agent for all interactions (onboarding and main flow)
+        try {
+          console.log(`🤖 [ENHANCED_MAIN_FLOW] Processing message for user ${user.id}: "${ctx.body}"`);
+
+          const response = await this.aiAgent.processMessage({
+            userId: user.id,
+            message: ctx.body,
+            userProfile: user as any // Temporary type assertion to avoid build issues
+          });
+
+          console.log(`✅ [ENHANCED_MAIN_FLOW] AI response generated: ${response.content.substring(0, 100)}...`);
+
+          if (response.toolCalls && response.toolCalls.length > 0) {
+            console.log(`🔧 [ENHANCED_MAIN_FLOW] Tools executed: ${response.toolCalls.map(t => t.name).join(', ')}`);
+          }
+
+          return ctx.flowDynamic(response.content);
+
+        } catch (error) {
+          console.error(`❌ [ENHANCED_MAIN_FLOW] Error processing message:`, error);
+          const errorMessage = 'Lo siento, hubo un error procesando tu mensaje. Por favor intenta de nuevo.';
+          return ctx.flowDynamic(errorMessage);
         }
-        
-        logger.info({ userId: ctx.from }, '[ROUTER] User has completed onboarding, proceeding to main flow');
-        // This is where the main conversation logic will go
-      })
-      .addAnswer('This is the main flow. What can I help you with today?', { capture: true }, async (ctx, { flowDynamic }) => {
-        // Placeholder for intent detection and routing to sub-flows
-        await flowDynamic('I am ready to process your request.');
       });
   }
 }

@@ -18,6 +18,8 @@ import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
+import { createOnboardingCompleterTool, createOnboardingStatusChecker } from './tools/onboarding-completer.js';
+import { createTrainingPlanGeneratorTool } from './tools/training-plan-generator.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
@@ -211,7 +213,10 @@ async function initializeServices(config: Config) {
   // Register tools
   toolRegistry.register(createRunLoggerTool(database, vectorMemory));
   toolRegistry.register(createPlanUpdaterTool(database, vectorMemory));
-  console.log('✅ Tools registered');
+  toolRegistry.register(createOnboardingCompleterTool(database));
+  toolRegistry.register(createOnboardingStatusChecker(database));
+  toolRegistry.register(createTrainingPlanGeneratorTool(database));
+  console.log('✅ Tools registered (including onboarding and training plan tools)');
 
   // Initialize AI Agent
   const aiAgent = new AIAgent(
