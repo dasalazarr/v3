@@ -7,7 +7,7 @@ import { eq, desc } from 'drizzle-orm';
 
 const LogRunSchema = z.object({
   distance: z.number().min(0.1).max(200),
-  duration: z.number().min(60).max(50000).optional(), // seconds
+  duration: z.number().min(30).max(50000).optional(), // seconds - reduced minimum for short runs
   perceivedEffort: z.number().min(1).max(10).optional(),
   mood: z.enum(['great', 'good', 'okay', 'tired', 'terrible']).optional(),
   notes: z.string().optional(),
@@ -15,7 +15,9 @@ const LogRunSchema = z.object({
     location: z.string(),
     severity: z.number().min(1).max(10)
   })).optional(),
-  date: z.string().optional() // ISO date string
+  date: z.string().optional(), // ISO date string
+  // Add fields for better data extraction
+  rawText: z.string().optional() // Original message for debugging
 });
 
 export function createRunLoggerTool(
@@ -24,13 +26,21 @@ export function createRunLoggerTool(
 ): ToolFunction {
   return {
     name: 'log_run',
-    description: 'Log a completed run with distance, time, effort, and other details',
+    description: 'Log a completed run with distance, time, effort, and other details. Extract data from natural language: distance in km/miles, duration in minutes (convert to seconds), effort 1-10, mood, notes. Examples: "6.4 km in 34 minutes" = distance: 6.4, duration: 2040 (34*60 seconds)',
     parameters: LogRunSchema,
     execute: async (params: z.infer<typeof LogRunSchema> & { userId?: string }) => {
-      const { distance, duration, perceivedEffort, mood, notes, aches, date } = params;
-      
+      const { distance, duration, perceivedEffort, mood, notes, aches, date, rawText } = params;
+
       // Get user ID from context (this would be passed in during execution)
       const userId = params.userId || 'unknown';
+
+      console.log(`🏃 [RUN_LOGGER] Processing run for user ${userId}:`, {
+        distance,
+        duration,
+        perceivedEffort,
+        mood,
+        rawText: rawText?.substring(0, 100)
+      });
       
       try {
         // Parse date or use current date

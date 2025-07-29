@@ -15,17 +15,43 @@ export class FrancLanguageDetector implements LanguageDetector {
   detect(text: string): string {
     // Si el texto es muy corto, usar idioma por defecto
     if (!text || text.trim().length < this.minTextLength) {
+      console.log(`🌐 [LANG_DETECT] Text too short (${text?.length || 0} chars), using default: ${this.defaultLanguage}`);
       return this.defaultLanguage;
     }
 
-    // Detectar idioma con franc
-    const detected = franc(text.trim());
-    
-    // Convertir código ISO 639-3 a ISO 639-1
+    const cleanText = text.trim().toLowerCase();
+
+    // Enhanced keyword-based detection for common patterns
+    const englishKeywords = ['i', 'ran', 'run', 'today', 'yesterday', 'km', 'miles', 'minutes', 'hours', 'the', 'and', 'in', 'my', 'was', 'is', 'are', 'have', 'had', 'will', 'would', 'could', 'should'];
+    const spanishKeywords = ['corrí', 'correr', 'hoy', 'ayer', 'minutos', 'horas', 'el', 'la', 'los', 'las', 'y', 'en', 'mi', 'fue', 'es', 'son', 'tengo', 'tuve', 'voy', 'podría', 'debería'];
+
+    const englishMatches = englishKeywords.filter(keyword => cleanText.includes(keyword)).length;
+    const spanishMatches = spanishKeywords.filter(keyword => cleanText.includes(keyword)).length;
+
+    console.log(`🌐 [LANG_DETECT] Text: "${text.substring(0, 50)}..."`);
+    console.log(`🌐 [LANG_DETECT] English matches: ${englishMatches}, Spanish matches: ${spanishMatches}`);
+
+    // If keyword-based detection is conclusive, use it
+    if (englishMatches > spanishMatches && englishMatches >= 1) {
+      console.log(`🌐 [LANG_DETECT] Keyword-based detection: English (${englishMatches} matches)`);
+      return 'en';
+    }
+    if (spanishMatches > englishMatches && spanishMatches >= 1) {
+      console.log(`🌐 [LANG_DETECT] Keyword-based detection: Spanish (${spanishMatches} matches)`);
+      return 'es';
+    }
+
+    // Fallback to franc for longer texts
+    const detected = franc(cleanText);
     const langCode = this.convertToISO6391(detected);
-    
+
+    console.log(`🌐 [LANG_DETECT] Franc detected: ${detected} -> ${langCode}`);
+
     // Si el idioma detectado está soportado, usarlo; sino, usar por defecto
-    return this.isSupported(langCode) ? langCode : this.defaultLanguage;
+    const finalLang = this.isSupported(langCode) ? langCode : this.defaultLanguage;
+    console.log(`🌐 [LANG_DETECT] Final language: ${finalLang}`);
+
+    return finalLang;
   }
 
   isSupported(langCode: string): boolean {

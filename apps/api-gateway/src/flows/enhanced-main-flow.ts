@@ -120,27 +120,48 @@ export class EnhancedMainFlow {
           }
         }
 
-        // Handle users who already have premium or pending payment
-        if (user.subscriptionStatus === 'premium') {
-          const alreadyPremiumMessage = user.preferredLanguage === 'es'
-            ? '¡Ya tienes Andes Premium! 🎉 Puedes comenzar a entrenar enviando cualquier mensaje.'
-            : 'You already have Andes Premium! 🎉 You can start training by sending any message.';
-          await flowDynamic(alreadyPremiumMessage);
-          return;
-        }
-
-        if (user.subscriptionStatus === 'pending_payment') {
-          const pendingMessage = user.preferredLanguage === 'es'
-            ? 'Tu pago está pendiente. Una vez completado, recibirás una confirmación y podrás comenzar con Andes Premium.'
-            : 'Your payment is pending. Once completed, you\'ll receive confirmation and can start with Andes Premium.';
-          await flowDynamic(pendingMessage);
-          return;
-        }
-
+        // 🚨 MANDATORY ONBOARDING ENFORCEMENT - ALL USERS MUST COMPLETE ONBOARDING
         if (!user.onboardingCompleted) {
-          logger.info({ userId: ctx.from }, '[ROUTER] Onboarding not completed, redirecting to OnboardingFlow');
+          logger.info({
+            userId: ctx.from,
+            subscriptionStatus: user.subscriptionStatus,
+            reason: 'MANDATORY_ONBOARDING_REQUIRED'
+          }, '[ROUTER] Onboarding not completed - MANDATORY for all users, redirecting to OnboardingFlow');
+
+          // Send appropriate message based on subscription status
+          let onboardingMessage;
+          if (user.subscriptionStatus === 'premium') {
+            onboardingMessage = user.preferredLanguage === 'es'
+              ? '¡Bienvenido a Andes Premium! 🎉 Primero necesitamos conocerte mejor para personalizar tu entrenamiento. Comencemos con tu perfil:'
+              : 'Welcome to Andes Premium! 🎉 First we need to get to know you better to personalize your training. Let\'s start with your profile:';
+          } else if (user.subscriptionStatus === 'pending_payment') {
+            onboardingMessage = user.preferredLanguage === 'es'
+              ? 'Tu pago está procesándose. Mientras tanto, configuremos tu perfil para tener todo listo cuando se active tu premium:'
+              : 'Your payment is being processed. Meanwhile, let\'s set up your profile so everything is ready when your premium activates:';
+          } else {
+            onboardingMessage = user.preferredLanguage === 'es'
+              ? '¡Bienvenido a Andes! 🏃‍♂️ Para brindarte la mejor experiencia, necesitamos conocerte mejor. Comencemos:'
+              : 'Welcome to Andes! 🏃‍♂️ To give you the best experience, we need to get to know you better. Let\'s start:';
+          }
+
+          await flowDynamic(onboardingMessage);
           const onboardingFlow = container.resolve(OnboardingFlow);
           return gotoFlow(onboardingFlow.createFlow());
+        }
+
+        // Handle users who have completed onboarding
+        if (user.subscriptionStatus === 'premium') {
+          const premiumReadyMessage = user.preferredLanguage === 'es'
+            ? '¡Perfecto! Ya tienes tu perfil completo y Andes Premium activo. 🎉 ¿En qué puedo ayudarte hoy?'
+            : 'Perfect! You have your complete profile and Andes Premium active. 🎉 How can I help you today?';
+          await flowDynamic(premiumReadyMessage);
+          // Continue to main flow processing
+        } else if (user.subscriptionStatus === 'pending_payment') {
+          const pendingMessage = user.preferredLanguage === 'es'
+            ? 'Tu perfil está completo. Tu pago está pendiente - una vez confirmado tendrás acceso completo a Andes Premium.'
+            : 'Your profile is complete. Your payment is pending - once confirmed you\'ll have full access to Andes Premium.';
+          await flowDynamic(pendingMessage);
+          return;
         }
 
         logger.info({ userId: ctx.from }, '[ROUTER] User has completed onboarding, proceeding to main flow');

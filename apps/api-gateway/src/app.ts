@@ -12,7 +12,7 @@ import fetch from 'node-fetch';
 import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
-import { AIAgent, ToolRegistry } from '@running-coach/llm-orchestrator';
+import { AIAgent, ToolRegistry, HybridAIAgent } from '@running-coach/llm-orchestrator';
 import { LanguageDetector, TemplateEngine, I18nService } from '@running-coach/shared';
 import { AnalyticsService } from './services/analytics-service.js';
 import { FreemiumService } from './services/freemium-service.js';
@@ -219,7 +219,27 @@ async function initializeServices(config: Config) {
   toolRegistry.register(createPlanUpdaterTool(database, vectorMemory));
   console.log('✅ Tools registered');
 
-  // Initialize AI Agent
+  // Initialize Hybrid AI Agent with both DeepSeek and GPT-4o Mini
+  const hybridAiAgent = new HybridAIAgent(
+    {
+      deepseek: {
+        apiKey: config.DEEPSEEK_API_KEY,
+        baseURL: config.DEEPSEEK_BASE_URL,
+        model: config.DEEPSEEK_MODEL
+      },
+      openai: {
+        apiKey: config.EMBEDDINGS_API_KEY, // Using same OpenAI key
+        baseURL: config.EMBEDDINGS_BASE_URL,
+        model: 'gpt-4o-mini'
+      }
+    },
+    chatBuffer,
+    vectorMemory,
+    toolRegistry
+  );
+  console.log('✅ Hybrid AI Agent initialized with DeepSeek + GPT-4o Mini');
+
+  // Keep legacy AI Agent for backward compatibility
   const aiAgent = new AIAgent(
     {
       apiKey: config.DEEPSEEK_API_KEY,
@@ -230,7 +250,7 @@ async function initializeServices(config: Config) {
     vectorMemory,
     toolRegistry
   );
-  console.log('✅ AI Agent initialized');
+  console.log('✅ Legacy AI Agent initialized');
 
   // Initialize Analytics Service
   const analyticsService = new AnalyticsService(database);
@@ -250,7 +270,8 @@ async function initializeServices(config: Config) {
   container.registerInstance('Database', database);
   container.registerInstance('ChatBuffer', chatBuffer);
   container.registerInstance('VectorMemory', vectorMemory);
-  container.registerInstance('AIAgent', aiAgent);
+  container.registerInstance('AIAgent', aiAgent); // Legacy agent
+  container.registerInstance('HybridAIAgent', hybridAiAgent); // New hybrid agent
   container.registerInstance('AnalyticsService', analyticsService);
   container.registerInstance('FreemiumService', freemiumService);
   container.registerInstance('ToolRegistry', toolRegistry);
@@ -266,6 +287,7 @@ async function initializeServices(config: Config) {
     chatBuffer,
     vectorMemory,
     aiAgent,
+    hybridAiAgent,
     analyticsService,
     freemiumService,
     toolRegistry,
@@ -608,11 +630,29 @@ async function main() {
                             continue;
                           }
 
-                          // Process message with AI Agent
-                          const aiResponse = await services.aiAgent.processMessage({
+                          // Process message with Hybrid AI Agent (intelligent model routing)
+                          console.log(`🤖 [HYBRID_AI] Processing message with intelligent routing`);
+                          const aiResponse = await services.hybridAiAgent.processMessage({
                             userId: user.id,
-                            message: messageText
+                            message: messageText,
+                            userProfile: {
+                              subscriptionStatus: user.subscriptionStatus,
+                              onboardingCompleted: user.onboardingCompleted,
+                              preferredLanguage: user.preferredLanguage,
+                              age: user.age || undefined,
+                              gender: user.gender || undefined,
+                              experienceLevel: user.experienceLevel || undefined
+                            } as any
                           });
+
+                          console.log(`🤖 [HYBRID_AI] Response generated using ${aiResponse.modelUsed} for intent: ${aiResponse.intent}`);
+                          console.log(`🤖 [HYBRID_AI] Cost optimized: ${aiResponse.costOptimized}`);
+
+                          // Log tool usage if any
+                          if (aiResponse.toolCalls && aiResponse.toolCalls.length > 0) {
+                            console.log(`🔧 [TOOLS] Used ${aiResponse.toolCalls.length} tools:`,
+                              aiResponse.toolCalls.map(t => t.name).join(', '));
+                          }
 
                           if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
                             // Send response back to WhatsApp
