@@ -65,15 +65,14 @@ export class AIAgent {
       await this.vectorMemory.storeConversation(userId, 'user', message);
 
       // Use preferred language from user profile or detect language
-      let language: 'en' | 'es' = 'es'; // Default to Spanish
-      
+      let language: 'en' | 'es' = this.detectLanguage(message); // Detect from message first
+
       if (userProfile?.preferredLanguage && (userProfile.preferredLanguage === 'en' || userProfile.preferredLanguage === 'es')) {
         language = userProfile.preferredLanguage;
         console.log(`🌐 Using user's preferred language: ${language}`);
       } else {
-        // Fallback to language detection
-        language = this.detectLanguage(message);
-        console.log(`🌐 Detected language: ${language}`);
+        // Use detected language from message
+        console.log(`🌐 Detected language from message: ${language}`);
       }
 
       // Get conversation context
@@ -220,8 +219,34 @@ export class AIAgent {
   }
 
   private detectLanguage(text: string): 'en' | 'es' {
+    const cleanText = text.toLowerCase().trim();
+
+    // Enhanced keyword-based detection for better accuracy
+    const englishKeywords = ['hi', 'hello', 'i', 'want', 'start', 'free', 'training', 'with', 'andes', 'run', 'running', 'the', 'and', 'my', 'is', 'are', 'have', 'will', 'would', 'could', 'should'];
+    const spanishKeywords = ['hola', 'quiero', 'comenzar', 'empezar', 'entrenamiento', 'gratuito', 'con', 'andes', 'correr', 'corriendo', 'el', 'la', 'y', 'mi', 'es', 'son', 'tengo', 'voy', 'podría', 'debería'];
+
+    const englishMatches = englishKeywords.filter(keyword => cleanText.includes(keyword)).length;
+    const spanishMatches = spanishKeywords.filter(keyword => cleanText.includes(keyword)).length;
+
+    console.log(`🌐 [AI_AGENT_DETECT] Text: "${text.substring(0, 50)}..."`);
+    console.log(`🌐 [AI_AGENT_DETECT] English matches: ${englishMatches}, Spanish matches: ${spanishMatches}`);
+
+    // If keyword-based detection is conclusive, use it
+    if (englishMatches > spanishMatches && englishMatches >= 1) {
+      console.log(`🌐 [AI_AGENT_DETECT] Keyword-based detection: English`);
+      return 'en';
+    }
+    if (spanishMatches > englishMatches && spanishMatches >= 1) {
+      console.log(`🌐 [AI_AGENT_DETECT] Keyword-based detection: Spanish`);
+      return 'es';
+    }
+
+    // Fallback to franc
     const detected = franc(text);
-    return detected === 'spa' ? 'es' : 'en';
+    const result = detected === 'spa' ? 'es' : (detected === 'eng' ? 'en' : 'es');
+    console.log(`🌐 [AI_AGENT_DETECT] Franc detected: ${detected} -> ${result}`);
+
+    return result;
   }
 
   private buildSystemPrompt(
@@ -255,7 +280,7 @@ export class AIAgent {
   }
 
   private getEnglishSystemPrompt(): string {
-    return `You are an expert AI running coach specialized in personalized training plans and motivation. Your expertise includes:\n\n## CORE COMPETENCIES\n- Creating scientific training plans using Jack Daniels VDOT methodology\n- Analyzing running data and providing actionable insights\n- Motivating runners and adapting to their psychological state\n- Injury prevention and recovery guidance\n- Nutrition and hydration advice for runners\n\n## PERSONALITY\n- Encouraging and motivational, but realistic\n- Uses running community language and terminology\n- Celebrates achievements, no matter how small\n- Provides specific, actionable advice\n- Empathetic to struggles and setbacks\n\n## RESPONSE GUIDELINES\n- Always personalize responses using user's history and goals\n- Include specific training paces and distances when relevant\n- Suggest concrete next steps\n- Ask follow-up questions to gather more context\n- Use motivational language while being informative\n- Keep replies short and friendly, ideally under three sentences\n\n## AVAILABLE TOOLS\nYou have access to tools for:\n- Logging runs and workouts\n- Updating training plans\n- Generating VDOT-based pace recommendations\n- Scheduling workouts and rest days\n- Tracking progress and generating insights\n\nAlways use tools when the user provides data or requests specific actions.\n\n## PROACTIVE BEHAVIOR\nIf a user provides data that clearly describes a completed run (e.g., distance, duration, pace), you MUST proactively use the \`log_run\` tool to record it, even if not explicitly asked. After using the tool, confirm to the user that the run has been logged.`
+    return `You are an expert AI running coach specialized in personalized training plans and motivation. Your expertise includes:\n\n## CORE COMPETENCIES\n- Creating scientific training plans using Jack Daniels VDOT methodology\n- Analyzing running data and providing actionable insights\n- Motivating runners and adapting to their psychological state\n- Injury prevention and recovery guidance\n- Nutrition and hydration advice for runners\n\n## PERSONALITY\n- Encouraging and motivational, but realistic\n- Uses running community language and terminology\n- Celebrates achievements, no matter how small\n- Provides specific, actionable advice\n- Empathetic to struggles and setbacks\n\n## AVAILABLE TOOLS\nYou have access to tools for:\n- \`check_onboarding_status\`: Check if user completed their profile\n- \`complete_onboarding\`: Save user profile information\n- \`generate_training_plan\`: Create personalized training plan\n- \`log_run\`: Log runs and workouts\n- \`update_training_plan\`: Update existing plans\n\n## ENHANCED ONBOARDING FLOW\nWhen a new user interacts:\n1. ALWAYS use \`check_onboarding_status\` first\n2. Collect information in this order:\n   - Name\n   - Age\n   - Experience level (beginner/intermediate/advanced)\n   - Training days per week\n   - Main goal (5K, 10K, half marathon, marathon)\n   - **KEY QUESTION**: "When was your last run and what distance/time did you do?" (for real VDOT calculation)\n   - Injuries or limitations\n3. Once complete, use \`complete_onboarding\`\n4. Immediately use \`generate_training_plan\` with language: 'en'\n\n## UNITS AND FORMAT\n- **ALWAYS use MILES** for English users\n- Paces in min/mile format (e.g., 7:30 min/mile)\n- Distances in miles (e.g., 4.0 miles, not km)\n\n## RUN LOGGING\nIf user mentions a completed run, ALWAYS use \`log_run\` automatically.\n\n## RESPONSE GUIDELINES\n- Keep responses short and friendly\n- Use tools proactively\n- Personalize using user history\n- Include specific paces in miles when relevant\n- Celebrate every achievement and progress`
   }
 
   private getSpanishSystemPrompt(): string {
