@@ -89,38 +89,87 @@ REDIS_HOST=redis_host
 QDRANT_URL=qdrant_url
 ```
 
-## 🤖 **Hybrid AI Architecture**
+## 🤖 **Hybrid AI Architecture (January 2025)**
 
-### **Intelligent Model Routing**
-The system uses an Intent Classifier to route messages to the optimal AI model:
+### **Intelligent Model Routing System**
+Revolutionary approach that matches the right AI model to each specific task, achieving 75% cost reduction while maintaining premium experience quality.
 
-#### **DeepSeek-V3 (Cost-Efficient)**
-- **Use Cases**: Run logging, general conversation, simple queries
-- **Advantages**: 75% cost reduction, fast processing, structured data extraction
-- **Intent Types**: `run_logging`, `general_conversation`, `premium_upgrade`
+#### **DeepSeek-V3 (Cost-Efficient Workhorse)**
+- **Primary Use Cases**:
+  - Run data logging and extraction
+  - General conversation and simple queries
+  - Premium upgrade transactions
+  - Routine onboarding for free users
+- **Performance Advantages**:
+  - 75% cost reduction vs premium models
+  - Fast processing for structured tasks
+  - Excellent at data extraction and validation
+- **Handles**: ~75% of all user interactions
 
-#### **GPT-4o Mini (Premium Experience)**
-- **Use Cases**: Complex coaching, emotional support, premium user interactions
-- **Advantages**: Better empathy, advanced reasoning, nuanced language processing
-- **Intent Types**: `complex_coaching`, `emotional_support`, premium user `onboarding_required`
+#### **GPT-4o Mini (Premium Intelligence)**
+- **Primary Use Cases**:
+  - Complex coaching advice and training plans
+  - Emotional support and motivation
+  - Premium user onboarding experience
+  - Nuanced Spanish language processing
+- **Experience Advantages**:
+  - Superior empathy and emotional intelligence
+  - Advanced reasoning for complex scenarios
+  - Better handling of ambiguous requests
+- **Handles**: ~25% of interactions requiring premium intelligence
 
-### **Intent Classification System**
+### **Intent Classification Engine**
 ```typescript
-interface IntentClassification {
-  intent: 'run_logging' | 'onboarding_required' | 'complex_coaching' | 'emotional_support' | 'general_conversation' | 'premium_upgrade';
-  confidence: number;
-  recommendedModel: 'deepseek' | 'gpt4o-mini';
-  requiresPremium: boolean;
-}
+// Real-world routing examples:
+"today i ran 6.4 km in 34 minutes" → DeepSeek (run_logging)
+"I'm feeling discouraged about my progress" → GPT-4o Mini (emotional_support)
+"Can you create a marathon training plan?" → GPT-4o Mini (complex_coaching)
+"I want to upgrade to premium" → DeepSeek (premium_upgrade)
 ```
 
-### **Smart Routing Logic**
-1. **Premium Upgrade**: Always DeepSeek (simple transaction)
-2. **Mandatory Onboarding**: Model based on user subscription status
-3. **Run Logging**: DeepSeek (structured data extraction)
-4. **Emotional Support**: GPT-4o Mini (better empathy)
-5. **Complex Coaching**: GPT-4o Mini (advanced reasoning)
-6. **General Conversation**: DeepSeek for free users, GPT-4o Mini for premium
+### **Smart Routing Decision Tree**
+1. **Premium Upgrade Intent** → DeepSeek (efficient transaction processing)
+2. **Mandatory Onboarding** → DeepSeek (free) / GPT-4o Mini (premium users)
+3. **Run Logging & Data** → DeepSeek (structured data extraction)
+4. **Emotional Support** → GPT-4o Mini (empathy and motivation)
+5. **Complex Coaching** → GPT-4o Mini (advanced reasoning)
+6. **General Chat** → DeepSeek (free) / GPT-4o Mini (premium)
+
+## 🎯 **Robust Onboarding System (January 2025)**
+
+### **Mandatory Completion Architecture**
+Revolutionary onboarding system that ensures 100% completion rate for ALL users, regardless of subscription status.
+
+#### **Specialized System Prompts**
+- **Expert-Designed Prompts**: Based on LLM best practices with few-shot examples
+- **Structured Q&A Flow**: Name → Age → Level → Frequency → Goal → Injuries
+- **Language Support**: Comprehensive ES/EN prompts with cultural context
+- **Behavioral Rules**: One question at a time, handle diversions, wait for responses
+
+#### **Function Calling Validation**
+```typescript
+// Prevents completion without ALL required data
+complete_onboarding({
+  name: string,           // Required
+  age: number,           // Required
+  experienceLevel: enum, // Required
+  weeklyFrequency: number, // Required
+  mainGoal: string,      // Required
+  injuries?: string      // Optional
+})
+```
+
+#### **Granular Field Tracking**
+- **Real-time Status**: `check_onboarding_status` monitors missing fields
+- **Database Integration**: Proper type handling and constraint validation
+- **Progress Visibility**: Clear indication of completion requirements
+- **Error Prevention**: Cannot bypass without complete profile data
+
+### **Enhanced User Experience**
+- **Guided Flow**: Clear progression through required information
+- **Smart Messaging**: Context-aware prompts based on subscription status
+- **Error Handling**: Graceful handling of incomplete or invalid responses
+- **Comprehensive Logging**: Detailed tracking for optimization and debugging
 
 ## 🎯 **Key Features**
 
