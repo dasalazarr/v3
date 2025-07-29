@@ -79,7 +79,7 @@ export function createOnboardingCompleterTool(): ToolFunction {
           injuries: updatedUser.injuryHistory
         });
 
-        // Generate completion message
+        // Generate completion message with immediate value
         const completionMessage = updatedUser.preferredLanguage === 'es'
           ? `¡Perfecto, ${name}! 🎉 Tu perfil está completo:
 
@@ -90,7 +90,8 @@ export function createOnboardingCompleterTool(): ToolFunction {
 • Objetivo: ${mainGoal}
 ${injuries ? `• Consideraciones: ${injuries}` : ''}
 
-¡Ahora estoy listo para ser tu coach personalizado! 🏃‍♂️ ¿En qué puedo ayudarte hoy?`
+🚀 **¡Ahora voy a crear tu plan de entrenamiento personalizado!**
+Dame un momento mientras genero tu programa específico para alcanzar tu meta...`
           : `Perfect, ${name}! 🎉 Your profile is complete:
 
 📋 **Your Information:**
@@ -100,11 +101,33 @@ ${injuries ? `• Consideraciones: ${injuries}` : ''}
 • Goal: ${mainGoal}
 ${injuries ? `• Considerations: ${injuries}` : ''}
 
-Now I'm ready to be your personalized coach! 🏃‍♂️ How can I help you today?`;
+🚀 **Now I'm going to create your personalized training plan!**
+Give me a moment while I generate your specific program to reach your goal...`;
+
+        // Trigger training plan generation
+        console.log(`🎯 [ONBOARDING_COMPLETER] Triggering training plan generation for user ${userId}`);
+
+        // Extract target race from mainGoal
+        const targetRace = extractTargetRace(mainGoal);
+
+        // This will be handled by the AI agent calling generate_training_plan tool
+        const planGenerationHint = updatedUser.preferredLanguage === 'es'
+          ? `\n\n🤖 **Instrucción para el sistema:** Ahora llama a la función generate_training_plan con los siguientes parámetros:
+- userId: ${userId}
+- targetRace: ${targetRace}
+- currentFitnessLevel: ${experienceLevel}
+- weeklyFrequency: ${weeklyFrequency}
+- generateImmediateWeek: true`
+          : `\n\n🤖 **System instruction:** Now call the generate_training_plan function with these parameters:
+- userId: ${userId}
+- targetRace: ${targetRace}
+- currentFitnessLevel: ${experienceLevel}
+- weeklyFrequency: ${weeklyFrequency}
+- generateImmediateWeek: true`;
 
         return {
           success: true,
-          message: completionMessage,
+          message: completionMessage + planGenerationHint,
           userProfile: {
             name,
             age: updatedUser.age,
@@ -113,6 +136,14 @@ Now I'm ready to be your personalized coach! 🏃‍♂️ How can I help you to
             mainGoal: updatedUser.onboardingGoal,
             injuries: updatedUser.injuryHistory,
             onboardingCompleted: true
+          },
+          shouldGeneratePlan: true,
+          planParams: {
+            userId,
+            targetRace,
+            currentFitnessLevel: experienceLevel,
+            weeklyFrequency,
+            generateImmediateWeek: true
           }
         };
 
@@ -204,4 +235,29 @@ export function createOnboardingStatusChecker(): ToolFunction {
       }
     }
   };
+}
+
+/**
+ * Extract target race from user's main goal text
+ */
+function extractTargetRace(mainGoal: string): '5k' | '10k' | 'half_marathon' | 'marathon' {
+  const goal = mainGoal.toLowerCase();
+
+  if (goal.includes('maratón') || goal.includes('marathon')) {
+    if (goal.includes('medio') || goal.includes('half') || goal.includes('21k')) {
+      return 'half_marathon';
+    }
+    return 'marathon';
+  }
+
+  if (goal.includes('10k') || goal.includes('10 k')) {
+    return '10k';
+  }
+
+  if (goal.includes('5k') || goal.includes('5 k')) {
+    return '5k';
+  }
+
+  // Default to 10k for general goals
+  return '10k';
 }

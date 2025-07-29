@@ -4,7 +4,7 @@ import { addKeyword, EVENTS } from '@builderbot/bot';
 import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
 import { LanguageDetector } from '@running-coach/shared';
-import { AIAgent } from '@running-coach/llm-orchestrator';
+import { AIAgent, HybridAIAgent } from '@running-coach/llm-orchestrator';
 import { VectorMemory } from '@running-coach/vector-memory';
 import logger from '../services/logger-service.js';
 import { OnboardingFlow } from './onboarding-flow.js';
@@ -13,7 +13,7 @@ import { FreemiumService } from '../services/freemium-service.js';
 @injectable()
 export class EnhancedMainFlow {
   constructor(
-    @inject('AIAgent') private aiAgent: AIAgent,
+    @inject('HybridAIAgent') private hybridAiAgent: HybridAIAgent,
     @inject('Database') private database: Database,
     @inject('VectorMemory') private vectorMemory: VectorMemory,
     @inject('LanguageDetector') private languageDetector: LanguageDetector
@@ -145,8 +145,12 @@ export class EnhancedMainFlow {
           }
 
           await flowDynamic(onboardingMessage);
-          const onboardingFlow = container.resolve(OnboardingFlow);
-          return gotoFlow(onboardingFlow.createFlow());
+
+          // Use Hybrid AI Agent for onboarding instead of separate flow
+          console.log(`🤖 [ENHANCED_MAIN_FLOW] Using Hybrid AI Agent for onboarding user ${ctx.from}`);
+
+          // The message will be processed by the Hybrid AI Agent with onboarding prompt
+          // No need to redirect to separate flow - continue processing below
         }
 
         // Handle users who have completed onboarding
@@ -165,11 +169,43 @@ export class EnhancedMainFlow {
         }
 
         logger.info({ userId: ctx.from }, '[ROUTER] User has completed onboarding, proceeding to main flow');
-        // This is where the main conversation logic will go
+        // Continue to process the message with Hybrid AI Agent
       })
-      .addAnswer('This is the main flow. What can I help you with today?', { capture: true }, async (ctx, { flowDynamic }) => {
-        // Placeholder for intent detection and routing to sub-flows
-        await flowDynamic('I am ready to process your request.');
+      .addAnswer('', { capture: true }, async (ctx, { flowDynamic }) => {
+        try {
+          const user = await this.getOrCreateUser(ctx.from, ctx.body);
+
+          console.log(`🤖 [ENHANCED_MAIN_FLOW] Processing message with Hybrid AI Agent for user ${ctx.from}`);
+
+          // Process message with Hybrid AI Agent
+          const aiResponse = await this.hybridAiAgent.processMessage({
+            userId: user.id,
+            message: ctx.body,
+            userProfile: {
+              subscriptionStatus: user.subscriptionStatus,
+              onboardingCompleted: user.onboardingCompleted,
+              preferredLanguage: user.preferredLanguage,
+              age: user.age || undefined,
+              gender: user.gender || undefined,
+              experienceLevel: user.experienceLevel || undefined
+            } as any
+          });
+
+          console.log(`🤖 [ENHANCED_MAIN_FLOW] Response generated using ${aiResponse.modelUsed} for intent: ${aiResponse.intent}`);
+
+          // Log tool usage if any
+          if (aiResponse.toolCalls && aiResponse.toolCalls.length > 0) {
+            console.log(`🔧 [TOOLS] Used ${aiResponse.toolCalls.length} tools:`,
+              aiResponse.toolCalls.map(t => t.name).join(', '));
+          }
+
+          await flowDynamic(aiResponse.content);
+
+        } catch (error) {
+          console.error(`❌ [ENHANCED_MAIN_FLOW] Error processing message:`, error);
+          const errorMessage = 'Lo siento, hubo un error procesando tu mensaje. Por favor intenta de nuevo.';
+          await flowDynamic(errorMessage);
+        }
       });
   }
 }

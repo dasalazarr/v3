@@ -97,23 +97,28 @@ export function createRunLoggerTool(
             .filter(run => run.duration > 0 && run.distance > 0)
         );
 
+        // Generate intelligent feedback message
+        const intelligentMessage = generateIntelligentFeedback(
+          distance,
+          duration,
+          pace,
+          perceivedEffort,
+          mood,
+          vdotEstimate
+        );
+
         const response = {
           success: true,
           runId: newRun[0].id,
-          message: `Run logged successfully! ${distance} miles`,
+          message: intelligentMessage,
           stats: {
             distance,
             pace: pace ? formatPace(pace) : undefined,
             effort: perceivedEffort,
             estimatedVDOT: vdotEstimate
-          }
+          },
+          shouldUpdatePlan: true // Signal that training plan should be updated
         };
-
-        // Generate motivational message based on the run
-        const motivation = generateMotivationalMessage(distance, perceivedEffort, mood);
-        if (motivation) {
-          response.message += ` ${motivation}`;
-        }
 
         return response;
       } catch (error) {
@@ -225,4 +230,63 @@ async function getRecentRuns(db: Database, userId: string): Promise<Partial<Run>
     console.error('Error getting recent runs:', error);
     return [];
   }
+}
+
+function generateIntelligentFeedback(
+  distance: number,
+  duration?: number,
+  pace?: number,
+  effort?: number,
+  mood?: string,
+  vdot?: number
+): string {
+  let feedback = `¡Excelente trabajo! 🏃‍♂️\n\n`;
+  feedback += `📊 **Carrera registrada:**\n`;
+  feedback += `• Distancia: ${distance} km\n`;
+
+  if (duration) {
+    const minutes = Math.floor(duration / 60);
+    const seconds = duration % 60;
+    feedback += `• Tiempo: ${minutes}:${String(seconds).padStart(2, '0')}\n`;
+  }
+
+  if (pace) {
+    const paceMin = Math.floor(pace);
+    const paceSec = Math.round((pace - paceMin) * 60);
+    feedback += `• Ritmo: ${paceMin}:${String(paceSec).padStart(2, '0')} min/km\n`;
+
+    // Intelligent pace feedback
+    if (pace < 4.5) {
+      feedback += `\n🔥 **¡Ritmo excepcional!** Ese es un pace muy fuerte para cualquier distancia.`;
+    } else if (pace < 5.5) {
+      feedback += `\n💪 **¡Buen ritmo!** Mantén esa consistencia en tus entrenamientos.`;
+    } else if (pace < 6.5) {
+      feedback += `\n👍 **Ritmo sólido** para entrenamiento base y construcción aeróbica.`;
+    } else {
+      feedback += `\n🏃‍♂️ **Perfecto** para construir resistencia y base aeróbica.`;
+    }
+  }
+
+  if (effort) {
+    feedback += `\n• Esfuerzo percibido: ${effort}/10`;
+    if (effort <= 3) {
+      feedback += ` (Muy fácil - perfecto para recuperación)`;
+    } else if (effort <= 5) {
+      feedback += ` (Fácil - ideal para volumen base)`;
+    } else if (effort <= 7) {
+      feedback += ` (Moderado - buen entrenamiento aeróbico)`;
+    } else if (effort <= 8) {
+      feedback += ` (Fuerte - entrenamiento de umbral)`;
+    } else {
+      feedback += ` (Muy fuerte - entrenamiento de alta intensidad)`;
+    }
+  }
+
+  if (vdot) {
+    feedback += `\n• VDOT estimado: ${Math.round(vdot)}`;
+  }
+
+  feedback += `\n\n💡 **Próximos pasos:** Este dato se integrará automáticamente en tu plan de entrenamiento para ajustar tus próximas sesiones según tu progreso actual.`;
+
+  return feedback;
 }

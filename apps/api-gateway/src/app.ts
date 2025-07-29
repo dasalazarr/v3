@@ -19,10 +19,12 @@ import { FreemiumService } from './services/freemium-service.js';
 import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
 import { createOnboardingCompleterTool, createOnboardingStatusChecker } from './tools/onboarding-completer.js';
+import { createTrainingPlanGeneratorTool } from './tools/training-plan-generator.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
 import { handleWebOnboardingPremium, handleWebOnboardingFree } from './flows/web-onboarding-flow.js';
+import { handleSystemDiagnostics, handleTestMessageProcessing } from './debug/system-diagnostics.js';
 import {
   handleSimplifiedOnboarding,
   handleLegacyWebOnboardingPremium,
@@ -220,7 +222,8 @@ async function initializeServices(config: Config) {
   toolRegistry.register(createPlanUpdaterTool(database, vectorMemory));
   toolRegistry.register(createOnboardingCompleterTool());
   toolRegistry.register(createOnboardingStatusChecker());
-  console.log('✅ Tools registered (including onboarding tools)');
+  toolRegistry.register(createTrainingPlanGeneratorTool());
+  console.log('✅ Tools registered (including onboarding and training plan tools)');
 
   // Initialize Hybrid AI Agent with both DeepSeek and GPT-4o Mini
   const hybridAiAgent = new HybridAIAgent(
@@ -312,7 +315,7 @@ async function initializeBot(config: Config, services: any) {
   });
 
   // Initialize flows and register them in the container
-  const mainFlow = new EnhancedMainFlow(services.aiAgent, services.database, services.vectorMemory, services.languageDetector);
+  const mainFlow = new EnhancedMainFlow(services.hybridAiAgent, services.database, services.vectorMemory, services.languageDetector);
   container.registerInstance('EnhancedMainFlow', mainFlow);
 
   const onboardingFlow = new OnboardingFlow(services.database, services.templateEngine);
