@@ -5,12 +5,17 @@ import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
 
 const CompleteOnboardingSchema = z.object({
+  userId: z.string().uuid().optional(), // Will be injected by AI Agent
   name: z.string().min(1, "Name is required"),
   age: z.number().min(13).max(100, "Age must be between 13 and 100"),
   experienceLevel: z.enum(['beginner', 'intermediate', 'advanced']),
   weeklyFrequency: z.number().min(0).max(7, "Weekly frequency must be between 0 and 7 days"),
   mainGoal: z.string().min(1, "Main goal is required"),
   injuries: z.string().optional(),
+  // Baseline run data for VDOT calculation
+  lastRunDistance: z.number().optional(), // in km
+  lastRunTime: z.number().optional(), // in seconds
+  lastRunPace: z.string().optional(), // e.g., "5:20" min/km
   confirmationMessage: z.string().optional()
 });
 
@@ -20,9 +25,12 @@ export function createOnboardingCompleterTool(): ToolFunction {
     description: 'Complete user onboarding by saving all collected profile information. ONLY call this when you have ALL required fields: name, age, experienceLevel, weeklyFrequency, and mainGoal. This marks the onboarding as complete.',
     parameters: CompleteOnboardingSchema,
     
-    execute: async (params: z.infer<typeof CompleteOnboardingSchema> & { userId?: string }) => {
-      const { name, age, experienceLevel, weeklyFrequency, mainGoal, injuries, confirmationMessage, userId } = params;
-      
+    execute: async (params: z.infer<typeof CompleteOnboardingSchema>) => {
+      const {
+        name, age, experienceLevel, weeklyFrequency, mainGoal, injuries,
+        lastRunDistance, lastRunTime, lastRunPace, confirmationMessage, userId
+      } = params;
+
       if (!userId) {
         throw new Error('User ID is required to complete onboarding');
       }

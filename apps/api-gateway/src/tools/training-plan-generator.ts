@@ -13,6 +13,7 @@ const GenerateTrainingPlanSchema = z.object({
   weeklyFrequency: z.number().min(2).max(7),
   baselineDistance: z.number().optional(), // Recent run distance in km
   baselineTime: z.number().optional(), // Recent run time in seconds
+  language: z.enum(['es', 'en']).default('es'), // Default to Spanish/km
   generateImmediateWeek: z.boolean().default(true)
 });
 
