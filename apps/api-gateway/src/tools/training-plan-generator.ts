@@ -6,7 +6,6 @@ import { eq } from 'drizzle-orm';
 import { VDOTCalculator, PlanBuilder } from '@running-coach/plan-generator';
 
 const GenerateTrainingPlanSchema = z.object({
-  userId: z.string().uuid(),
   targetRace: z.enum(['5k', '10k', 'half_marathon', 'marathon']),
   targetDate: z.string().optional(), // ISO date string
   currentFitnessLevel: z.enum(['beginner', 'intermediate', 'advanced']),
@@ -23,17 +22,24 @@ export function createTrainingPlanGeneratorTool(): ToolFunction {
     description: 'Generate a personalized training plan based on user profile and goals. Creates both the overall plan and immediate first week workouts. Call this after completing onboarding to provide immediate value.',
     parameters: GenerateTrainingPlanSchema,
     
-    execute: async (params: z.infer<typeof GenerateTrainingPlanSchema>) => {
-      const { 
-        userId, 
-        targetRace, 
-        targetDate, 
-        currentFitnessLevel, 
-        weeklyFrequency, 
-        baselineDistance, 
+    execute: async (params: z.infer<typeof GenerateTrainingPlanSchema> & { userId?: string }) => {
+      const {
+        targetRace,
+        targetDate,
+        currentFitnessLevel,
+        weeklyFrequency,
+        baselineDistance,
         baselineTime,
-        generateImmediateWeek 
+        generateImmediateWeek
       } = params;
+
+      // Extract userId from params (injected by AI Agent)
+      const userId = (params as any).userId;
+
+      if (!userId) {
+        console.error('❌ [TRAINING_PLAN_GENERATOR] Missing userId in params:', params);
+        throw new Error('User ID is required to generate training plan');
+      }
       
       console.log(`🏃 [TRAINING_PLAN_GENERATOR] Generating plan for user ${userId}:`, {
         targetRace,

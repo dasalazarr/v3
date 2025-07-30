@@ -20,6 +20,7 @@ import { createRunLoggerTool } from './tools/run-logger.js';
 import { createPlanUpdaterTool } from './tools/plan-updater.js';
 import { createOnboardingCompleterTool, createOnboardingStatusChecker } from './tools/onboarding-completer.js';
 import { createTrainingPlanGeneratorTool } from './tools/training-plan-generator.js';
+import { createMessageCounterTool } from './tools/message-counter-checker.js';
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
@@ -223,7 +224,8 @@ async function initializeServices(config: Config) {
   toolRegistry.register(createOnboardingCompleterTool());
   toolRegistry.register(createOnboardingStatusChecker());
   toolRegistry.register(createTrainingPlanGeneratorTool());
-  console.log('✅ Tools registered (including onboarding and training plan tools)');
+  toolRegistry.register(createMessageCounterTool(database, chatBuffer, config.MESSAGE_LIMIT));
+  console.log('✅ Tools registered (including onboarding, training plan, and message counter tools)');
 
   // Initialize Hybrid AI Agent with both DeepSeek and GPT-4o Mini
   const hybridAiAgent = new HybridAIAgent(

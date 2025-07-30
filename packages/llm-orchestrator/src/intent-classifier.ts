@@ -49,7 +49,7 @@ export class IntentClassifier {
         intent: 'onboarding_required',
         confidence: 1.0,
         reasoning: 'User has not completed mandatory onboarding - will use specialized onboarding prompt and tools',
-        recommendedModel: userProfile?.subscriptionStatus === 'premium' ? 'gpt4o-mini' : 'deepseek',
+        recommendedModel: 'gpt4o-mini', // Always use GPT-4o Mini for onboarding (reliable tool calling)
         requiresPremium: false
       };
     }

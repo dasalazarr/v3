@@ -37,7 +37,11 @@ export class ToolRegistry {
 
       // Validate parameters (excluding userId)
       const { userId: _, ...paramsForValidation } = toolCall.parameters;
-      const validatedParams = tool.parameters.parse(paramsForValidation);
+
+      // Convert string booleans to actual booleans before validation
+      const convertedParams = this.convertStringBooleans(paramsForValidation);
+
+      const validatedParams = tool.parameters.parse(convertedParams);
 
       // Add userId back after validation
       const finalParams = { ...validatedParams, userId };
@@ -100,6 +104,31 @@ export class ToolRegistry {
    */
   public hasTools(name: string): boolean {
     return this.tools.has(name);
+  }
+
+  /**
+   * Convert string booleans to actual booleans
+   */
+  private convertStringBooleans(params: any): any {
+    if (typeof params !== 'object' || params === null) {
+      return params;
+    }
+
+    const converted = { ...params };
+
+    for (const [key, value] of Object.entries(converted)) {
+      if (typeof value === 'string') {
+        if (value === 'true') {
+          converted[key] = true;
+        } else if (value === 'false') {
+          converted[key] = false;
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        converted[key] = this.convertStringBooleans(value);
+      }
+    }
+
+    return converted;
   }
 
   private zodToJsonSchema(schema: z.ZodSchema): any {

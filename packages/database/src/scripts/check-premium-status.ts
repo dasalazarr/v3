@@ -62,6 +62,20 @@ async function checkPremiumStatus() {
     console.log(`🏥 Injury History: ${user.injuryHistory || 'None'}`);
     console.log('');
 
+    console.log('📈 MESSAGE COUNTER STATUS:');
+    console.log('=' .repeat(50));
+    console.log(`📊 Weekly Message Count: ${user.weeklyMessageCount || 0}/30`);
+    console.log(`⚠️ Premium Limit: 30 messages`);
+
+    if (user.weeklyMessageCount >= 30) {
+      console.log(`🚨 LIMIT REACHED: User should see premium upgrade prompts`);
+    } else if (user.weeklyMessageCount >= 28) {
+      console.log(`⚠️ NEAR LIMIT: User should see warning messages`);
+    } else {
+      console.log(`✅ UNDER LIMIT: Normal bot functionality`);
+    }
+    console.log('');
+
     // ANALYSIS
     console.log('🔍 ANALYSIS:');
     console.log('=' .repeat(50));
