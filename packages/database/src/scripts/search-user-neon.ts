@@ -80,14 +80,15 @@ async function searchUserInNeon() {
 
     if (pendingUsers.length > 0) {
       console.log(`✅ Found ${pendingUsers.length} users with pending_payment status:`);
-      pendingUsers.forEach((user, index) => {
+      for (let index = 0; index < pendingUsers.length; index++) {
+        const user = pendingUsers[index];
         console.log(`\n👤 PENDING USER ${index + 1}:`);
         console.log(`🆔 ID: ${user.id}`);
         console.log(`📱 Phone: ${user.phoneNumber}`);
         console.log(`📊 Subscription: ${user.subscriptionStatus}`);
         console.log(`📈 Message Count: ${user.weeklyMessageCount}`);
         console.log(`📅 Created: ${user.createdAt}`);
-        
+
         // Check if this is our target user
         if (user.id === targetUserId) {
           console.log('🎯 THIS IS THE TARGET USER!');
@@ -95,7 +96,7 @@ async function searchUserInNeon() {
           await sqlClient.end();
           return;
         }
-      });
+      }
     }
 
     // Method 4: Raw SQL query to double-check

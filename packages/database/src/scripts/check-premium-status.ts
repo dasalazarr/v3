@@ -64,12 +64,13 @@ async function checkPremiumStatus() {
 
     console.log('📈 MESSAGE COUNTER STATUS:');
     console.log('=' .repeat(50));
-    console.log(`📊 Weekly Message Count: ${user.weeklyMessageCount || 0}/30`);
-    console.log(`⚠️ Premium Limit: 30 messages`);
+    const messageCount = user.weeklyMessageCount || 0;
+    console.log(`📊 Weekly Message Count: ${messageCount}/40`);
+    console.log(`⚠️ Premium Limit: 40 messages`);
 
-    if (user.weeklyMessageCount >= 30) {
+    if (messageCount >= 40) {
       console.log(`🚨 LIMIT REACHED: User should see premium upgrade prompts`);
-    } else if (user.weeklyMessageCount >= 28) {
+    } else if (messageCount >= 38) {
       console.log(`⚠️ NEAR LIMIT: User should see warning messages`);
     } else {
       console.log(`✅ UNDER LIMIT: Normal bot functionality`);
