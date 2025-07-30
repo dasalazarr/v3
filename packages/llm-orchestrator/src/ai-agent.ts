@@ -60,6 +60,9 @@ export class AIAgent {
     const { userId, message, userProfile, contextOverride, systemPrompt } = request;
 
     try {
+      // CRITICAL: Check if this is onboarding confirmation
+      const isOnboardingConfirmation = userProfile ? this.isOnboardingConfirmation(message, userProfile) : false;
+
       // Store user message in chat buffer and vector memory
       await this.chatBuffer.addMessage(userId, 'user', message);
       await this.vectorMemory.storeConversation(userId, 'user', message);
@@ -82,8 +85,8 @@ export class AIAgent {
       // Get relevant vector memory context
       const memoryContext = await this.vectorMemory.retrieveContext(userId, message);
 
-      // Build system prompt (use custom if provided, otherwise build default)
-      const finalSystemPrompt = systemPrompt || this.buildSystemPrompt(userProfile, memoryContext, language);
+      // Build system prompt (use custom if provided, otherwise build default with onboarding context)
+      const finalSystemPrompt = systemPrompt || this.buildSystemPrompt(userProfile, memoryContext, language, isOnboardingConfirmation);
 
       if (systemPrompt) {
         console.log(`🎯 [AI_AGENT] Using custom system prompt for specialized flow`);
@@ -256,7 +259,8 @@ export class AIAgent {
   private buildSystemPrompt(
     userProfile?: UserProfile,
     memoryContext?: any,
-    language: 'en' | 'es' = 'en'
+    language: 'en' | 'es' = 'en',
+    isOnboardingConfirmation: boolean = false
   ): string {
     const basePrompt = language === 'es' 
       ? this.getSpanishSystemPrompt()
@@ -280,7 +284,48 @@ export class AIAgent {
       enhancedPrompt += `\n\n## ${contextTitle}:\n${memoryContext.summary}`;
     }
 
+    // CRITICAL: Add onboarding confirmation context
+    if (isOnboardingConfirmation) {
+      enhancedPrompt += `\n\n## 🚨 CRITICAL ONBOARDING CONFIRMATION DETECTED 🚨
+USER IS CONFIRMING THEIR ONBOARDING DATA RIGHT NOW!
+- The user just said something like "está correcto", "that's correct", "yes", "sí"
+- This is NOT a run report - this is onboarding confirmation
+- YOU MUST USE complete_onboarding TOOL IMMEDIATELY
+- DO NOT use log_run tool - this is not run data
+- Complete the onboarding process now`;
+    }
+
     return enhancedPrompt;
+  }
+
+  /**
+   * Detects if the user message is confirming onboarding data
+   */
+  private isOnboardingConfirmation(message: string, userProfile: UserProfile): boolean {
+    // Only check if onboarding is not completed
+    if ((userProfile as any).onboardingCompleted) {
+      return false;
+    }
+
+    const msg = message.toLowerCase().trim();
+
+    // Spanish confirmations
+    const spanishConfirmations = [
+      'está correcto', 'esta correcto', 'correcto', 'sí', 'si', 'exacto',
+      'perfecto', 'todo bien', 'todo correcto', 'así es', 'confirmo'
+    ];
+
+    // English confirmations
+    const englishConfirmations = [
+      "that's correct", 'thats correct', 'correct', 'yes', 'exactly',
+      'perfect', 'all good', 'all correct', 'that is right', 'confirm'
+    ];
+
+    const allConfirmations = [...spanishConfirmations, ...englishConfirmations];
+
+    return allConfirmations.some(confirmation =>
+      msg === confirmation || msg.includes(confirmation)
+    );
   }
 
   private getEnglishSystemPrompt(): string {
@@ -306,14 +351,19 @@ When a new user interacts:
 4. Immediately use \`generate_training_plan\` with language: 'en'
 
 ## CRITICAL CONTEXT - CORRECT TOOL USAGE
-**DURING ONBOARDING:**
-- If user confirms data ("that's correct", "yes", "correct") → USE \`complete_onboarding\`
-- DO NOT use \`log_run\` during onboarding process
-- Only use \`log_run\` when user reports a run AFTER onboarding
+**ABSOLUTE RULE - ONBOARDING CONFIRMATION:**
+- When user says "that's correct", "yes", "correct", "está correcto", "sí", "correcto" after you show them their onboarding summary → ALWAYS USE \`complete_onboarding\` TOOL
+- NEVER EVER use \`log_run\` when user is confirming their onboarding data
+- \`log_run\` is ONLY for actual run reports with distance/time data
 
-**AFTER ONBOARDING:**
-- If user mentions completed run with specific data → USE \`log_run\`
-- Examples: "I ran 3 miles in 25 minutes", "did a 10K yesterday in 50min"
+**DURING ONBOARDING PROCESS:**
+- Collecting name, age, experience, goals, injuries → NO TOOLS until confirmation
+- User confirms summary → USE \`complete_onboarding\` IMMEDIATELY
+- DO NOT interpret confirmation as run data
+
+**AFTER ONBOARDING COMPLETED:**
+- User reports actual runs with data → USE \`log_run\`
+- Examples: "I ran 3 miles in 25 minutes", "corrí 5km en 30 minutos"
 
 ## UNITS AND FORMAT
 - **ALWAYS use MILES** for English users
@@ -351,14 +401,19 @@ Cuando un usuario nuevo interactúe:
 4. Inmediatamente usa \`generate_training_plan\` con language: 'es'
 
 ## CONTEXTO CRÍTICO - USO CORRECTO DE TOOLS
-**DURANTE ONBOARDING:**
-- Si usuario confirma datos ("está correcto", "sí", "correcto") → USA \`complete_onboarding\`
-- NO uses \`log_run\` durante el proceso de onboarding
-- Solo usa \`log_run\` cuando usuario reporte una carrera DESPUÉS del onboarding
+**REGLA ABSOLUTA - CONFIRMACIÓN DE ONBOARDING:**
+- Cuando usuario dice "está correcto", "sí", "correcto", "that's correct", "yes", "correct" después de mostrarle su resumen de onboarding → SIEMPRE USA \`complete_onboarding\` TOOL
+- NUNCA JAMÁS uses \`log_run\` cuando usuario está confirmando sus datos de onboarding
+- \`log_run\` es SOLO para reportes reales de carreras con datos de distancia/tiempo
 
-**DESPUÉS DEL ONBOARDING:**
-- Si usuario menciona carrera completada con datos específicos → USA \`log_run\`
-- Ejemplos: "corrí 5km en 25 minutos", "hice 10k ayer en 50min"
+**DURANTE PROCESO DE ONBOARDING:**
+- Recopilando nombre, edad, experiencia, objetivos, lesiones → NO TOOLS hasta confirmación
+- Usuario confirma resumen → USA \`complete_onboarding\` INMEDIATAMENTE
+- NO interpretes confirmación como datos de carrera
+
+**DESPUÉS DEL ONBOARDING COMPLETADO:**
+- Usuario reporta carreras reales con datos → USA \`log_run\`
+- Ejemplos: "corrí 5km en 25 minutos", "I ran 3 miles in 25 minutes"
 
 ## UNIDADES Y FORMATO
 - **SIEMPRE usa KILÓMETROS** para usuarios en español
