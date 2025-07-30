@@ -148,11 +148,29 @@ export const handleGumroadWebhook = async (req: Request, res: Response) => {
   const productIdEs = container.resolve<string>('GUMROAD_PRODUCT_ID_ES');
 
   console.log(`🔥 [GUMROAD] Expected product IDs: EN=${productIdEn}, ES=${productIdEs}`);
+  console.log(`🔥 [GUMROAD] Received product ID: ${product_id}`);
 
+  // TODO: Fix product ID validation - Gumroad sends internal IDs, not short names
+  // Temporarily disabled to allow real payments to process
+  /*
   if (product_id !== productIdEn && product_id !== productIdEs) {
     console.error(`🔥 [GUMROAD] Product ID mismatch: received=${product_id}`);
     return res.status(400).json({ error: 'Product ID does not match' });
   }
+  */
+
+  console.log(`🔥 [GUMROAD] Product ID validation temporarily disabled - processing payment`);
+
+  // Additional validation: check if it's our product by permalink or product name
+  const isValidProduct = product_name?.includes('Andes') ||
+                        (typeof req.body.permalink === 'string' && req.body.permalink === 'andes');
+
+  if (!isValidProduct) {
+    console.error(`🔥 [GUMROAD] Invalid product: name=${product_name}, permalink=${req.body.permalink}`);
+    return res.status(400).json({ error: 'Invalid product' });
+  }
+
+  console.log(`🔥 [GUMROAD] Product validation passed: ${product_name}`);
 
   try {
     const db = container.resolve<Database>('Database');
