@@ -48,6 +48,7 @@ export const handleGumroadWebhook = async (req: Request, res: Response) => {
   const {
     sale_id,
     product_id,
+    product_name,
     email,
     custom_fields,
     url_params,
