@@ -1,53 +1,84 @@
 # Andes AI Running Coach - Documentation Index
 
-**Status**: ✅ Production Ready | **Revenue**: Active | **System**: Optimized | **Conversion**: 80%+
+**Status**: ✅ Production Ready with Critical Fixes | **Revenue**: Active | **System**: Debugged & Optimized
 
-Welcome to the comprehensive documentation for Andes AI Running Coach, a WhatsApp-based AI-powered running coach with optimized architecture and streamlined operations.
+## 📚 **Complete Documentation Suite**
 
-## 📋 **Essential Documentation**
+This directory contains comprehensive documentation for the Andes AI Running Coach system, including **critical fixes and improvements implemented during production debugging sessions**.
 
-### **🎯 System Overview**
+---
 
-#### **[System_Architecture_Overview.md](./System_Architecture_Overview.md)** ⭐ *Start Here*
-Complete system architecture, data flow, API endpoints, and key features. Essential reading for understanding the entire Andes ecosystem.
+## **🚨 CRITICAL TROUBLESHOOTING GUIDES** ⭐ **ESSENTIAL FOR DEVELOPERS**
 
-#### **[Production_Deployment_Guide.md](./Production_Deployment_Guide.md)** 🚀 *Critical*
+### **[Onboarding_Troubleshooting_Guide.md](./Onboarding_Troubleshooting_Guide.md)** 🔥 **NEW - CRITICAL**
+**Must-read for all developers** - Documents critical production issues and their solutions:
+- **Tool Selection Logic Error**: AI using `log_run` instead of `complete_onboarding`
+- **Database Constraint Violations**: Goal field mapping issues resolved
+- **Premium Subscription Activation**: Webhook processing failures fixed
+- Comprehensive debugging tools and validation steps
+- Prevention strategies and monitoring guidelines
+
+### **[Premium_Subscription_Validation_Guide.md](./Premium_Subscription_Validation_Guide.md)** 💎 **NEW - BUSINESS CRITICAL**
+**Essential for subscription management**:
+- Database status validation procedures
+- Gumroad webhook processing troubleshooting
+- Manual activation procedures for emergency support
+- Product ID configuration and validation
+
+### **[Deployment_and_Testing_Guide.md](./Deployment_and_Testing_Guide.md)** 🚀 **NEW - DEVELOPMENT ESSENTIAL**
+**Critical for development workflow**:
+- Build and deployment procedures with error handling
+- User state reset scripts for testing scenarios
+- Railway logs monitoring and pattern recognition
+- End-to-end testing procedures and emergency response
+
+---
+
+## **🏗️ System Architecture & Core Concepts**
+
+### **[System_Architecture_Overview.md](./System_Architecture_Overview.md)** ⭐ *Updated with Critical Fixes*
+- **UPDATED**: Robust onboarding system with few-shot examples
+- **UPDATED**: Database field mapping corrections (onboardingGoal vs goalRace)
+- **UPDATED**: Automatic confirmation detection system (30+ multilingual patterns)
+- Complete system architecture and component relationships
+- Technology stack and integration patterns
+
+### **[Production_Deployment_Guide.md](./Production_Deployment_Guide.md)** 🚀 *Production Setup*
 Production deployment setup, environment configuration, webhook setup, monitoring, and troubleshooting procedures.
+---
 
-#### **[System_Optimization_Plan.md](./System_Optimization_Plan.md)** 🔧 *Maintenance*
-System cleanup guide, file removal procedures, performance optimizations, and maintenance best practices.
+## **💳 Subscription & Payment Management**
 
-### **💰 Business Logic**
+### **[Subscription_Management_Guide.md](./Subscription_Management_Guide.md)** 💎 *Updated with Production Fixes*
+- **UPDATED**: Production troubleshooting section with real debugging experience
+- **UPDATED**: Manual activation scripts and procedures
+- **UPDATED**: Railway logs monitoring patterns
+- Gumroad integration and webhook handling
+- Automated subscription lifecycle management
 
-#### **[Subscription_Management_Guide.md](./Subscription_Management_Guide.md)** 💎 *Business Critical*
-Subscription lifecycle management, payment validation, and revenue protection strategies.
-
-#### **[Gumroad_Integration.md](./Gumroad_Integration.md)** 💳 *Payment Processing*
+### **[Gumroad_Integration.md](./Gumroad_Integration.md)** 💳 *Payment Processing*
 Complete Gumroad integration guide including webhook setup, payment processing, and subscription lifecycle management.
 
-### **📝 Content Strategy**
+---
 
-#### **[Build_in_Public_Content_Strategy.md](./Build_in_Public_Content_Strategy.md)** 📢 *Marketing*
-Marketing and content approach for building in public and user engagement.
-
-#### **[Andes_Project_Requirements.md](./Andes_Project_Requirements.md)** 📋 *Reference*
-Original project requirements and vision documentation.
-
-#### **[Project Requirements Document.md](./Project Requirements Document.md)** 📄 *Specifications*
-Detailed project specifications and technical requirements.
-## 🎯 **Quick Start Guide**
+## **🚀 Quick Start Guides**
 
 ### **For New Developers**
-1. **Start Here**: [`System_Architecture_Overview.md`](./System_Architecture_Overview.md) - Complete system understanding
-2. **Deploy**: [`Production_Deployment_Guide.md`](./Production_Deployment_Guide.md) - Setup and configuration
-3. **Optimize**: [`System_Optimization_Plan.md`](./System_Optimization_Plan.md) - Maintenance procedures
+1. Read **[System_Architecture_Overview.md](./System_Architecture_Overview.md)** for system understanding
+2. Review **[Onboarding_Troubleshooting_Guide.md](./Onboarding_Troubleshooting_Guide.md)** for critical issues
+3. Follow **[Deployment_and_Testing_Guide.md](./Deployment_and_Testing_Guide.md)** for development workflow
+4. Study database schema and constraints for data model understanding
 
-### **For Business Stakeholders**
-1. **System Overview**: [`System_Architecture_Overview.md`](./System_Architecture_Overview.md) - Architecture and metrics
-2. **Marketing**: [`Build_in_Public_Content_Strategy.md`](./Build_in_Public_Content_Strategy.md) - Content strategy
-3. **Revenue**: [`Subscription_Management_Guide.md`](./Subscription_Management_Guide.md) - Business operations
+### **For Troubleshooting Production Issues**
+1. **Onboarding Problems**: Use **[Onboarding_Troubleshooting_Guide.md](./Onboarding_Troubleshooting_Guide.md)**
+2. **Subscription Issues**: Use **[Premium_Subscription_Validation_Guide.md](./Premium_Subscription_Validation_Guide.md)**
+3. **Deployment Problems**: Use **[Deployment_and_Testing_Guide.md](./Deployment_and_Testing_Guide.md)**
+4. **System Architecture**: Reference **[System_Architecture_Overview.md](./System_Architecture_Overview.md)**
 
-### **For Technical Implementation**
+### **For System Maintenance**
+1. **Regular Health Checks**: Follow procedures in **[Deployment_and_Testing_Guide.md](./Deployment_and_Testing_Guide.md)**
+2. **Subscription Monitoring**: Use tools from **[Premium_Subscription_Validation_Guide.md](./Premium_Subscription_Validation_Guide.md)**
+3. **Performance Monitoring**: Reference system optimization guides
 1. **Architecture**: [`System_Architecture_Overview.md`](./System_Architecture_Overview.md) - Technical details
 2. **Deployment**: [`Production_Deployment_Guide.md`](./Production_Deployment_Guide.md) - Production setup
 3. **Payments**: [`Gumroad_Integration.md`](./Gumroad_Integration.md) - Payment processing
@@ -118,29 +149,58 @@ Detailed project specifications and technical requirements.
 - **Performance Metrics**: Response times and success rates
 
 ### **Troubleshooting Resources**
-1. **System Issues**: Check [`Production_Deployment_Guide.md`](./Production_Deployment_Guide.md)
-2. **Payment Problems**: Review [`Gumroad_Integration.md`](./Gumroad_Integration.md)
-3. **Architecture Questions**: See [`System_Architecture_Overview.md`](./System_Architecture_Overview.md)
-
-## 📋 **Documentation Maintenance**
-
-### **Last Updated**: January 2025 - System Optimization Complete
-
-### **Update Schedule**
-- **As Needed**: Critical fixes and system changes
-- **Monthly**: Performance metrics and feature updates
-- **Quarterly**: Complete architecture review
-
-### **Contributing Guidelines**
-When updating documentation:
-1. Update relevant metrics and status information
-2. Maintain consistency across all documents
-3. Include practical examples and code snippets
-4. Test all provided commands and endpoints
-5. Update the last modified date
+1. **Onboarding Issues**: **[Onboarding_Troubleshooting_Guide.md](./Onboarding_Troubleshooting_Guide.md)** 🔥 **CRITICAL**
+2. **Subscription Problems**: **[Premium_Subscription_Validation_Guide.md](./Premium_Subscription_Validation_Guide.md)** 💎 **ESSENTIAL**
+3. **Deployment Issues**: **[Deployment_and_Testing_Guide.md](./Deployment_and_Testing_Guide.md)** 🚀 **IMPORTANT**
+4. **System Architecture**: [`System_Architecture_Overview.md`](./System_Architecture_Overview.md)
 
 ---
 
-**Andes AI Running Coach** - Optimized, streamlined, and production-ready WhatsApp-based AI running coach. 🏃‍♂️✨
+## **🔧 Critical Scripts & Tools**
 
-**System Status**: ✅ Fully Operational | **Architecture**: ✅ Optimized | **Revenue Flow**: ✅ Active
+### **User Management Scripts**
+```bash
+# Check user status (most important)
+npx tsx packages/database/src/scripts/check-premium-status.ts
+
+# Reset onboarding for testing
+npx tsx packages/database/src/scripts/reset-onboarding-only.ts
+
+# Manual premium activation
+npx tsx packages/database/src/scripts/activate-premium-manual.ts
+```
+
+### **Webhook Testing Tools**
+```bash
+# Test webhook processing
+node test-webhook-with-valid-id.cjs
+
+# Validate product IDs
+node test-product-ids.cjs
+
+# Check Railway environment
+node check-railway-vars.cjs
+```
+
+---
+
+## **🆘 Emergency Procedures**
+
+### **System Down**
+1. Check Railway service status
+2. Review **[Deployment_and_Testing_Guide.md](./Deployment_and_Testing_Guide.md)** emergency procedures
+3. Monitor logs using patterns from troubleshooting guides
+
+### **User Support Issues**
+1. Use **[Premium_Subscription_Validation_Guide.md](./Premium_Subscription_Validation_Guide.md)** for subscription issues
+2. Reference **[Onboarding_Troubleshooting_Guide.md](./Onboarding_Troubleshooting_Guide.md)** for onboarding problems
+3. Execute manual fixes using provided scripts
+
+---
+
+**Last Updated**: January 30, 2025
+**Version**: 2.0 (Post-Production Debugging)
+**Status**: ✅ Production-Ready with Critical Fixes Implemented
+**Critical Issues**: ✅ Resolved and Documented
+
+**Andes AI Running Coach** - Production-ready WhatsApp-based AI running coach with comprehensive troubleshooting documentation. 🏃‍♂️✨

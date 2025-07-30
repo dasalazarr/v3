@@ -160,37 +160,51 @@ const contextualPrompt = memoryService.generateContextualPrompt(userMemory, lang
 ## 🎯 **Robust Onboarding System (January 2025)**
 
 ### **Mandatory Completion Architecture**
-Revolutionary onboarding system that ensures 100% completion rate for ALL users, regardless of subscription status.
+Revolutionary onboarding system that ensures 100% completion rate for ALL users, with critical fixes implemented for production reliability.
 
-#### **Specialized System Prompts**
-- **Expert-Designed Prompts**: Based on LLM best practices with few-shot examples
-- **Structured Q&A Flow**: Name → Age → Level → Frequency → Goal → Injuries
-- **Language Support**: Comprehensive ES/EN prompts with cultural context
+#### **Few-Shot Examples & Intent Detection**
+- **Expert-Designed Prompts**: Based on LLM best practices with specific few-shot examples
+- **Confirmation Detection**: 30+ multilingual patterns for onboarding completion
+- **Intent Classification**: Clear distinction between onboarding confirmation vs run logging
 - **Behavioral Rules**: One question at a time, handle diversions, wait for responses
 
-#### **Function Calling Validation**
+#### **Critical Tool Selection Logic (Fixed)**
 ```typescript
-// Prevents completion without ALL required data
-complete_onboarding({
-  name: string,           // Required
-  age: number,           // Required
-  experienceLevel: enum, // Required
-  weeklyFrequency: number, // Required
-  mainGoal: string,      // Required
-  injuries?: string      // Optional
-})
+// FIXED: Proper tool selection based on context
+// Example 1 - Spanish Confirmation:
+// User: "Está correcto, todo perfecto" → complete_onboarding ✅
+// Example 2 - English Confirmation:
+// User: "That's correct, looks good" → complete_onboarding ✅
+// Example 3 - Run Logging (After Onboarding):
+// User: "I ran 5km in 25 minutes" → log_run ✅
 ```
 
-#### **Granular Field Tracking**
-- **Real-time Status**: `check_onboarding_status` monitors missing fields
-- **Database Integration**: Proper type handling and constraint validation
-- **Progress Visibility**: Clear indication of completion requirements
-- **Error Prevention**: Cannot bypass without complete profile data
+#### **Database Field Mapping (Corrected)**
+```typescript
+// FIXED: Proper goal field mapping
+mapGoalToDatabase('marathon') → {
+  onboardingGoal: 'improve_time',  // Type of objective
+  goalRace: 'marathon'             // Specific race target
+}
+// Schema constraints respected:
+// onboardingGoal: ['first_race', 'improve_time', 'stay_fit']
+// goalRace: ['5k', '10k', 'half_marathon', 'marathon', 'ultra']
+```
 
-### **Enhanced User Experience**
+#### **Automatic Confirmation Detection System**
+```typescript
+isOnboardingConfirmation(message, userProfile) {
+  // Spanish patterns: 'está correcto', 'sí', 'perfecto', 'todo bien'
+  // English patterns: 'that's correct', 'yes', 'looks good', 'perfect'
+  // Context-aware: Only active when onboardingCompleted = false
+  // Logging: Detailed detection tracking for debugging
+}
+```
+
+#### **Enhanced User Experience**
 - **Guided Flow**: Clear progression through required information
 - **Smart Messaging**: Context-aware prompts based on subscription status
-- **Error Handling**: Graceful handling of incomplete or invalid responses
+- **Error Prevention**: Database constraint validation and proper field mapping
 - **Comprehensive Logging**: Detailed tracking for optimization and debugging
 
 ## 🎯 **Key Features**

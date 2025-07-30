@@ -355,3 +355,76 @@ If subscription issues occur:
 4. Validate user subscription_expires_at dates
 
 This system is critical for business sustainability and must be implemented immediately.
+
+---
+
+## 🔧 **TROUBLESHOOTING (Production Experience)**
+
+### Critical Issues Resolved
+
+#### **Issue 1: Product ID Validation Failure**
+**Problem**: Webhook returns "Product ID does not match"
+**Root Cause**: Missing or incorrect environment variables
+**Solution**:
+```bash
+# Verify Railway environment variables
+GUMROAD_PRODUCT_ID_EN=andes
+GUMROAD_PRODUCT_ID_ES=andeslatam
+
+# Test product ID validation
+node test-product-ids.cjs
+```
+
+#### **Issue 2: Creator Purchase Handling**
+**Problem**: Webhooks may not fire for product creator purchases
+**Solution**: Creator purchases are treated as normal customer purchases. If webhook fails, use manual activation:
+```bash
+npx tsx packages/database/src/scripts/activate-premium-manual.ts
+```
+
+#### **Issue 3: User Identification Issues**
+**Problem**: Phone number format inconsistencies
+**Solution**: Ensure consistent format in Gumroad custom_fields and database
+
+### Debugging Tools & Scripts
+```bash
+# Comprehensive user status check
+npx tsx packages/database/src/scripts/check-premium-status.ts
+
+# Manual premium activation
+npx tsx packages/database/src/scripts/activate-premium-manual.ts
+
+# Test webhook processing
+node test-webhook-with-valid-id.cjs
+
+# Validate product ID configuration
+node test-product-ids.cjs
+
+# Check Railway environment variables
+node check-railway-vars.cjs
+```
+
+### Database Queries
+```sql
+-- Check user subscription status
+SELECT subscription_status, premium_activated_at, phone_number
+FROM users WHERE phone_number = '593984074389';
+
+-- View recent webhook processing
+SELECT * FROM payments ORDER BY created_at DESC LIMIT 10;
+
+-- Check for constraint violations
+SELECT * FROM users WHERE onboarding_goal NOT IN ('first_race', 'improve_time', 'stay_fit');
+```
+
+### Railway Logs Monitoring
+```bash
+# Filter webhook processing
+grep "GUMROAD" railway-logs.txt
+
+# Check for errors
+grep "ERROR\|error" railway-logs.txt
+
+# Monitor premium activations
+grep "Successfully upgraded user to premium" railway-logs.txt
+```
