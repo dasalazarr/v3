@@ -63,6 +63,9 @@ export function createOnboardingCompleterTool(): ToolFunction {
 
       try {
 
+        // Map mainGoal to correct database fields
+        const goalMapping = mapGoalToDatabase(mainGoal);
+
         // Update user with onboarding data
         const [updatedUser] = await database.query
           .update(users)
@@ -71,7 +74,11 @@ export function createOnboardingCompleterTool(): ToolFunction {
             age: age,
             experienceLevel: experienceLevel as any,
             weeklyMileage: weeklyFrequency.toString(),
-            onboardingGoal: mainGoal as any,
+
+            // Map goals correctly
+            onboardingGoal: goalMapping.onboardingGoal as any,
+            goalRace: goalMapping.goalRace as any,
+
             injuryHistory: injuries || null,
 
             // Mark onboarding as complete
@@ -276,4 +283,43 @@ function extractTargetRace(mainGoal: string): '5k' | '10k' | 'half_marathon' | '
 
   // Default to 10k for general goals
   return '10k';
+}
+
+/**
+ * Maps user's main goal to correct database fields
+ */
+function mapGoalToDatabase(mainGoal: string): { onboardingGoal: string | null, goalRace: string | null } {
+  const goal = mainGoal.toLowerCase();
+
+  // Race-specific goals go to goalRace
+  if (goal.includes('5k') || goal === '5k') {
+    return { onboardingGoal: 'first_race', goalRace: '5k' };
+  }
+  if (goal.includes('10k') || goal === '10k') {
+    return { onboardingGoal: 'improve_time', goalRace: '10k' };
+  }
+  if (goal.includes('medio') || goal.includes('half') || goal.includes('21k')) {
+    return { onboardingGoal: 'improve_time', goalRace: 'half_marathon' };
+  }
+  if (goal.includes('maratón') || goal.includes('marathon') || goal === 'maraton' || goal.includes('42k')) {
+    return { onboardingGoal: 'improve_time', goalRace: 'marathon' };
+  }
+  if (goal.includes('ultra')) {
+    return { onboardingGoal: 'improve_time', goalRace: 'ultra' };
+  }
+
+  // General fitness goals go to onboardingGoal only
+  if (goal.includes('peso') || goal.includes('weight') || goal.includes('fit')) {
+    return { onboardingGoal: 'stay_fit', goalRace: null };
+  }
+  if (goal.includes('tiempo') || goal.includes('time') || goal.includes('rápido') || goal.includes('faster')) {
+    return { onboardingGoal: 'improve_time', goalRace: null };
+  }
+  if (goal.includes('primera') || goal.includes('first') || goal.includes('empezar') || goal.includes('start')) {
+    return { onboardingGoal: 'first_race', goalRace: null };
+  }
+
+  // Default mapping for unknown goals
+  console.log(`⚠️ [ONBOARDING_COMPLETER] Unknown goal: ${mainGoal}, defaulting to improve_time`);
+  return { onboardingGoal: 'improve_time', goalRace: null };
 }
