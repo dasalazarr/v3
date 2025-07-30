@@ -300,6 +300,7 @@ USER IS CONFIRMING THEIR ONBOARDING DATA RIGHT NOW!
 
   /**
    * Detects if the user message is confirming onboarding data
+   * Implements robust intent detection as per system architecture
    */
   private isOnboardingConfirmation(message: string, userProfile: UserProfile): boolean {
     // Only check if onboarding is not completed
@@ -309,23 +310,59 @@ USER IS CONFIRMING THEIR ONBOARDING DATA RIGHT NOW!
 
     const msg = message.toLowerCase().trim();
 
-    // Spanish confirmations
-    const spanishConfirmations = [
+    // COMPREHENSIVE CONFIRMATION PATTERNS
+
+    // Spanish confirmations (exact matches)
+    const spanishExact = [
       'está correcto', 'esta correcto', 'correcto', 'sí', 'si', 'exacto',
-      'perfecto', 'todo bien', 'todo correcto', 'así es', 'confirmo'
+      'perfecto', 'todo bien', 'todo correcto', 'así es', 'confirmo',
+      'ok', 'vale', 'bien', 'de acuerdo', 'conforme'
     ];
 
-    // English confirmations
-    const englishConfirmations = [
+    // English confirmations (exact matches)
+    const englishExact = [
       "that's correct", 'thats correct', 'correct', 'yes', 'exactly',
-      'perfect', 'all good', 'all correct', 'that is right', 'confirm'
+      'perfect', 'all good', 'all correct', 'that is right', 'confirm',
+      'ok', 'okay', 'right', 'agreed', 'looks good'
     ];
 
-    const allConfirmations = [...spanishConfirmations, ...englishConfirmations];
+    // Spanish confirmation patterns (partial matches)
+    const spanishPatterns = [
+      'todo está', 'todo esta', 'está bien', 'esta bien', 'me parece bien',
+      'así está', 'así esta', 'todo perfecto', 'está perfecto', 'esta perfecto'
+    ];
 
-    return allConfirmations.some(confirmation =>
-      msg === confirmation || msg.includes(confirmation)
-    );
+    // English confirmation patterns (partial matches)
+    const englishPatterns = [
+      'looks correct', 'seems right', 'that looks', 'everything is',
+      'all looks', 'that seems', 'everything looks'
+    ];
+
+    // Check exact matches first
+    const allExact = [...spanishExact, ...englishExact];
+    if (allExact.some(confirmation => msg === confirmation)) {
+      console.log(`🎯 [ONBOARDING_CONFIRMATION] Exact match detected: "${msg}"`);
+      return true;
+    }
+
+    // Check pattern matches
+    const allPatterns = [...spanishPatterns, ...englishPatterns];
+    if (allPatterns.some(pattern => msg.includes(pattern))) {
+      console.log(`🎯 [ONBOARDING_CONFIRMATION] Pattern match detected: "${msg}"`);
+      return true;
+    }
+
+    // Additional context-based detection
+    // If message is very short and positive, likely confirmation
+    if (msg.length <= 10 && (
+      msg.includes('sí') || msg.includes('si') || msg.includes('yes') ||
+      msg.includes('ok') || msg.includes('bien') || msg.includes('good')
+    )) {
+      console.log(`🎯 [ONBOARDING_CONFIRMATION] Short positive detected: "${msg}"`);
+      return true;
+    }
+
+    return false;
   }
 
   private getEnglishSystemPrompt(): string {
@@ -350,20 +387,37 @@ When a new user interacts:
 3. Once complete, use \`complete_onboarding\`
 4. Immediately use \`generate_training_plan\` with language: 'en'
 
-## CRITICAL CONTEXT - CORRECT TOOL USAGE
-**ABSOLUTE RULE - ONBOARDING CONFIRMATION:**
-- When user says "that's correct", "yes", "correct", "está correcto", "sí", "correcto" after you show them their onboarding summary → ALWAYS USE \`complete_onboarding\` TOOL
-- NEVER EVER use \`log_run\` when user is confirming their onboarding data
-- \`log_run\` is ONLY for actual run reports with distance/time data
+## CRITICAL CONTEXT - CORRECT TOOL USAGE WITH FEW-SHOT EXAMPLES
+
+**ABSOLUTE RULE - ONBOARDING CONFIRMATION (Few-Shot Examples):**
+
+**Example 1 - English Confirmation:**
+- User: "That's correct, everything looks good"
+- Context: User confirming onboarding summary
+- Action: USE complete_onboarding TOOL
+- Never: log_run
+
+**Example 2 - Spanish Confirmation:**
+- User: "Está correcto, todo bien"
+- Context: User confirming onboarding summary
+- Action: USE complete_onboarding TOOL
+- Never: log_run
+
+**Example 3 - Simple Confirmation:**
+- User: "Yes" / "Sí"
+- Context: After showing onboarding summary
+- Action: USE complete_onboarding TOOL
+- Never: log_run
 
 **DURING ONBOARDING PROCESS:**
-- Collecting name, age, experience, goals, injuries → NO TOOLS until confirmation
+- Collecting data → NO TOOLS until final confirmation
 - User confirms summary → USE \`complete_onboarding\` IMMEDIATELY
-- DO NOT interpret confirmation as run data
+- NEVER interpret confirmation as run data
 
-**AFTER ONBOARDING COMPLETED:**
-- User reports actual runs with data → USE \`log_run\`
-- Examples: "I ran 3 miles in 25 minutes", "corrí 5km en 30 minutos"
+**AFTER ONBOARDING COMPLETED (Few-Shot Examples):**
+- User: "I ran 5km in 25 minutes today"
+- Context: Reporting actual run with data
+- Action: USE log_run TOOL
 
 ## UNITS AND FORMAT
 - **ALWAYS use MILES** for English users
@@ -400,20 +454,37 @@ Cuando un usuario nuevo interactúe:
 3. Una vez completo, usa \`complete_onboarding\`
 4. Inmediatamente usa \`generate_training_plan\` con language: 'es'
 
-## CONTEXTO CRÍTICO - USO CORRECTO DE TOOLS
-**REGLA ABSOLUTA - CONFIRMACIÓN DE ONBOARDING:**
-- Cuando usuario dice "está correcto", "sí", "correcto", "that's correct", "yes", "correct" después de mostrarle su resumen de onboarding → SIEMPRE USA \`complete_onboarding\` TOOL
-- NUNCA JAMÁS uses \`log_run\` cuando usuario está confirmando sus datos de onboarding
-- \`log_run\` es SOLO para reportes reales de carreras con datos de distancia/tiempo
+## CONTEXTO CRÍTICO - USO CORRECTO DE TOOLS CON EJEMPLOS ESPECÍFICOS
+
+**REGLA ABSOLUTA - CONFIRMACIÓN DE ONBOARDING (Ejemplos Few-Shot):**
+
+**Ejemplo 1 - Confirmación en Español:**
+- Usuario: "Está correcto, todo perfecto"
+- Contexto: Usuario confirmando resumen de onboarding
+- Acción: USA complete_onboarding TOOL
+- Nunca: log_run
+
+**Ejemplo 2 - Confirmación en Inglés:**
+- Usuario: "That's correct, looks good"
+- Contexto: Usuario confirmando resumen de onboarding
+- Acción: USA complete_onboarding TOOL
+- Nunca: log_run
+
+**Ejemplo 3 - Confirmación Simple:**
+- Usuario: "Sí" / "Yes"
+- Contexto: Después de mostrar resumen de onboarding
+- Acción: USA complete_onboarding TOOL
+- Nunca: log_run
 
 **DURANTE PROCESO DE ONBOARDING:**
-- Recopilando nombre, edad, experiencia, objetivos, lesiones → NO TOOLS hasta confirmación
-- Usuario confirma resumen → USA \`complete_onboarding\` INMEDIATAMENTE
-- NO interpretes confirmación como datos de carrera
+- Recopilando datos → NO TOOLS hasta confirmación final
+- Usuario confirma resumen → USA complete_onboarding INMEDIATAMENTE
+- NUNCA interpretes confirmación como datos de carrera
 
-**DESPUÉS DEL ONBOARDING COMPLETADO:**
-- Usuario reporta carreras reales con datos → USA \`log_run\`
-- Ejemplos: "corrí 5km en 25 minutos", "I ran 3 miles in 25 minutes"
+**DESPUÉS DEL ONBOARDING COMPLETADO (Ejemplos Few-Shot):**
+- Usuario: "Corrí 5km en 25 minutos hoy"
+- Contexto: Reportando carrera real con datos
+- Acción: USA log_run TOOL
 
 ## UNIDADES Y FORMATO
 - **SIEMPRE usa KILÓMETROS** para usuarios en español
