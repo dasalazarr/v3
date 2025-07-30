@@ -29,12 +29,24 @@ export class ToolRegistry {
     }
 
     try {
-      // Validate parameters
-      const validatedParams = tool.parameters.parse(toolCall.parameters);
-      
+      console.log(`🔧 [TOOL_REGISTRY] Executing tool: ${toolCall.name}`);
+      console.log(`🔧 [TOOL_REGISTRY] Raw parameters:`, toolCall.parameters);
+
+      // Extract userId before validation (it's not in schema)
+      const userId = toolCall.parameters.userId;
+
+      // Validate parameters (excluding userId)
+      const { userId: _, ...paramsForValidation } = toolCall.parameters;
+      const validatedParams = tool.parameters.parse(paramsForValidation);
+
+      // Add userId back after validation
+      const finalParams = { ...validatedParams, userId };
+
+      console.log(`🔧 [TOOL_REGISTRY] Final parameters with userId:`, finalParams);
+
       // Execute tool
-      const result = await tool.execute(validatedParams);
-      
+      const result = await tool.execute(finalParams);
+
       console.log(`✅ Executed tool: ${toolCall.name}`);
       return result;
     } catch (error) {
