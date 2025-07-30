@@ -36,12 +36,35 @@ This directory contains comprehensive documentation for the Andes AI Running Coa
 
 ## **🏗️ System Architecture & Core Concepts**
 
-### **[System_Architecture_Overview.md](./System_Architecture_Overview.md)** ⭐ *Updated with Critical Fixes*
+### **[System_Architecture_Overview.md](./System_Architecture_Overview.md)** ⭐ *Updated with Hybrid AI*
+- **UPDATED**: Hybrid AI architecture with DeepSeek + GPT-4o Mini orchestration
+- **UPDATED**: Intelligent intent classification using natural language understanding
+- **UPDATED**: Cost-optimized model routing (75% DeepSeek, 25% GPT-4o Mini)
 - **UPDATED**: Robust onboarding system with few-shot examples
 - **UPDATED**: Database field mapping corrections (onboardingGoal vs goalRace)
-- **UPDATED**: Automatic confirmation detection system (30+ multilingual patterns)
 - Complete system architecture and component relationships
 - Technology stack and integration patterns
+
+### **[Hybrid_AI_Architecture_Guide.md](./Hybrid_AI_Architecture_Guide.md)** 🧠 *NEW - AI SYSTEM CORE*
+**Essential for understanding the AI orchestration**:
+- HybridAIAgent implementation and model selection logic
+- DeepSeek vs GPT-4o Mini routing strategies and optimization
+- Cost efficiency targets and performance monitoring
+- Specialized prompts and error handling mechanisms
+
+### **[Intelligent_Intent_Classifier_Guide.md](./Intelligent_Intent_Classifier_Guide.md)** 🎯 *NEW - NATURAL LANGUAGE*
+**Critical for intent detection accuracy**:
+- Evolution from keyword-based to AI-powered classification
+- DeepSeek-powered natural language understanding
+- Intent hierarchy and model routing decisions
+- Debugging and performance optimization
+
+### **[Tool_Execution_Guide.md](./Tool_Execution_Guide.md)** 🔧 *NEW - TOOL SYSTEM*
+**Comprehensive tool execution framework**:
+- Tool Registry system and parameter handling
+- Critical tools: message counter, onboarding, training plans
+- GPT-4o Mini vs DeepSeek tool calling reliability
+- Error handling and debugging procedures
 
 ### **[Production_Deployment_Guide.md](./Production_Deployment_Guide.md)** 🚀 *Production Setup*
 Production deployment setup, environment configuration, webhook setup, monitoring, and troubleshooting procedures.
@@ -153,6 +176,20 @@ Complete Gumroad integration guide including webhook setup, payment processing, 
 2. **Subscription Problems**: **[Premium_Subscription_Validation_Guide.md](./Premium_Subscription_Validation_Guide.md)** 💎 **ESSENTIAL**
 3. **Deployment Issues**: **[Deployment_and_Testing_Guide.md](./Deployment_and_Testing_Guide.md)** 🚀 **IMPORTANT**
 4. **System Architecture**: [`System_Architecture_Overview.md`](./System_Architecture_Overview.md)
+
+---
+
+## **🚨 Troubleshooting & Debugging**
+
+### **[Troubleshooting_Guide.md](./Troubleshooting_Guide.md)** 🔍 *NEW - PROBLEM SOLVING*
+**Comprehensive issue resolution guide**:
+- Message counter tool not executing (placeholder text issue)
+- Tool calling errors and DeepSeek vs GPT-4o Mini issues
+- User not found in database (local vs production discrepancies)
+- Premium status not updated (webhook processing delays)
+- Build and deployment failures with solutions
+- Diagnostic scripts and monitoring procedures
+- Emergency fixes and rollback procedures
 
 ---
 

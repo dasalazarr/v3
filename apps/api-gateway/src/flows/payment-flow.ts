@@ -42,6 +42,7 @@ export const handleGumroadWebhook = async (req: Request, res: Response) => {
   console.log('🔥 [GUMROAD] Webhook received at:', new Date().toISOString());
   console.log('🔥 [GUMROAD] Headers:', JSON.stringify(req.headers, null, 2));
   console.log('🔥 [GUMROAD] Body:', JSON.stringify(req.body, null, 2));
+  console.log('🔥 [GUMROAD] Body keys:', Object.keys(req.body));
 
   // Gumroad sends x-www-form-urlencoded data
   const {
@@ -49,6 +50,7 @@ export const handleGumroadWebhook = async (req: Request, res: Response) => {
     product_id,
     email,
     custom_fields,
+    url_params,
     full_name,
     price,
     recurrence
@@ -65,7 +67,68 @@ export const handleGumroadWebhook = async (req: Request, res: Response) => {
     parsedCustomFields = custom_fields;
   }
 
-  const phoneNumber = parsedCustomFields?.phone_number;
+  // Robust phone number extraction from multiple possible locations
+  let phoneNumber = parsedCustomFields?.phone_number;
+
+  // Function to extract phone number from various possible formats
+  const extractPhoneNumber = (data: any): string | undefined => {
+    if (!data) return undefined;
+
+    // Direct access patterns
+    const patterns = [
+      'phone_number',
+      'custom_fields[phone_number]',
+      'custom_fields%5Bphone_number%5D',
+      'custom_fields.phone_number'
+    ];
+
+    for (const pattern of patterns) {
+      if (data[pattern]) {
+        console.log(`🔥 [GUMROAD] Found phone number with pattern "${pattern}":`, data[pattern]);
+        return data[pattern];
+      }
+    }
+
+    // Check nested objects
+    if (typeof data === 'object') {
+      for (const [key, value] of Object.entries(data)) {
+        if (key.includes('phone_number') || key.includes('phone')) {
+          console.log(`🔥 [GUMROAD] Found phone number in key "${key}":`, value);
+          return value as string;
+        }
+      }
+    }
+
+    return undefined;
+  };
+
+  // Try extracting from custom_fields first
+  if (!phoneNumber && parsedCustomFields) {
+    phoneNumber = extractPhoneNumber(parsedCustomFields);
+  }
+
+  // Try extracting from url_params
+  if (!phoneNumber && url_params) {
+    // Parse url_params if it's a JSON string
+    let parsedUrlParams;
+    try {
+      parsedUrlParams = typeof url_params === 'string' ? JSON.parse(url_params) : url_params;
+    } catch (error) {
+      console.log('🔥 [GUMROAD] URL params not JSON, using as-is:', url_params);
+      parsedUrlParams = url_params;
+    }
+
+    phoneNumber = extractPhoneNumber(parsedUrlParams) || extractPhoneNumber(url_params);
+
+    console.log('🔥 [GUMROAD] URL params structure:', JSON.stringify(url_params, null, 2));
+    console.log('🔥 [GUMROAD] Parsed URL params structure:', JSON.stringify(parsedUrlParams, null, 2));
+  }
+
+  // Try extracting from main request body
+  if (!phoneNumber) {
+    phoneNumber = extractPhoneNumber(req.body);
+    console.log('🔥 [GUMROAD] Checking main request body for phone number');
+  }
 
   console.log(`🔥 [GUMROAD] Extracted phone number: ${phoneNumber}`);
   console.log(`🔥 [GUMROAD] Sale ID: ${sale_id}`);
@@ -76,6 +139,8 @@ export const handleGumroadWebhook = async (req: Request, res: Response) => {
   if (!phoneNumber) {
     console.error('🔥 [GUMROAD] Missing phone_number in custom_fields');
     console.error('🔥 [GUMROAD] Available custom_fields:', parsedCustomFields);
+    console.error('🔥 [GUMROAD] Available url_params:', url_params);
+    console.error('🔥 [GUMROAD] Checking url_params keys:', url_params ? Object.keys(url_params) : 'none');
     return res.status(400).json({ error: 'Missing phone_number in custom_fields' });
   }
 

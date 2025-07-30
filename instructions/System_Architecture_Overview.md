@@ -32,11 +32,14 @@
 - **Confirmation**: WhatsApp message in user's language
 
 #### **4. Hybrid AI Architecture** 🤖
-- **Intent Classifier**: Intelligent routing between AI models
+- **HybridAIAgent**: Orchestrates between DeepSeek and GPT-4o Mini
+- **Intelligent Intent Classifier**: DeepSeek-powered natural language understanding
 - **DeepSeek-V3**: Cost-efficient for routine tasks (75% of requests)
-- **GPT-4o Mini**: Premium experience for complex interactions
+- **GPT-4o Mini**: Premium experience for complex interactions (25% of requests)
 - **Smart Routing**: Based on intent, user status, and complexity
 - **Unified Memory**: Consistent context across model switches
+- **Tool Registry**: Shared tool execution across both models
+- **Automatic Fallbacks**: Error recovery and cost optimization
 
 #### **5. Payment Processing**
 - **Gumroad Webhook**: `POST /webhook/gumroad`
@@ -118,22 +121,53 @@ Revolutionary multiagent approach that matches the right AI model to each specif
   - Better handling of ambiguous requests
 - **Handles**: ~25% of interactions requiring premium intelligence
 
-### **Intent Classification Engine**
+### **🧠 Intelligent Intent Classification Engine**
+
+#### **Evolution: Keyword-Based → AI-Powered**
+The system now uses **DeepSeek-powered natural language understanding** instead of rigid keyword matching:
+
+**Previous (Limited)**:
 ```typescript
-// Real-world routing examples:
-"today i ran 6.4 km in 34 minutes" → DeepSeek (run_logging)
-"I'm feeling discouraged about my progress" → GPT-4o Mini (emotional_support)
-"Can you create a marathon training plan?" → GPT-4o Mini (complex_coaching)
-"I want to upgrade to premium" → DeepSeek (premium_upgrade)
+// Failed on variations like "cuantos mensajes me quedan"
+const keywords = ['cuántos mensajes', 'contador'];
+return keywords.some(keyword => message.includes(keyword));
 ```
 
-### **Smart Routing Decision Tree**
-1. **Premium Upgrade Intent** → DeepSeek (efficient transaction processing)
-2. **Mandatory Onboarding** → DeepSeek (free) / GPT-4o Mini (premium users)
-3. **Run Logging & Data** → DeepSeek (structured data extraction)
-4. **Emotional Support** → GPT-4o Mini (empathy and motivation)
-5. **Complex Coaching** → GPT-4o Mini (advanced reasoning)
-6. **General Chat** → DeepSeek (free) / GPT-4o Mini (premium)
+**Current (Intelligent)**:
+```typescript
+// Understands natural language variations and context
+const classification = await deepseek.chat.completions.create({
+  messages: [{ role: 'system', content: intelligentClassificationPrompt }],
+  response_format: { type: 'json_object' }
+});
+```
+
+#### **Real-World Classification Examples**:
+```typescript
+// Natural language understanding in action:
+"cuantos mensajes me quedan?" → message_counter_check (GPT-4o Mini)
+"today i ran 6.4 km in 34 minutes" → run_logging (DeepSeek)
+"I'm feeling discouraged about my progress" → emotional_support (GPT-4o Mini)
+"Can you create a marathon training plan?" → complex_coaching (GPT-4o Mini)
+"I want to upgrade to premium" → premium_upgrade (DeepSeek)
+"soy premium?" → message_counter_check (GPT-4o Mini)
+"verificar mi estado" → message_counter_check (GPT-4o Mini)
+```
+
+### **🎯 Smart Routing Decision Tree (Priority Order)**
+1. **message_counter_check** → **GPT-4o Mini** (reliability critical for user-facing data)
+2. **onboarding_required** → **GPT-4o Mini** (complex multi-step flow with tool calling)
+3. **premium_upgrade** → **DeepSeek** (efficient transaction processing)
+4. **complex_coaching** → **GPT-4o Mini** (advanced reasoning and personalization)
+5. **emotional_support** → **GPT-4o Mini** (empathy and motivational intelligence)
+6. **run_logging** → **DeepSeek** (structured data extraction and validation)
+7. **general_conversation** → **DeepSeek** (cost-efficient for routine interactions)
+
+#### **Special Routing Rules**:
+- **Premium Users**: Always get GPT-4o Mini for enhanced experience
+- **Critical Tools**: Message counter, onboarding → Force GPT-4o Mini
+- **Cost Optimization**: 75% DeepSeek, 25% GPT-4o Mini target ratio
+- **Fallback Strategy**: DeepSeek on GPT-4o Mini errors
 
 ### **Persistent Contextual Memory System**
 Revolutionary memory architecture that maintains user context across all interactions, creating a truly personalized coaching experience.

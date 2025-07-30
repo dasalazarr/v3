@@ -461,8 +461,11 @@ async function main() {
     const app = express();
     app.use(cors()); // Enable CORS for all routes
 
-    // Use express.urlencoded for Gumroad webhooks (they send x-www-form-urlencoded)
+    // Use both express.urlencoded and express.json for Gumroad webhooks (they might send either)
     app.use('/webhook/gumroad', express.urlencoded({ extended: true }));
+    app.use('/webhook/gumroad', express.json());
+    app.use('/debug/gumroad', express.urlencoded({ extended: true }));
+    app.use('/debug/gumroad', express.json());
     app.use(express.json());
 
     // Simplified Onboarding Endpoints (New)
@@ -492,6 +495,15 @@ async function main() {
     // Legacy Web Onboarding Endpoints (Backward Compatibility)
     app.post('/onboarding/premium', handleLegacyWebOnboardingPremium);
     app.post('/onboarding/free', handleLegacyWebOnboardingFree);
+
+    // Debug endpoint to see raw webhook data
+    app.post('/debug/gumroad', (req, res) => {
+      console.log('🔍 [DEBUG] Raw webhook data received:');
+      console.log('🔍 [DEBUG] Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('🔍 [DEBUG] Body:', JSON.stringify(req.body, null, 2));
+      console.log('🔍 [DEBUG] Body keys:', Object.keys(req.body));
+      res.json({ received: true, body: req.body });
+    });
 
     // Gumroad Webhook
     app.post('/webhook/gumroad', handleGumroadWebhook);
