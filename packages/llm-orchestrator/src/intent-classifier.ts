@@ -188,10 +188,12 @@ export class IntentClassifier {
     ];
 
     const spanishKeywords = [
-      'contador de mensajes', 'cuántos mensajes', 'mensajes restantes', 'mensajes que quedan',
+      'contador de mensajes', 'cuántos mensajes', 'cuantos mensajes', 'mensajes restantes',
+      'mensajes que quedan', 'mensajes me quedan', 'me quedan', 'quedan mensajes',
       'estado premium', 'estado de suscripción', 'soy premium', 'usuario premium',
       'suscripción', 'mi estado', 'estado de cuenta', 'cuál es mi contador',
-      'verificar mensajes', 'mostrar contador', 'revisar estado'
+      'verificar mensajes', 'mostrar contador', 'revisar estado', 'premium status',
+      'subscription status', 'message count', 'message counter'
     ];
 
     const keywords = isSpanish ? spanishKeywords : englishKeywords;

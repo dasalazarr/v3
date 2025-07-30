@@ -3,6 +3,7 @@ import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
 import { UserProfile, ApiResponse } from '@running-coach/shared';
 import { ToolRegistry } from './tool-registry.js';
 import { IntentClassifier, IntentClassification } from './intent-classifier.js';
+import { IntelligentIntentClassifier } from './intelligent-intent-classifier.js';
 import { AIAgent, AgentResponse, ProcessMessageRequest } from './ai-agent.js';
 import { getOnboardingSystemPrompt } from './onboarding-prompts.js';
 
@@ -34,6 +35,7 @@ export class HybridAIAgent {
   private deepseekAgent: AIAgent;
   private openaiAgent: AIAgent;
   private intentClassifier: IntentClassifier;
+  private intelligentClassifier: IntelligentIntentClassifier;
   private chatBuffer: ChatBuffer;
   private vectorMemory: VectorMemory;
   private toolRegistry: ToolRegistry;
@@ -48,6 +50,13 @@ export class HybridAIAgent {
     this.vectorMemory = vectorMemory;
     this.toolRegistry = toolRegistry;
     this.intentClassifier = new IntentClassifier();
+
+    // Initialize intelligent classifier with DeepSeek config
+    this.intelligentClassifier = new IntelligentIntentClassifier({
+      apiKey: config.deepseek.apiKey,
+      baseURL: config.deepseek.baseURL,
+      model: config.deepseek.model
+    });
 
     // Initialize DeepSeek agent
     this.deepseekAgent = new AIAgent(
@@ -83,8 +92,8 @@ export class HybridAIAgent {
     const { userId, message, userProfile } = request;
 
     try {
-      // Classify intent and determine optimal model
-      const classification = this.intentClassifier.classify(message, {
+      // Use intelligent classifier with DeepSeek for better accuracy
+      const classification = await this.intelligentClassifier.classify(message, {
         subscriptionStatus: (userProfile as any)?.subscriptionStatus,
         onboardingCompleted: (userProfile as any)?.onboardingCompleted,
         preferredLanguage: (userProfile as any)?.preferredLanguage
