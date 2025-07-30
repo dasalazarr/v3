@@ -89,10 +89,10 @@ REDIS_HOST=redis_host
 QDRANT_URL=qdrant_url
 ```
 
-## 🤖 **Hybrid AI Architecture (January 2025)**
+## 🤖 **Multiagent AI Architecture (January 2025)**
 
-### **Intelligent Model Routing System**
-Revolutionary approach that matches the right AI model to each specific task, achieving 75% cost reduction while maintaining premium experience quality.
+### **Intelligent Model Routing System with Memory**
+Revolutionary multiagent approach that matches the right AI model to each specific task while maintaining persistent contextual memory, achieving 75% cost reduction while delivering personalized coaching experiences.
 
 #### **DeepSeek-V3 (Cost-Efficient Workhorse)**
 - **Primary Use Cases**:
@@ -134,6 +134,28 @@ Revolutionary approach that matches the right AI model to each specific task, ac
 4. **Emotional Support** → GPT-4o Mini (empathy and motivation)
 5. **Complex Coaching** → GPT-4o Mini (advanced reasoning)
 6. **General Chat** → DeepSeek (free) / GPT-4o Mini (premium)
+
+### **Persistent Contextual Memory System**
+Revolutionary memory architecture that maintains user context across all interactions, creating a truly personalized coaching experience.
+
+#### **Memory Components**
+- **Profile Data**: Name, age, experience level, goals, injuries, baseline performance
+- **Conversation Context**: Recent topics, current flow state, interaction history
+- **Training State**: Current week, completed workouts, progress tracking, upcoming goals
+- **Performance History**: Run logs, VDOT calculations, improvement trends
+
+#### **Contextual Prompt Generation**
+```typescript
+// Automatic context injection for every interaction
+const contextualPrompt = memoryService.generateContextualPrompt(userMemory, language);
+// Result: "## USER CONTEXT: Name: Diego, 29 years old, intermediate level, Goal: marathon, Completed workouts: 5"
+```
+
+#### **Cross-Session Continuity**
+- **Seamless Experience**: No need to repeat information between sessions
+- **Progress Awareness**: AI remembers previous conversations and progress
+- **Personalized Responses**: Every interaction considers full user history
+- **Goal Tracking**: Continuous monitoring of long-term objectives
 
 ## 🎯 **Robust Onboarding System (January 2025)**
 
