@@ -122,7 +122,7 @@ export class HybridAIAgent {
       // Process message with selected agent
       let response: AgentResponse;
 
-      // Use specialized onboarding prompt if needed
+      // Use specialized prompts if needed
       if (classification.intent === 'onboarding_required') {
         const userLanguage = (userProfile as any)?.preferredLanguage || 'es';
         const onboardingPrompt = getOnboardingSystemPrompt(userLanguage as 'es' | 'en');
@@ -136,6 +136,19 @@ export class HybridAIAgent {
         };
 
         response = await selectedAgent.processMessage(onboardingRequest);
+      } else if (classification.intent === 'message_counter_check') {
+        const userLanguage = (userProfile as any)?.preferredLanguage || 'es';
+        const messageCounterPrompt = this.getMessageCounterPrompt(userLanguage as 'es' | 'en');
+
+        console.log(`🎯 [HYBRID_AI] Using specialized message counter prompt for ${userLanguage}`);
+
+        // Create modified request with message counter system prompt
+        const messageCounterRequest = {
+          ...request,
+          systemPrompt: messageCounterPrompt
+        };
+
+        response = await selectedAgent.processMessage(messageCounterRequest);
       } else {
         response = await selectedAgent.processMessage(request);
       }
@@ -206,12 +219,12 @@ export class HybridAIAgent {
    * Force a specific model for testing purposes
    */
   public async processMessageWithModel(
-    request: ProcessMessageRequest, 
+    request: ProcessMessageRequest,
     forceModel: 'deepseek' | 'gpt4o-mini'
   ): Promise<HybridAgentResponse> {
     const agent = forceModel === 'deepseek' ? this.deepseekAgent : this.openaiAgent;
     const response = await agent.processMessage(request);
-    
+
     return {
       ...response,
       modelUsed: forceModel,
@@ -225,5 +238,54 @@ export class HybridAIAgent {
         requiresPremium: false
       }
     };
+  }
+
+  /**
+   * Get specialized prompt for message counter checks
+   */
+  private getMessageCounterPrompt(language: 'es' | 'en'): string {
+    if (language === 'es') {
+      return `Eres un asistente especializado en verificar el estado de mensajes y suscripciones premium de usuarios.
+
+## TAREA PRINCIPAL
+Cuando un usuario pregunta sobre su contador de mensajes, estado premium, o suscripción, SIEMPRE debes usar la herramienta check_message_counter.
+
+## HERRAMIENTAS DISPONIBLES
+- check_message_counter: OBLIGATORIO usar cuando preguntan sobre mensajes, contador, premium, suscripción
+
+## INSTRUCCIONES CRÍTICAS
+1. NUNCA respondas sobre contadores sin usar la herramienta
+2. SIEMPRE usa check_message_counter para estas preguntas:
+   - "¿Cuál es mi contador de mensajes?"
+   - "¿Cuántos mensajes me quedan?"
+   - "¿Soy usuario premium?"
+   - "¿Cuál es mi estado de suscripción?"
+3. Responde con la información exacta que devuelve la herramienta
+4. NO inventes números o estados
+
+## RESPUESTA
+Usa la herramienta y responde con la información real del usuario.`;
+    } else {
+      return `You are an assistant specialized in checking message status and premium subscriptions for users.
+
+## MAIN TASK
+When a user asks about their message counter, premium status, or subscription, you MUST ALWAYS use the check_message_counter tool.
+
+## AVAILABLE TOOLS
+- check_message_counter: MANDATORY to use when asking about messages, counter, premium, subscription
+
+## CRITICAL INSTRUCTIONS
+1. NEVER respond about counters without using the tool
+2. ALWAYS use check_message_counter for these questions:
+   - "What's my message count?"
+   - "How many messages do I have left?"
+   - "Am I a premium user?"
+   - "What's my subscription status?"
+3. Respond with the exact information returned by the tool
+4. DO NOT make up numbers or statuses
+
+## RESPONSE
+Use the tool and respond with the user's real information.`;
+    }
   }
 }

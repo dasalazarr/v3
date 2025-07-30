@@ -4,7 +4,7 @@
  */
 
 export interface IntentClassification {
-  intent: 'run_logging' | 'onboarding_required' | 'complex_coaching' | 'emotional_support' | 'general_conversation' | 'premium_upgrade';
+  intent: 'run_logging' | 'onboarding_required' | 'complex_coaching' | 'emotional_support' | 'general_conversation' | 'premium_upgrade' | 'message_counter_check';
   confidence: number;
   reasoning: string;
   recommendedModel: 'deepseek' | 'gpt4o-mini';
@@ -39,6 +39,17 @@ export class IntentClassifier {
         confidence: 0.95,
         reasoning: 'User explicitly requesting premium upgrade',
         recommendedModel: 'deepseek', // Simple transaction, no need for premium model
+        requiresPremium: false
+      };
+    }
+
+    // 1.5. Message Counter Check Intent (High Priority)
+    if (this.isMessageCounterCheckIntent(lowerMessage, isSpanish)) {
+      return {
+        intent: 'message_counter_check',
+        confidence: 0.95,
+        reasoning: 'User asking about message count, premium status, or subscription',
+        recommendedModel: 'gpt4o-mini', // Use GPT-4o Mini for reliable tool calling
         requiresPremium: false
       };
     }
@@ -163,6 +174,27 @@ export class IntentClassifier {
     ];
 
     const keywords = isSpanish ? spanishCoachingKeywords : englishCoachingKeywords;
+    return keywords.some(keyword => message.includes(keyword));
+  }
+
+  /**
+   * Check if message is asking about message counter or premium status
+   */
+  private isMessageCounterCheckIntent(message: string, isSpanish: boolean): boolean {
+    const englishKeywords = [
+      'message count', 'message counter', 'how many messages', 'messages left',
+      'remaining messages', 'premium status', 'subscription status', 'am i premium',
+      'premium user', 'subscription', 'my status', 'account status', 'messages remaining'
+    ];
+
+    const spanishKeywords = [
+      'contador de mensajes', 'cuántos mensajes', 'mensajes restantes', 'mensajes que quedan',
+      'estado premium', 'estado de suscripción', 'soy premium', 'usuario premium',
+      'suscripción', 'mi estado', 'estado de cuenta', 'cuál es mi contador',
+      'verificar mensajes', 'mostrar contador', 'revisar estado'
+    ];
+
+    const keywords = isSpanish ? spanishKeywords : englishKeywords;
     return keywords.some(keyword => message.includes(keyword));
   }
 

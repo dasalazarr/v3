@@ -15,7 +15,7 @@ export function createMessageCounterTool(
 ) {
   return {
     name: 'check_message_counter',
-    description: 'Check the user\'s current message count and remaining free messages. Use this when users ask about their message limit, usage, or premium status.',
+    description: 'Check the user\'s current message count, remaining free messages, and premium status. ALWAYS use this tool when users ask about: message counter, message count, how many messages, remaining messages, premium status, subscription status, or any variation of these questions.',
     parameters: MessageCounterSchema,
     execute: async (params: { userId: string }) => {
       try {
