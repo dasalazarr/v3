@@ -168,11 +168,28 @@ export class AIAgent {
 
         // Get final response after tool execution
         if (toolCalls.length > 0) {
+          // Check for proactive actions needed based on tool results
+          const needsProactiveResponse = this.checkForProactiveActions(toolCalls);
+
+          if (needsProactiveResponse) {
+            // Add proactive coaching instruction to the context
+            messages.push({
+              role: 'system',
+              content: `IMPORTANT: The user just logged a run successfully. As their AI coach, you should:
+1. Acknowledge their run with specific performance feedback
+2. Provide their next scheduled workout automatically
+3. Give motivational coaching based on their progress
+4. Be proactive and helpful - don't wait for them to ask for their next plan
+
+The run was logged successfully. Now provide comprehensive coaching feedback and their next training plan.`
+            });
+          }
+
           const followupCompletion = await this.openai.chat.completions.create({
             model: this.model,
             messages,
             temperature: 0.7,
-            max_tokens: 400,
+            max_tokens: 600, // Increased for more comprehensive responses
           });
           content = followupCompletion.choices[0].message.content || content;
         }
@@ -558,12 +575,39 @@ Cuando un usuario nuevo interactúe:
     const choice = completion.choices[0];
     const hasToolCalls = choice.message.tool_calls && choice.message.tool_calls.length > 0;
     const contentLength = choice.message.content?.length || 0;
-    
+
     let confidence = 0.7; // Base confidence
-    
+
     if (hasToolCalls) confidence += 0.2; // Tool usage indicates higher confidence
     if (contentLength > 100) confidence += 0.1; // Longer responses tend to be more confident
-    
+
     return Math.min(confidence, 1.0);
+  }
+
+  /**
+   * Check if tool results indicate need for proactive coaching response
+   */
+  private checkForProactiveActions(toolCalls: any[]): boolean {
+    for (const toolCall of toolCalls) {
+      // Check for run logging that needs follow-up
+      if (toolCall.name === 'log_run' && toolCall.result?.shouldUpdatePlan) {
+        console.log('🎯 [AI_AGENT] Detected run logging - enabling proactive coaching response');
+        return true;
+      }
+
+      // Check for onboarding completion that needs training plan
+      if (toolCall.name === 'complete_onboarding' && toolCall.result?.success) {
+        console.log('🎯 [AI_AGENT] Detected onboarding completion - enabling proactive plan generation');
+        return true;
+      }
+
+      // Check for training plan generation that needs immediate workout
+      if (toolCall.name === 'generate_training_plan' && toolCall.result?.success) {
+        console.log('🎯 [AI_AGENT] Detected training plan generation - enabling proactive workout delivery');
+        return true;
+      }
+    }
+
+    return false;
   }
 }

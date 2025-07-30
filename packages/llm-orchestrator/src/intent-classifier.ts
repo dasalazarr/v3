@@ -70,8 +70,8 @@ export class IntentClassifier {
       return {
         intent: 'run_logging',
         confidence: 0.9,
-        reasoning: 'Message contains run/exercise data to be logged',
-        recommendedModel: 'deepseek', // Structured data extraction works well with DeepSeek
+        reasoning: 'Message contains run/exercise data to be logged - needs proactive coaching follow-up',
+        recommendedModel: 'gpt4o-mini', // Use GPT-4o Mini for better proactive coaching responses
         requiresPremium: false
       };
     }
