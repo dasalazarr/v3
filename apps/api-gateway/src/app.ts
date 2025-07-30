@@ -23,6 +23,7 @@ import { createTrainingPlanGeneratorTool } from './tools/training-plan-generator
 import { EnhancedMainFlow } from './flows/enhanced-main-flow.js';
 import { FaqFlow } from './flows/faq-flow.js';
 import { OnboardingFlow } from './flows/onboarding-flow.js';
+import { MemoryService } from './services/memory-service.js';
 import { handleWebOnboardingPremium, handleWebOnboardingFree } from './flows/web-onboarding-flow.js';
 import {
   handleSimplifiedOnboarding,
@@ -271,6 +272,9 @@ async function initializeServices(config: Config) {
   // y exportados como instancias singleton
   const { languageDetector, i18nService, templateEngine } = await import('@running-coach/shared');
 
+  // Initialize Memory Service
+  const memoryService = new MemoryService(database);
+
   // Register services in DI container
   container.registerInstance('Database', database);
   container.registerInstance('ChatBuffer', chatBuffer);
@@ -283,6 +287,7 @@ async function initializeServices(config: Config) {
   container.registerInstance('LanguageDetector', languageDetector);
   container.registerInstance('I18nService', i18nService);
   container.registerInstance('TemplateEngine', templateEngine);
+  container.registerInstance('MemoryService', memoryService);
   container.registerInstance('GUMROAD_PRODUCT_ID_EN', config.GUMROAD_PRODUCT_ID_EN);
   container.registerInstance('GUMROAD_PRODUCT_ID_ES', config.GUMROAD_PRODUCT_ID_ES);
   container.registerInstance('GUMROAD_WEBHOOK_SECRET', config.GUMROAD_WEBHOOK_SECRET);
@@ -314,7 +319,7 @@ async function initializeBot(config: Config, services: any) {
   });
 
   // Initialize flows and register them in the container
-  const mainFlow = new EnhancedMainFlow(services.hybridAiAgent, services.database, services.vectorMemory, services.languageDetector);
+  const mainFlow = container.resolve(EnhancedMainFlow);
   container.registerInstance('EnhancedMainFlow', mainFlow);
 
   const onboardingFlow = new OnboardingFlow(services.database, services.templateEngine);

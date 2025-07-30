@@ -26,7 +26,11 @@ export class IntentClassifier {
     const isSpanish = userProfile?.preferredLanguage === 'es';
     
     console.log(`🧠 [INTENT_CLASSIFIER] Analyzing message: "${message.substring(0, 50)}..."`);
-    console.log(`🧠 [INTENT_CLASSIFIER] User profile:`, userProfile);
+    console.log(`🧠 [INTENT_CLASSIFIER] User profile:`, {
+      subscriptionStatus: userProfile?.subscriptionStatus,
+      onboardingCompleted: userProfile?.onboardingCompleted,
+      preferredLanguage: userProfile?.preferredLanguage
+    });
 
     // 1. Premium Upgrade Intent (Highest Priority)
     if (this.isPremiumUpgradeIntent(lowerMessage)) {

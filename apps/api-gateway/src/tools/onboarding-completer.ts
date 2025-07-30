@@ -5,7 +5,6 @@ import { Database, users } from '@running-coach/database';
 import { eq } from 'drizzle-orm';
 
 const CompleteOnboardingSchema = z.object({
-  userId: z.string().uuid().optional(), // Will be injected by AI Agent
   name: z.string().min(1, "Name is required"),
   age: z.number().min(13).max(100, "Age must be between 13 and 100"),
   experienceLevel: z.enum(['beginner', 'intermediate', 'advanced']),
@@ -25,13 +24,17 @@ export function createOnboardingCompleterTool(): ToolFunction {
     description: 'Complete user onboarding by saving all collected profile information. ONLY call this when you have ALL required fields: name, age, experienceLevel, weeklyFrequency, and mainGoal. This marks the onboarding as complete.',
     parameters: CompleteOnboardingSchema,
     
-    execute: async (params: z.infer<typeof CompleteOnboardingSchema>) => {
+    execute: async (params: z.infer<typeof CompleteOnboardingSchema> & { userId?: string }) => {
       const {
         name, age, experienceLevel, weeklyFrequency, mainGoal, injuries,
-        lastRunDistance, lastRunTime, lastRunPace, confirmationMessage, userId
+        lastRunDistance, lastRunTime, lastRunPace, confirmationMessage
       } = params;
 
+      // Extract userId from params (injected by AI Agent)
+      const userId = (params as any).userId;
+
       if (!userId) {
+        console.error('❌ [ONBOARDING_COMPLETER] Missing userId in params:', params);
         throw new Error('User ID is required to complete onboarding');
       }
 
@@ -41,8 +44,13 @@ export function createOnboardingCompleterTool(): ToolFunction {
         experienceLevel,
         weeklyFrequency,
         mainGoal,
-        injuries: injuries ? 'provided' : 'none'
+        injuries: injuries ? 'provided' : 'none',
+        lastRunDistance,
+        lastRunTime,
+        lastRunPace
       });
+
+      console.log(`🔧 [TOOL_EXECUTION] Executing complete_onboarding with userId: ${userId}`);
 
       const database = container.resolve<Database>('Database');
 

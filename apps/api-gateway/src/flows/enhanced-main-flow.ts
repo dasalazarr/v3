@@ -9,6 +9,7 @@ import { VectorMemory } from '@running-coach/vector-memory';
 import logger from '../services/logger-service.js';
 import { OnboardingFlow } from './onboarding-flow.js';
 import { FreemiumService } from '../services/freemium-service.js';
+import { MemoryService } from '../services/memory-service.js';
 
 @injectable()
 export class EnhancedMainFlow {
@@ -16,7 +17,8 @@ export class EnhancedMainFlow {
     @inject('AIAgent') private aiAgent: AIAgent,
     @inject('Database') private database: Database,
     @inject('VectorMemory') private vectorMemory: VectorMemory,
-    @inject('LanguageDetector') private languageDetector: LanguageDetector
+    @inject('LanguageDetector') private languageDetector: LanguageDetector,
+    @inject('MemoryService') private memoryService: MemoryService
   ) {}
 
   private async getOrCreateUser(phoneNumber: string, message: string) {
@@ -177,7 +179,12 @@ export class EnhancedMainFlow {
 
           console.log(`🤖 [ENHANCED_MAIN_FLOW] Processing message with AI Agent for user ${ctx.from}`);
 
-          // Process message with AI Agent
+          // Get enhanced context from memory service
+          const userMemory = await this.memoryService.getEnhancedContext(user.id);
+          const contextualPrompt = userMemory ?
+            this.memoryService.generateContextualPrompt(userMemory, user.preferredLanguage as 'en' | 'es') : '';
+
+          // Process message with AI Agent and enhanced context
           const aiResponse = await this.aiAgent.processMessage({
             userId: user.id,
             message: ctx.body,
@@ -188,8 +195,12 @@ export class EnhancedMainFlow {
               age: user.age || undefined,
               gender: user.gender || undefined,
               experienceLevel: user.experienceLevel || undefined
-            } as any
+            } as any,
+            systemPrompt: contextualPrompt ? `${contextualPrompt}\n\n` : undefined
           });
+
+          // Update conversation context
+          await this.memoryService.updateConversationContext(user.id, 'general_conversation');
 
           console.log(`🤖 [ENHANCED_MAIN_FLOW] Response generated successfully`);
 
