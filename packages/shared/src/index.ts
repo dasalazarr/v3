@@ -7,3 +7,6 @@ export * from './i18n-service.js';
 
 // Export template engine
 export * from './template-engine.js';
+
+// Export utility functions
+export * from './utils.js';

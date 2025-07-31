@@ -5,6 +5,7 @@ import { VDOTPaces as Paces } from '@running-coach/plan-generator';
 import { VectorMemory } from '@running-coach/vector-memory';
 import { ToolFunction } from '@running-coach/llm-orchestrator';
 import { PlanBuilder, VDOTCalculator } from '@running-coach/plan-generator';
+import { formatPace } from '@running-coach/shared';
 import { eq, and } from 'drizzle-orm';
 
 // Define a type for the plan object returned from the database
@@ -427,8 +428,3 @@ async function regenerateUpcomingWorkouts(
   }
 }
 
-function formatPace(secondsPerMile: number): string {
-  const minutes = Math.floor(secondsPerMile / 60);
-  const seconds = Math.round(secondsPerMile % 60);
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}

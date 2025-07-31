@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { ChatMessage, CHAT_BUFFER_SIZE, CHAT_BUFFER_TTL } from '@running-coach/shared';
+import { ChatMessage, CHAT_BUFFER_SIZE, CHAT_BUFFER_TTL, generateId } from '@running-coach/shared';
 
 export interface RedisConfig {
   host: string;
@@ -52,7 +52,7 @@ export class ChatBuffer {
   ): Promise<void> {
     const key = this.getUserChatKey(userId);
     const message: ChatMessage = {
-      id: this.generateId(),
+      id: generateId(),
       userId,
       role,
       content,
@@ -250,7 +250,5 @@ export class ChatBuffer {
     return `state:${userId}`;
   }
 
-  private generateId(): string {
-    return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
+
 }

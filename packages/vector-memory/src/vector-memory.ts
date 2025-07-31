@@ -1,7 +1,6 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import OpenAI from 'openai';
-import { randomUUID } from 'crypto';
-import { MemoryContext, VECTOR_DIMENSION } from '@running-coach/shared';
+import { MemoryContext, VECTOR_DIMENSION, generateId } from '@running-coach/shared';
 
 export interface QdrantConfig {
   url: string;
@@ -133,7 +132,7 @@ export class VectorMemory {
       const embedding = await this.generateEmbedding(entry.content);
 
       // Store in Qdrant using a UUID as point ID
-      const vectorId = randomUUID();
+      const vectorId = generateId();
       
       await this.qdrant.upsert(this.collectionName, {
         wait: true,
@@ -217,7 +216,7 @@ export class VectorMemory {
    */
   public async storeConversation(userId: string, role: 'user' | 'assistant', content: string): Promise<void> {
     await this.storeMemory({
-      id: this.generateId(),
+      id: generateId(),
       userId,
       content: `${role}: ${content}`,
       type: 'conversation',
@@ -231,7 +230,7 @@ export class VectorMemory {
    */
   public async storeRunData(userId: string, runSummary: string, details: Record<string, any>): Promise<void> {
     await this.storeMemory({
-      id: this.generateId(),
+      id: generateId(),
       userId,
       content: runSummary,
       type: 'run_data',
@@ -245,7 +244,7 @@ export class VectorMemory {
    */
   public async storeAchievement(userId: string, achievement: string, details?: Record<string, any>): Promise<void> {
     await this.storeMemory({
-      id: this.generateId(),
+      id: generateId(),
       userId,
       content: achievement,
       type: 'achievement',
@@ -259,7 +258,7 @@ export class VectorMemory {
    */
   public async storeGoal(userId: string, goal: string, details?: Record<string, any>): Promise<void> {
     await this.storeMemory({
-      id: this.generateId(),
+      id: generateId(),
       userId,
       content: goal,
       type: 'goal',
@@ -348,7 +347,5 @@ export class VectorMemory {
     }
   }
 
-  private generateId(): string {
-    return randomUUID();
-  }
+
 }

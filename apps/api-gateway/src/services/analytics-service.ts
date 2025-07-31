@@ -1,6 +1,7 @@
 import { Database } from '@running-coach/database';
 import { runs, users, progressSummaries } from '@running-coach/database';
 import { VDOTCalculator } from '@running-coach/plan-generator';
+import { formatPace } from '@running-coach/shared';
 import { eq, gte, lte, and, desc } from 'drizzle-orm';
 import { addDays, startOfWeek, endOfWeek, format } from 'date-fns';
 import { singleton } from 'tsyringe';
@@ -105,7 +106,7 @@ export class AnalyticsService {
       stats: {
         totalDistance: `${stats.totalDistance.toFixed(1)} mi`,
         totalRuns: stats.totalRuns,
-        averagePace: this.formatPace(stats.averagePace),
+        averagePace: formatPace(stats.averagePace),
         vdot: stats.vdotEstimate,
         averageEffort: stats.averageEffort
       },
@@ -324,11 +325,7 @@ export class AnalyticsService {
     }
   }
 
-  private formatPace(secondsPerMile: number): string {
-    const minutes = Math.floor(secondsPerMile / 60);
-    const seconds = Math.round(secondsPerMile % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
+
 
   private formatDateRange(weekStart: Date): string {
     const weekEnd = endOfWeek(weekStart);

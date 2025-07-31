@@ -1,6 +1,4 @@
-import OpenAI from 'openai';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
-import { UserProfile, ApiResponse } from '@running-coach/shared';
 import { ToolRegistry } from './tool-registry.js';
 import { IntentClassifier, IntentClassification } from './intent-classifier.js';
 import { IntelligentIntentClassifier } from './intelligent-intent-classifier.js';
@@ -36,9 +34,6 @@ export class HybridAIAgent {
   private openaiAgent: AIAgent;
   private intentClassifier: IntentClassifier;
   private intelligentClassifier: IntelligentIntentClassifier;
-  private chatBuffer: ChatBuffer;
-  private vectorMemory: VectorMemory;
-  private toolRegistry: ToolRegistry;
 
   constructor(
     config: HybridAIConfig,
@@ -46,9 +41,7 @@ export class HybridAIAgent {
     vectorMemory: VectorMemory,
     toolRegistry: ToolRegistry
   ) {
-    this.chatBuffer = chatBuffer;
-    this.vectorMemory = vectorMemory;
-    this.toolRegistry = toolRegistry;
+    // Dependencies are passed to individual agents, not stored here
     this.intentClassifier = new IntentClassifier();
 
     // Initialize intelligent classifier with DeepSeek config

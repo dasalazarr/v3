@@ -1,5 +1,5 @@
 import { addDays, startOfWeek } from 'date-fns';
-import { TrainingPlan, Workout, UserProfile } from '@running-coach/shared';
+import { TrainingPlan, Workout, UserProfile, formatPace } from '@running-coach/shared';
 import { VDOTCalculator, VDOTPaces } from './vdot-calculator.js';
 
 export interface PlanGenerationRequest {
@@ -483,7 +483,7 @@ export class PlanBuilder {
     distance: number,
     targetPace: number
   ): string {
-    const paceStr = this.formatPace(targetPace);
+    const paceStr = formatPace(targetPace);
     const distanceStr = distance.toFixed(1);
 
     switch (template.type) {
@@ -502,11 +502,7 @@ export class PlanBuilder {
     }
   }
 
-  private static formatPace(secondsPerMile: number): string {
-    const minutes = Math.floor(secondsPerMile / 60);
-    const seconds = Math.round(secondsPerMile % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
+
 
   private static getWorkoutDayOfWeek(
     workoutIndex: number,

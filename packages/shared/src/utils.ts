@@ -4,49 +4,42 @@
 
 import { randomUUID } from 'crypto';
 
+/**
+ * Generate a unique UUID
+ */
 export function generateId(): string {
   return randomUUID();
 }
 
+/**
+ * Format pace from seconds per mile to MM:SS format
+ */
 export function formatPace(secondsPerMile: number): string {
   const minutes = Math.floor(secondsPerMile / 60);
   const seconds = Math.round(secondsPerMile % 60);
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
+/**
+ * Parse pace string (MM:SS) to seconds per mile
+ */
 export function parsePace(paceString: string): number {
   const [minutes, seconds] = paceString.split(':').map(Number);
   return minutes * 60 + seconds;
 }
 
-export function formatDistance(miles: number, unit: 'miles' | 'km' = 'miles'): string {
-  if (unit === 'km') {
-    return `${(miles * 1.60934).toFixed(2)} km`;
-  }
-  return `${miles.toFixed(2)} miles`;
-}
-
+/**
+ * Format duration from seconds to HH:MM:SS or MM:SS format
+ */
 export function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-  
+
   if (hours > 0) {
     return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
-}
-
-export function calculateVDOT(distance: number, timeInSeconds: number): number {
-  // Jack Daniels VDOT calculation
-  // Simplified formula - in production would use full tables
-  const velocity = distance / (timeInSeconds / 3600); // miles per hour
-  const vo2 = -4.6 + 0.182258 * velocity + (0.000104 * velocity * velocity);
-  return Math.round(vo2 * 100) / 100;
-}
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export function isValidPhoneNumber(phone: string): boolean {

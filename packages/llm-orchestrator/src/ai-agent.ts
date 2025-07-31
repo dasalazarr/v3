@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
-import { franc } from 'franc';
+import { franc } from 'franc-min';
 import { ChatBuffer, VectorMemory } from '@running-coach/vector-memory';
-import { UserProfile, ApiResponse } from '@running-coach/shared';
+import { UserProfile } from '@running-coach/shared';
 import { ToolRegistry } from './tool-registry.js';
 
 export interface OpenAIConfig {
