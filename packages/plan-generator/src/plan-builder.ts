@@ -9,6 +9,7 @@ export interface PlanGenerationRequest {
   targetDate?: Date;
   weeklyFrequency: number; // 3-7 runs per week
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+  language?: 'es' | 'en'; // Language for workout descriptions
   weeklyMileage?: number;
   injuryHistory?: Array<{
     type: string;
@@ -272,7 +273,8 @@ export class PlanBuilder {
         plan,
         weekNumber,
         day + 1,
-        weeklyMileage
+        weeklyMileage,
+        request.language || 'en'
       );
       workouts.push(workout);
     }
@@ -457,7 +459,8 @@ export class PlanBuilder {
     plan: TrainingPlan,
     weekNumber: number,
     dayNumber: number,
-    weeklyMileage: number
+    weeklyMileage: number,
+    language: 'es' | 'en' = 'en'
   ): Workout {
     const distance = weeklyMileage * template.distanceRatio;
     const targetPace = plan.paces[template.paceType];
@@ -473,7 +476,7 @@ export class PlanBuilder {
       distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
       duration,
       targetPace,
-      description: this.generateWorkoutDescription(template, distance, targetPace),
+      description: this.generateWorkoutDescription(template, distance, targetPace, language),
       completed: false,
     };
   }
@@ -481,24 +484,31 @@ export class PlanBuilder {
   private static generateWorkoutDescription(
     template: WorkoutTemplate,
     distance: number,
-    targetPace: number
+    targetPace: number,
+    language: 'es' | 'en' = 'en'
   ): string {
     const paceStr = formatPace(targetPace);
-    const distanceStr = distance.toFixed(1);
+
+    // Convert to kilometers for Spanish
+    const isSpanish = language === 'es';
+    const convertedDistance = isSpanish ? distance * 1.60934 : distance; // miles to km
+    const distanceStr = convertedDistance.toFixed(1);
+    const distanceUnit = isSpanish ? 'km' : 'miles';
+    const paceUnit = isSpanish ? '/km' : '/mile';
 
     switch (template.type) {
       case 'easy':
-        return `${distanceStr} miles easy @ ${paceStr}/mile. ${template.description}`;
+        return `${distanceStr} ${distanceUnit} easy @ ${paceStr}${paceUnit}. ${template.description}`;
       case 'tempo':
-        return `${distanceStr} miles tempo @ ${paceStr}/mile. ${template.description}`;
+        return `${distanceStr} ${distanceUnit} tempo @ ${paceStr}${paceUnit}. ${template.description}`;
       case 'intervals':
-        return `${distanceStr} miles total intervals @ ${paceStr}/mile. ${template.description}`;
+        return `${distanceStr} ${distanceUnit} total intervals @ ${paceStr}${paceUnit}. ${template.description}`;
       case 'long':
-        return `${distanceStr} miles long run @ ${paceStr}/mile. ${template.description}`;
+        return `${distanceStr} ${distanceUnit} long run @ ${paceStr}${paceUnit}. ${template.description}`;
       case 'recovery':
-        return `${distanceStr} miles recovery @ ${paceStr}/mile. ${template.description}`;
+        return `${distanceStr} ${distanceUnit} recovery @ ${paceStr}${paceUnit}. ${template.description}`;
       default:
-        return `${distanceStr} miles @ ${paceStr}/mile. ${template.description}`;
+        return `${distanceStr} ${distanceUnit} @ ${paceStr}${paceUnit}. ${template.description}`;
     }
   }
 

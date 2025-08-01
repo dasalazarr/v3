@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Database } from '@running-coach/database';
-import { trainingPlans, workouts } from '@running-coach/database';
+import { trainingPlans, workouts, users } from '@running-coach/database';
 import { VDOTPaces as Paces } from '@running-coach/plan-generator';
 import { VectorMemory } from '@running-coach/vector-memory';
 import { ToolFunction } from '@running-coach/llm-orchestrator';
@@ -87,6 +87,15 @@ async function createNewPlan(
   }
 ): Promise<any> {
   const { targetRace, weeklyFrequency, currentVDOT, targetDate } = params;
+
+  // Get user language preference
+  const [user] = await db.query
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const userLanguage = user?.preferredLanguage as 'es' | 'en' || 'en';
   
   // Deactivate existing plans
   await db.query.update(trainingPlans)
@@ -124,7 +133,8 @@ async function createNewPlan(
     targetRace: targetRace as any,
     targetDate,
     weeklyFrequency,
-    experienceLevel: 'intermediate'
+    experienceLevel: 'intermediate',
+    language: userLanguage
   });
   
   // Insert workouts into database

@@ -210,7 +210,43 @@ export class EnhancedMainFlow {
               aiResponse.toolCalls.map(t => t.name).join(', '));
           }
 
-          await flowDynamic(aiResponse.content);
+          // Check if message needs chunking and send appropriately
+          const { MessageChunker } = await import('@running-coach/shared');
+
+          if (MessageChunker.needsChunking(aiResponse.content)) {
+            // Determine message type for appropriate chunking
+            let messageType: 'general' | 'training_plan' | 'advice' = 'general';
+            if (aiResponse.content.includes('plan de entrenamiento') || aiResponse.content.includes('training plan') || aiResponse.content.includes('Semana')) {
+              messageType = 'training_plan';
+            } else if (aiResponse.content.includes('consejos') || aiResponse.content.includes('tips') || aiResponse.content.includes('###')) {
+              messageType = 'advice';
+            }
+
+            // Split into chunks and send each one
+            let chunks: string[];
+            switch (messageType) {
+              case 'training_plan':
+                chunks = MessageChunker.chunkTrainingPlan(aiResponse.content);
+                break;
+              case 'advice':
+                chunks = MessageChunker.chunkAdvice(aiResponse.content);
+                break;
+              default:
+                chunks = MessageChunker.chunkMessage(aiResponse.content);
+            }
+
+            console.log(`📝 [ENHANCED_MAIN_FLOW] Sending ${chunks.length} chunks`);
+
+            // Send each chunk with small delay
+            for (let i = 0; i < chunks.length; i++) {
+              await flowDynamic(chunks[i]);
+              if (i < chunks.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            }
+          } else {
+            await flowDynamic(aiResponse.content);
+          }
 
         } catch (error) {
           console.error(`❌ [ENHANCED_MAIN_FLOW] Error processing message:`, error);

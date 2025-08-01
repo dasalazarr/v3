@@ -41,7 +41,7 @@ dotenv.config();
 async function sendWhatsAppMessage(to: string, message: string, config: any) {
   try {
     const url = `https://graph.facebook.com/v17.0/${config.NUMBER_ID}/messages`;
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -71,6 +71,55 @@ async function sendWhatsAppMessage(to: string, message: string, config: any) {
     console.error('❌ Error sending WhatsApp message:', error);
     return false;
   }
+}
+
+// Enhanced function to send chunked WhatsApp messages
+async function sendChunkedWhatsAppMessage(to: string, message: string, config: any, messageType: 'general' | 'training_plan' | 'advice' = 'general') {
+  const { MessageChunker } = await import('@running-coach/shared');
+
+  // Check if message needs chunking
+  if (!MessageChunker.needsChunking(message)) {
+    return await sendWhatsAppMessage(to, message, config);
+  }
+
+  console.log(`📝 [CHUNKER] Message too long (${message.length} chars), splitting into chunks...`);
+
+  // Choose appropriate chunking strategy
+  let chunks: string[];
+  switch (messageType) {
+    case 'training_plan':
+      chunks = MessageChunker.chunkTrainingPlan(message);
+      break;
+    case 'advice':
+      chunks = MessageChunker.chunkAdvice(message);
+      break;
+    default:
+      chunks = MessageChunker.chunkMessage(message);
+  }
+
+  console.log(`📝 [CHUNKER] Split into ${chunks.length} chunks`);
+
+  // Send chunks with small delay between them
+  let allSent = true;
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const sent = await sendWhatsAppMessage(to, chunk, config);
+
+    if (!sent) {
+      console.error(`❌ [CHUNKER] Failed to send chunk ${i + 1}/${chunks.length}`);
+      allSent = false;
+      break;
+    }
+
+    console.log(`✅ [CHUNKER] Sent chunk ${i + 1}/${chunks.length} (${chunk.length} chars)`);
+
+    // Small delay between chunks to avoid rate limiting
+    if (i < chunks.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  return allSent;
 }
 
 // Configuration interfaces
@@ -679,8 +728,16 @@ async function main() {
                           }
 
                           if (aiResponse && aiResponse.content && aiResponse.content.length > 0) {
-                            // Send response back to WhatsApp
-                            await sendWhatsAppMessage(phone, aiResponse.content, config);
+                            // Determine message type for appropriate chunking
+                            let messageType: 'general' | 'training_plan' | 'advice' = 'general';
+                            if (aiResponse.content.includes('plan de entrenamiento') || aiResponse.content.includes('training plan') || aiResponse.content.includes('Semana')) {
+                              messageType = 'training_plan';
+                            } else if (aiResponse.content.includes('consejos') || aiResponse.content.includes('tips') || aiResponse.content.includes('###')) {
+                              messageType = 'advice';
+                            }
+
+                            // Send response back to WhatsApp with chunking
+                            await sendChunkedWhatsAppMessage(phone, aiResponse.content, config, messageType);
                             console.log(`✅ Sent AI response to ${phone}: ${aiResponse.content.substring(0, 50)}...`);
                           }
                         }

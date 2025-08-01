@@ -10,3 +10,6 @@ export * from './template-engine.js';
 
 // Export utility functions
 export * from './utils.js';
+
+// Export message chunker
+export * from './message-chunker.js';

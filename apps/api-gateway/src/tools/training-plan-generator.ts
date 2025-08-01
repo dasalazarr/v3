@@ -123,7 +123,8 @@ export function createTrainingPlanGeneratorTool(): ToolFunction {
             currentVDOT: estimatedVDOT,
             targetRace,
             weeklyFrequency,
-            experienceLevel: currentFitnessLevel
+            experienceLevel: currentFitnessLevel,
+            language: user.preferredLanguage as 'es' | 'en'
           };
 
           const weekWorkouts = PlanBuilder.generateWeekWorkouts(
